@@ -142,6 +142,7 @@ class AddressBookWidget(QWidget):
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.table.setSortingEnabled(True)
+        self.table.verticalHeader().setVisible(False)
         layout.addWidget(self.table)
 
         # Buttons

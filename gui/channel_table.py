@@ -38,6 +38,7 @@ class DraggableTableWidget(QTableWidget):
         self.setDropIndicatorShown(True)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.verticalHeader().setVisible(False)
         self._item_changed_handler = None
 
     def set_item_changed_handler(self, handler):
