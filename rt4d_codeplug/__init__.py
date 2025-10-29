@@ -1,6 +1,6 @@
 """RT-4D Codeplug Library
 
-A Python library for parsing, editing, and flashing RT-4D radio codeplug files.
+A Python library and GUI for parsing, editing, and flashing RT-4D radio codeplug files.
 """
 
 __version__ = "0.1.0"
