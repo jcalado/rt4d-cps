@@ -141,35 +141,35 @@ class EncryptionWidget(QWidget):
 
         self.table.setRowCount(0)
         keys = sorted(self.codeplug.get_active_encryption_keys(), key=lambda k: k.index)
+        palette = self.table.palette()
+        base_brush = palette.base()
+        alternate_brush = palette.alternateBase()
 
         for row, key in enumerate(keys):
             self.table.insertRow(row)
 
-            # Alternate row colors (like CPS)
-            if row % 2 == 0:
-                bg_color = QColor(255, 250, 205)  # LemonChiffon
-            else:
-                bg_color = QColor(255, 255, 255)  # White
+            # Alternate row colors using palette-friendly tones
+            bg_brush = alternate_brush if row % 2 == 0 else base_brush
 
             # No. (1-based)
             item_index = QTableWidgetItem(str(key.index + 1))
-            item_index.setBackground(bg_color)
+            item_index.setBackground(bg_brush)
             self.table.setItem(row, 0, item_index)
 
             # Key Alias
             item_alias = QTableWidgetItem(key.alias)
-            item_alias.setBackground(bg_color)
+            item_alias.setBackground(bg_brush)
             self.table.setItem(row, 1, item_alias)
 
             # Type
             type_name = self.get_type_name(key.enc_type)
             item_type = QTableWidgetItem(type_name)
-            item_type.setBackground(bg_color)
+            item_type.setBackground(bg_brush)
             self.table.setItem(row, 2, item_type)
 
             # Key Value
             item_value = QTableWidgetItem(key.value)
-            item_value.setBackground(bg_color)
+            item_value.setBackground(bg_brush)
             self.table.setItem(row, 3, item_value)
 
     def get_type_name(self, enc_type: EncryptionType) -> str:

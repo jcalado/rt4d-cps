@@ -131,13 +131,15 @@ class GroupListWidget(QWidget):
 
         self.table.setRowCount(0)
         group_lists = sorted(self.codeplug.get_active_group_lists(), key=lambda g: g.index)
+        palette = self.table.palette()
+        readonly_bg = palette.alternateBase().color()
 
         for row, gl in enumerate(group_lists):
             self.table.insertRow(row)
 
             # Index
             item_index = QTableWidgetItem(str(gl.index + 1))
-            item_index.setBackground(QColor(240, 240, 240))
+            item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
             # Name

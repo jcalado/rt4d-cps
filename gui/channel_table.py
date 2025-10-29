@@ -875,10 +875,13 @@ class ChannelTableWidget(QWidget):
 
     def populate_row(self, row: int, channel: Channel):
         """Populate a table row with channel data"""
+        palette = self.table.palette()
+        readonly_bg = palette.alternateBase().color()
+
         # Index (read-only)
         item_index = QTableWidgetItem(str(channel.index + 1))
         item_index.setFlags(item_index.flags() & ~Qt.ItemIsEditable)
-        item_index.setBackground(QColor(240, 240, 240))
+        item_index.setBackground(readonly_bg)
         self.table.setItem(row, 0, item_index)
 
         # Name
@@ -910,12 +913,12 @@ class ChannelTableWidget(QWidget):
         else:
             item_cc = QTableWidgetItem("")
             item_cc.setFlags(item_cc.flags() & ~Qt.ItemIsEditable)
-            item_cc.setBackground(QColor(240, 240, 240))
+            item_cc.setBackground(readonly_bg)
             self.table.setItem(row, 7, item_cc)
 
             item_slot = QTableWidgetItem("")
             item_slot.setFlags(item_slot.flags() & ~Qt.ItemIsEditable)
-            item_slot.setBackground(QColor(240, 240, 240))
+            item_slot.setBackground(readonly_bg)
             self.table.setItem(row, 8, item_slot)
 
     def on_item_changed(self, item: QTableWidgetItem):

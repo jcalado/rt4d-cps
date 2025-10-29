@@ -128,13 +128,15 @@ class ContactWidget(QWidget):
 
         self.table.setRowCount(0)
         contacts = sorted(self.codeplug.get_active_contacts(), key=lambda c: c.index)
+        palette = self.table.palette()
+        readonly_bg = palette.alternateBase().color()
 
         for row, contact in enumerate(contacts):
             self.table.insertRow(row)
 
             # Index
             item_index = QTableWidgetItem(str(contact.index))
-            item_index.setBackground(QColor(240, 240, 240))
+            item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
             # Name
