@@ -44,8 +44,8 @@ jobs:
           pip install pyinstaller
 
       - name: Verify version matches tag
+        shell: python
         run: |
-          python - <<'PY'
           import os
           import rt4d_codeplug
 
@@ -55,7 +55,6 @@ jobs:
               raise SystemExit(
                   f"Version mismatch: tag={tag_version} package={pkg_version}"
               )
-          PY
 
       - name: Build executable
         run: |
