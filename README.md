@@ -2,10 +2,13 @@
 
 Utility scripts and GUI for exploring, editing, and flashing RT-4D radio codeplug files.
 
+> [!WARNING]
+> This project is pre-release beta software; expect rough edges and verify programming steps on a non-critical radio first.
+
 ## Getting Started
 - Ensure Python 3.9+ is installed.
 - Install dependencies: `pip install -r requirements.txt`
-- 
+
 ## GUI
 Run `python3 rt4d_gui.py` to launch the PySide6 editor for interactive channel/contact management.
 
