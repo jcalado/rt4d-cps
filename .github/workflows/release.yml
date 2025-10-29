@@ -23,9 +23,13 @@ jobs:
           python-version: "3.11"
 
       - name: Determine version
+        shell: python
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          import os
+          ref = os.environ["GITHUB_REF_NAME"]
+          version = ref[1:] if ref.startswith("v") else ref
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"VERSION={version}\n")
 
       - name: Install Qt prerequisites (Linux)
         if: matrix.os == 'ubuntu-latest'
@@ -96,9 +100,13 @@ jobs:
     needs: build
     steps:
       - name: Determine version
+        shell: python
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          import os
+          ref = os.environ["GITHUB_REF_NAME"]
+          version = ref[1:] if ref.startswith("v") else ref
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write(f"VERSION={version}\n")
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
