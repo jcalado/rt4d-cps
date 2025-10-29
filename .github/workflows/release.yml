@@ -47,7 +47,13 @@ jobs:
         shell: python
         run: |
           import os
-          import rt4d_codeplug
+          import sys
+          from pathlib import Path
+
+          workspace = Path(os.environ["GITHUB_WORKSPACE"])
+          sys.path.insert(0, str(workspace))
+
+          import rt4d_codeplug  # noqa: E402
 
           tag_version = os.environ["VERSION"]
           pkg_version = rt4d_codeplug.__version__
