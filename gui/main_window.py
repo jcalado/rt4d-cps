@@ -329,23 +329,28 @@ class MainWindow(QMainWindow):
         from .radio_dialog import RadioBackupDialog
         dialog = RadioBackupDialog(self)
         if dialog.exec():
-            # If successful, load the backed up file
+            # If successful, load the backed up file (only for selective backups)
             file_path = dialog.get_backup_file()
             if file_path:
-                parser = CodeplugParser.from_file(str(file_path))
-                self.codeplug = parser.parse()
-                self.current_file = file_path
-                self.modified = False
-                self.channel_widget.load_codeplug(self.codeplug)
-                self.contact_widget.load_codeplug(self.codeplug)
-                self.grouplist_widget.load_codeplug(self.codeplug)
-                self.zone_widget.load_codeplug(self.codeplug)
-                self.encryption_widget.load_codeplug(self.codeplug)
-                self.dtmf_widget.load_settings(self.codeplug.settings)
-                self.settings_widget.load_settings(self.codeplug.settings)
-                self.update_title()
-                self.enable_actions(True)
-                self.status_bar.showMessage(f"Loaded backup from radio")
+                # Don't try to load full SPI backups - they're raw binary dumps
+                if dialog.is_full_backup():
+                    self.status_bar.showMessage(f"Full SPI backup saved to {file_path.name}")
+                else:
+                    # Load selective backup as codeplug
+                    parser = CodeplugParser.from_file(str(file_path))
+                    self.codeplug = parser.parse()
+                    self.current_file = file_path
+                    self.modified = False
+                    self.channel_widget.load_codeplug(self.codeplug)
+                    self.contact_widget.load_codeplug(self.codeplug)
+                    self.grouplist_widget.load_codeplug(self.codeplug)
+                    self.zone_widget.load_codeplug(self.codeplug)
+                    self.encryption_widget.load_codeplug(self.codeplug)
+                    self.dtmf_widget.load_settings(self.codeplug.settings)
+                    self.settings_widget.load_settings(self.codeplug.settings)
+                    self.update_title()
+                    self.enable_actions(True)
+                    self.status_bar.showMessage(f"Loaded backup from radio")
 
     def flash_to_radio(self):
         """Flash codeplug to radio"""

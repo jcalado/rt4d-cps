@@ -64,9 +64,14 @@ class RadioWorker(QThread):
 
         # Full backup
         if not self.regions:
-            self.progress.emit(10, "Reading SPI flash...")
-            success = uart.read_spi_dump(self.file_path)
+            def progress_callback(current, total):
+                # Map to 10-90% range
+                percent = int((current / total) * 80) + 10
+                self.progress.emit(percent, f"Reading SPI flash: {current}/{total} KB")
+
+            success = uart.read_spi_dump(self.file_path, progress_callback)
             if success:
+                self.progress.emit(100, "Complete")
                 self.finished.emit(True, f"Backup saved to {self.file_path}")
             else:
                 self.finished.emit(False, "Failed to read SPI flash")
@@ -153,6 +158,7 @@ class RadioBackupDialog(QDialog):
         super().__init__(parent)
         self.backup_file: Optional[Path] = None
         self.worker: Optional[RadioWorker] = None
+        self.was_full_backup: bool = False
         self.init_ui()
 
     def init_ui(self):
@@ -261,11 +267,17 @@ class RadioBackupDialog(QDialog):
 
     def browse_file(self):
         """Browse for save file"""
+        # Show only .bin for full backup, .4rdmf for selective backup
+        if self.check_full.isChecked():
+            file_filter = "Binary Files (*.bin);;All Files (*)"
+        else:
+            file_filter = "RT-4D Codeplug (*.4rdmf);;Binary Files (*.bin);;All Files (*)"
+
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save Backup",
             "",
-            "RT-4D Codeplug (*.4rdmf);;Binary Files (*.bin);;All Files (*)"
+            file_filter
         )
         if file_path:
             self.backup_file = Path(file_path)
@@ -293,7 +305,8 @@ class RadioBackupDialog(QDialog):
 
         # Determine regions
         regions = None
-        if not self.check_full.isChecked():
+        self.was_full_backup = self.check_full.isChecked()
+        if not self.was_full_backup:
             regions = []
             if self.check_settings.isChecked():
                 regions.append("main_settings")
@@ -340,6 +353,10 @@ class RadioBackupDialog(QDialog):
     def get_backup_file(self) -> Optional[Path]:
         """Get the backup file path"""
         return self.backup_file
+
+    def is_full_backup(self) -> bool:
+        """Check if this was a full SPI backup"""
+        return self.was_full_backup
 
 
 class RadioFlashDialog(QDialog):

@@ -161,14 +161,23 @@ class RT4DUART:
 
         return True  # Bootloader mode
 
-    def read_spi_dump(self, output_file: str) -> bool:
-        """Read complete SPI flash to file (4MB)"""
+    def read_spi_dump(self, output_file: str, progress_callback=None) -> bool:
+        """Read complete SPI flash to file (4MB)
+
+        Args:
+            output_file: Path to save the dump
+            progress_callback: Optional callback function(current, total) for progress updates
+        """
         print("Reading SPI flash...")
 
         with open(output_file, 'wb') as f:
             for i in range(4096):  # 4096 KB = 4 MB
                 percentage = (i / 4096) * 100
                 print(f"\rReading SPI flash: {percentage:.1f}%", end='', flush=True)
+
+                # Call progress callback if provided
+                if progress_callback:
+                    progress_callback(i, 4096)
 
                 data = self.command_read_spi(i)
                 if data is None:
@@ -178,6 +187,11 @@ class RT4DUART:
                 f.write(data)
 
         print("\rReading complete" + " " * 30)
+
+        # Final progress update
+        if progress_callback:
+            progress_callback(4096, 4096)
+
         return True
 
     def read_spi_region(self, address: int, size: int) -> Optional[bytes]:
