@@ -214,7 +214,7 @@ class Zone:
 
     def is_empty(self) -> bool:
         """Check if zone is empty/unused"""
-        return not self.name or len(self.channels) == 0
+        return not self.name
 
     def add_channel(self, channel_index: int):
         """Add a channel to this zone (max 200 channels)"""
