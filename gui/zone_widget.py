@@ -318,15 +318,15 @@ class ZoneWidget(QWidget):
         if not selected_items:
             return
 
-        # Check if we'll exceed 250 channels
+        # Check if we'll exceed 200 channels
         current_count = len(self.current_zone.channels)
         new_count = current_count + len(selected_items)
-        if new_count > 250:
+        if new_count > 200:
             QMessageBox.warning(
                 self,
                 "Too Many Channels",
                 f"Cannot add {len(selected_items)} channels.\n"
-                f"Zone has {current_count} channels, maximum is 250."
+                f"Zone has {current_count} channels, maximum is 200."
             )
             return
 

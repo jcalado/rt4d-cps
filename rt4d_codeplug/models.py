@@ -217,9 +217,9 @@ class Zone:
         return not self.name or len(self.channels) == 0
 
     def add_channel(self, channel_index: int):
-        """Add a channel to this zone (max 250 channels)"""
-        if len(self.channels) >= 250:
-            raise ValueError("Zone can contain maximum 250 channels")
+        """Add a channel to this zone (max 200 channels)"""
+        if len(self.channels) >= 200:
+            raise ValueError("Zone can contain maximum 200 channels")
         if channel_index not in self.channels:
             self.channels.append(channel_index)
 

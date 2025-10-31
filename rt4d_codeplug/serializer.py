@@ -201,13 +201,13 @@ class CodeplugSerializer:
 
         # Channel list
         # First 2 bytes: channel count (uint16_le)
-        channel_count = min(len(zone.channels), 250)  # Max 250 channels
+        channel_count = min(len(zone.channels), 200)  # Max 200 channels
         data[0] = channel_count & 0xFF
         data[1] = (channel_count >> 8) & 0xFF
 
         # Channel indices start at offset 0x14 (20)
         # Each channel index is 2 bytes (uint16_le)
-        for i, channel_idx in enumerate(zone.channels[:250]):
+        for i, channel_idx in enumerate(zone.channels[:200]):
             offset = 0x14 + (i * 2)
             data[offset] = channel_idx & 0xFF
             data[offset + 1] = (channel_idx >> 8) & 0xFF
