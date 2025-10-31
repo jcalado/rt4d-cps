@@ -379,6 +379,9 @@ class ZoneWidget(QWidget):
         if not selected_items:
             return
 
+        # Find the row of the last selected item
+        last_selected_row = max(self.selected_list.row(item) for item in selected_items)
+
         for item in selected_items:
             channel_idx = item.data(Qt.UserRole)
             self.current_zone.remove_channel(channel_idx)
@@ -386,6 +389,15 @@ class ZoneWidget(QWidget):
         self.refresh_details()
         self.refresh_table()
         self.data_modified.emit()
+
+        # Select the next channel in the zone list, or previous if we removed the last one
+        if self.selected_list.count() > 0:
+            if last_selected_row < self.selected_list.count():
+                # Select the item now at the same position
+                self.selected_list.setCurrentRow(last_selected_row)
+            else:
+                # We removed the last item(s), select the new last item
+                self.selected_list.setCurrentRow(self.selected_list.count() - 1)
 
     def move_channel_up(self):
         """Move selected channel up in order"""
