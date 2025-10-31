@@ -350,6 +350,9 @@ class ZoneWidget(QWidget):
             )
             return
 
+        # Find the row of the last selected item to select the next one
+        last_selected_row = max(self.available_list.row(item) for item in selected_items)
+
         # Add channels
         for item in selected_items:
             channel_idx = item.data(Qt.UserRole)
@@ -358,6 +361,14 @@ class ZoneWidget(QWidget):
         self.refresh_details()
         self.refresh_table()
         self.data_modified.emit()
+
+        # Select the next available channel (if any)
+        next_row = last_selected_row
+        if next_row < self.available_list.count():
+            self.available_list.setCurrentRow(next_row)
+        elif self.available_list.count() > 0:
+            # If we were at the end, select the last remaining item
+            self.available_list.setCurrentRow(self.available_list.count() - 1)
 
     def remove_channels_from_zone(self):
         """Remove selected channels from zone"""
