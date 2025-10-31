@@ -140,14 +140,23 @@ class ZoneWidget(QWidget):
 
     def refresh_table(self):
         """Refresh zones table"""
+        # Save current selection
+        selected_zone_index = None
+        if self.current_zone:
+            selected_zone_index = self.current_zone.index
+
+        # Block signals to prevent selection change during rebuild
+        self.table.blockSignals(True)
         self.table.setRowCount(0)
 
         if not self.codeplug:
+            self.table.blockSignals(False)
             return
 
         # Sort zones by index
         zones = sorted(self.codeplug.zones, key=lambda z: z.index)
 
+        row_to_select = None
         for zone in zones:
             if zone.is_empty():
                 continue
@@ -167,6 +176,17 @@ class ZoneWidget(QWidget):
             # Channel count
             item = QTableWidgetItem(str(len(zone.channels)))
             self.table.setItem(row, 2, item)
+
+            # Track which row to reselect
+            if selected_zone_index is not None and zone.index == selected_zone_index:
+                row_to_select = row
+
+        # Restore signals
+        self.table.blockSignals(False)
+
+        # Restore selection if we had one
+        if row_to_select is not None:
+            self.table.selectRow(row_to_select)
 
     def refresh_details(self):
         """Refresh right panel details"""
