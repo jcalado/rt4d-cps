@@ -44,10 +44,10 @@ class ZoneWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["#", "Name", "Channels"])
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Resize columns
         header = self.table.horizontalHeader()
@@ -68,6 +68,14 @@ class ZoneWidget(QWidget):
         self.btn_delete = QPushButton("Delete")
         self.btn_delete.clicked.connect(self.delete_zone)
         button_layout.addWidget(self.btn_delete)
+
+        self.btn_move_zone_up = QPushButton("Move Up ↑")
+        self.btn_move_zone_up.clicked.connect(self.move_zone_up)
+        button_layout.addWidget(self.btn_move_zone_up)
+
+        self.btn_move_zone_down = QPushButton("Move Down ↓")
+        self.btn_move_zone_down.clicked.connect(self.move_zone_down)
+        button_layout.addWidget(self.btn_move_zone_down)
 
         button_layout.addStretch()
         left_layout.addLayout(button_layout)
@@ -328,6 +336,47 @@ class ZoneWidget(QWidget):
             self.refresh_table()
             self.refresh_details()
             self.data_modified.emit()
+
+    def move_zone_up(self):
+        """Move selected zone up in display order"""
+        if not self.codeplug or not self.current_zone:
+            return
+
+        current_row = self.table.currentRow()
+        if current_row <= 0:
+            return
+
+        # Get zones sorted by index
+        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+
+        # Swap zone indices
+        zones[current_row].index, zones[current_row - 1].index = \
+            zones[current_row - 1].index, zones[current_row].index
+
+        # Refresh and maintain selection
+        self.refresh_table()
+        self.table.selectRow(current_row - 1)
+        self.data_modified.emit()
+
+    def move_zone_down(self):
+        """Move selected zone down in display order"""
+        if not self.codeplug or not self.current_zone:
+            return
+
+        current_row = self.table.currentRow()
+        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+
+        if current_row < 0 or current_row >= len(zones) - 1:
+            return
+
+        # Swap zone indices
+        zones[current_row].index, zones[current_row + 1].index = \
+            zones[current_row + 1].index, zones[current_row].index
+
+        # Refresh and maintain selection
+        self.refresh_table()
+        self.table.selectRow(current_row + 1)
+        self.data_modified.emit()
 
     def add_channels_to_zone(self):
         """Add selected channels to zone"""
