@@ -248,7 +248,7 @@ class GroupListWidget(QWidget):
 
         # Find next available index
         existing_indices = [gl.index for gl in self.codeplug.group_lists]
-        next_index = 0
+        next_index = max(existing_indices, default=-1) + 1
         while next_index in existing_indices and next_index < 32:
             next_index += 1
 

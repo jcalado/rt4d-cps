@@ -135,7 +135,7 @@ class ContactWidget(QWidget):
             self.table.insertRow(row)
 
             # Index
-            item_index = QTableWidgetItem(str(contact.index))
+            item_index = QTableWidgetItem(str(contact.index + 1))
             item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
@@ -237,7 +237,7 @@ class ContactWidget(QWidget):
         # Find next available index
         from rt4d_codeplug.constants import MAX_CONTACTS
         existing_indices = [c.index for c in self.codeplug.contacts]
-        next_index = 0
+        next_index = max(existing_indices, default=-1) + 1
         while next_index in existing_indices and next_index < MAX_CONTACTS:
             next_index += 1
 
