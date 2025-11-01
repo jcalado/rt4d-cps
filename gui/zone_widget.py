@@ -44,10 +44,10 @@ class ZoneWidget(QWidget):
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["#", "Name", "Channels"])
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
         self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.verticalHeader().setVisible(False)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SingleSelection)
 
         # Resize columns
         header = self.table.horizontalHeader()
@@ -68,6 +68,14 @@ class ZoneWidget(QWidget):
         self.btn_delete = QPushButton("Delete")
         self.btn_delete.clicked.connect(self.delete_zone)
         button_layout.addWidget(self.btn_delete)
+
+        self.btn_move_zone_up = QPushButton("Move Up ↑")
+        self.btn_move_zone_up.clicked.connect(self.move_zone_up)
+        button_layout.addWidget(self.btn_move_zone_up)
+
+        self.btn_move_zone_down = QPushButton("Move Down ↓")
+        self.btn_move_zone_down.clicked.connect(self.move_zone_down)
+        button_layout.addWidget(self.btn_move_zone_down)
 
         button_layout.addStretch()
         left_layout.addLayout(button_layout)
@@ -140,14 +148,23 @@ class ZoneWidget(QWidget):
 
     def refresh_table(self):
         """Refresh zones table"""
+        # Save current selection
+        selected_zone_index = None
+        if self.current_zone:
+            selected_zone_index = self.current_zone.index
+
+        # Block signals to prevent selection change during rebuild
+        self.table.blockSignals(True)
         self.table.setRowCount(0)
 
         if not self.codeplug:
+            self.table.blockSignals(False)
             return
 
         # Sort zones by index
         zones = sorted(self.codeplug.zones, key=lambda z: z.index)
 
+        row_to_select = None
         for zone in zones:
             if zone.is_empty():
                 continue
@@ -167,6 +184,17 @@ class ZoneWidget(QWidget):
             # Channel count
             item = QTableWidgetItem(str(len(zone.channels)))
             self.table.setItem(row, 2, item)
+
+            # Track which row to reselect
+            if selected_zone_index is not None and zone.index == selected_zone_index:
+                row_to_select = row
+
+        # Restore signals
+        self.table.blockSignals(False)
+
+        # Restore selection if we had one
+        if row_to_select is not None:
+            self.table.selectRow(row_to_select)
 
     def refresh_details(self):
         """Refresh right panel details"""
@@ -309,6 +337,47 @@ class ZoneWidget(QWidget):
             self.refresh_details()
             self.data_modified.emit()
 
+    def move_zone_up(self):
+        """Move selected zone up in display order"""
+        if not self.codeplug or not self.current_zone:
+            return
+
+        current_row = self.table.currentRow()
+        if current_row <= 0:
+            return
+
+        # Get zones sorted by index
+        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+
+        # Swap zone indices
+        zones[current_row].index, zones[current_row - 1].index = \
+            zones[current_row - 1].index, zones[current_row].index
+
+        # Refresh and maintain selection
+        self.refresh_table()
+        self.table.selectRow(current_row - 1)
+        self.data_modified.emit()
+
+    def move_zone_down(self):
+        """Move selected zone down in display order"""
+        if not self.codeplug or not self.current_zone:
+            return
+
+        current_row = self.table.currentRow()
+        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+
+        if current_row < 0 or current_row >= len(zones) - 1:
+            return
+
+        # Swap zone indices
+        zones[current_row].index, zones[current_row + 1].index = \
+            zones[current_row + 1].index, zones[current_row].index
+
+        # Refresh and maintain selection
+        self.refresh_table()
+        self.table.selectRow(current_row + 1)
+        self.data_modified.emit()
+
     def add_channels_to_zone(self):
         """Add selected channels to zone"""
         if not self.current_zone:
@@ -318,17 +387,20 @@ class ZoneWidget(QWidget):
         if not selected_items:
             return
 
-        # Check if we'll exceed 250 channels
+        # Check if we'll exceed 200 channels
         current_count = len(self.current_zone.channels)
         new_count = current_count + len(selected_items)
-        if new_count > 250:
+        if new_count > 200:
             QMessageBox.warning(
                 self,
                 "Too Many Channels",
                 f"Cannot add {len(selected_items)} channels.\n"
-                f"Zone has {current_count} channels, maximum is 250."
+                f"Zone has {current_count} channels, maximum is 200."
             )
             return
+
+        # Find the row of the last selected item to select the next one
+        last_selected_row = max(self.available_list.row(item) for item in selected_items)
 
         # Add channels
         for item in selected_items:
@@ -339,6 +411,14 @@ class ZoneWidget(QWidget):
         self.refresh_table()
         self.data_modified.emit()
 
+        # Select the next available channel (if any)
+        next_row = last_selected_row
+        if next_row < self.available_list.count():
+            self.available_list.setCurrentRow(next_row)
+        elif self.available_list.count() > 0:
+            # If we were at the end, select the last remaining item
+            self.available_list.setCurrentRow(self.available_list.count() - 1)
+
     def remove_channels_from_zone(self):
         """Remove selected channels from zone"""
         if not self.current_zone:
@@ -348,6 +428,9 @@ class ZoneWidget(QWidget):
         if not selected_items:
             return
 
+        # Find the row of the last selected item
+        last_selected_row = max(self.selected_list.row(item) for item in selected_items)
+
         for item in selected_items:
             channel_idx = item.data(Qt.UserRole)
             self.current_zone.remove_channel(channel_idx)
@@ -355,6 +438,15 @@ class ZoneWidget(QWidget):
         self.refresh_details()
         self.refresh_table()
         self.data_modified.emit()
+
+        # Select the next channel in the zone list, or previous if we removed the last one
+        if self.selected_list.count() > 0:
+            if last_selected_row < self.selected_list.count():
+                # Select the item now at the same position
+                self.selected_list.setCurrentRow(last_selected_row)
+            else:
+                # We removed the last item(s), select the new last item
+                self.selected_list.setCurrentRow(self.selected_list.count() - 1)
 
     def move_channel_up(self):
         """Move selected channel up in order"""

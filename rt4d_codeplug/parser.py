@@ -312,7 +312,7 @@ class CodeplugParser:
 
             # Channel list starts at offset 0x14 (20)
             # Each channel is a 16-bit little-endian integer
-            for i in range(min(channel_count, 250)):  # Max 250 channels per zone
+            for i in range(min(channel_count, 200)):  # Max 200 channels per zone
                 offset = 0x14 + (i * 2)
                 if offset + 1 < len(zone_data):
                     channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)

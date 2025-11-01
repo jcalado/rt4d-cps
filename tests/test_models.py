@@ -33,13 +33,13 @@ def test_zone_channel_limits_and_uniqueness():
     zone.add_channel(4)
     assert zone.channels == [3, 4]
 
-    for idx in range(5, 253):
+    for idx in range(5, 203):
         zone.add_channel(idx)
 
-    assert len(zone.channels) == 250
+    assert len(zone.channels) == 200
 
     with pytest.raises(ValueError):
-        zone.add_channel(253)
+        zone.add_channel(203)
 
     empty_zone = Zone(index=2, name="")
     assert empty_zone.is_empty()
