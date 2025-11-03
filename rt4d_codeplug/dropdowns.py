@@ -401,7 +401,9 @@ NOAA_CHANNEL_VALUES = [
     ("10 (163.275 MHz)", 9),
 ]
 
-# Function key actions (40 options from CPS)
+# Function key actions - stores dropdown INDEX (0-39)
+# CPS MainForm.cs line 369: CBOX_KEY array with 120 items = 40 per language
+# CPS stores directly: bufCFG[170] = (byte)cboxFS1S.SelectedIndex (lines 5514-5525)
 FUNCTION_KEY_VALUES = [
     ("None", 0),
     ("Analog Monitor", 1),
