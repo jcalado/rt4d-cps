@@ -381,6 +381,26 @@ class RadioSettings:
     # Stored as list of strings, each up to 16 chars, valid characters: 0-9, A-D, *, #
     dtmf_codes: List[str] = field(default_factory=lambda: [""] * 20)
 
+    # DT Custom Firmware Settings (offset 0x380 = 896)
+    scan_speed_analog: int = 0  # Scan speed for analog channels (offset 896/0x380)
+    tx_backlight: int = 0  # TX backlight behavior (offset 897/0x381)
+    green_key_long: int = 0  # Long press code for green key (offset 898/0x382)
+    voltage_display: int = 0  # Display voltage on screen (offset 899/0x383)
+    live_sub_tone: int = 0  # Live sub-tone detection (offset 900/0x384)
+    spectrum_threshold: int = 0  # Spectrum scan squelch threshold (offset 901/0x385)
+    sub_tone_ptt: int = 0  # Enable PTT from DTMF list (offset 902/0x386)
+    tot_warning: int = 0  # TOT warning beep before timeout (offset 903/0x387)
+    scan_end: int = 0  # Scan end behavior (offset 904/0x388)
+    scan_continue: int = 0  # Scan continue mode (offset 905/0x389)
+    scan_return: int = 0  # Scan return behavior (offset 914/0x392)
+    vfo_a_offset: int = 0  # VFO A frequency offset in Hz (offset 915/0x393, 32-bit LE, stored as units of 10 Hz)
+    vfo_b_offset: int = 0  # VFO B frequency offset in Hz (offset 919/0x397, 32-bit LE, stored as units of 10 Hz)
+    callsign_lookup: int = 0  # Look up callsign in Call Log (offset 923/0x39B)
+    dmr_scan_speed: int = 0  # Scan speed for DMR channels (offset 924/0x39C)
+    ptt_lock: int = 0  # PTT lock feature (offset 925/0x39D)
+    zone_channel_display: int = 0  # Show Zone CH on display (offset 926/0x39E)
+    dmr_gid_name: int = 0  # Show DMR group name if available (offset 927/0x39F)
+
 
 @dataclass
 class Codeplug:

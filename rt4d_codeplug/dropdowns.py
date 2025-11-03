@@ -486,3 +486,118 @@ DTMF_PRESET_VALUES = [
     ("DTMF-09", 8), ("DTMF-10", 9), ("DTMF-11", 10), ("DTMF-12", 11),
     ("DTMF-13", 12), ("DTMF-14", 13), ("DTMF-15", 14), ("DTMF-16", 15),
 ]
+
+# === DT Custom Firmware Settings (offset 0x380) ===
+
+# Scan Speed for Analog channels (offset 0x380)
+# DT custom firmware: 4 values representing milliseconds
+SCAN_SPEED_ANALOG_VALUES = [
+    ("60 ms", 0),
+    ("100 ms", 1),
+    ("150 ms", 2),
+    ("200 ms", 3),
+]
+
+# TX Backlight (offset 0x381)
+TX_BACKLIGHT_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Green Key Long Press - same values as function keys (offset 0x382)
+GREEN_KEY_LONG_VALUES = FUNCTION_KEY_VALUES
+
+# Voltage Display (offset 0x383)
+VOLTAGE_DISPLAY_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Live Sub-tone Detection (offset 0x384)
+LIVE_SUB_TONE_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Spectrum Threshold (offset 0x385)
+# Level to open squelch - typically not shown in CPS per DT's notes
+SPECTRUM_THRESHOLD_VALUES = [
+    ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4),
+    ("5", 5), ("6", 6), ("7", 7), ("8", 8), ("9", 9),
+]
+
+# Sub-tone PTT (offset 0x386)
+# Enable pressing PTT from the DTMF list (e.g., EchoLink/Allstar)
+SUB_TONE_PTT_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# TOT Warning (offset 0x387)
+# Beep before TOT timeout
+TOT_WARNING_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Scan End behavior (offset 0x388)
+SCAN_END_VALUES = [
+    ("Continue", 0),
+    ("Stop", 1),
+]
+
+# Scan Continue mode (offset 0x389)
+# DT custom firmware: values from 0 to 31
+# Old style scanner modes (TO/CO/SE) are gone and configurable by other options
+SCAN_CONTINUE_VALUES = [
+    ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5),
+    ("6", 6), ("7", 7), ("8", 8), ("9", 9), ("10", 10),
+    ("11", 11), ("12", 12), ("13", 13), ("14", 14), ("15", 15),
+    ("16", 16), ("17", 17), ("18", 18), ("19", 19), ("20", 20),
+    ("21", 21), ("22", 22), ("23", 23), ("24", 24), ("25", 25),
+    ("26", 26), ("27", 27), ("28", 28), ("29", 29), ("30", 30),
+    ("31", 31),
+]
+
+# Scan Return (offset 0x392)
+SCAN_RETURN_CUSTOM_VALUES = [
+    ("Original CH", 0),
+    ("Current CH", 1),
+    ("Last Call CH", 2),
+]
+
+# Callsign Lookup (offset 0x39B)
+# Look up callsign and display in Call Log
+CALLSIGN_LOOKUP_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# DMR Scan Speed (offset 0x39C)
+DMR_SCAN_SPEED_VALUES = [
+    ("Fast", 0),
+    ("Medium", 1),
+    ("Slow", 2),
+]
+
+# PTT Lock (offset 0x39D)
+# DT custom firmware: 3 options
+PTT_LOCK_VALUES = [
+    ("Off", 0),
+    ("When Locked", 1),
+    ("Always", 2),
+]
+
+# Zone Channel Display (offset 0x39E)
+# Show "Zone CH" on display
+ZONE_CHANNEL_DISPLAY_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# DMR Group ID Name (offset 0x39F)
+# Show DMR group name if available
+DMR_GID_NAME_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]

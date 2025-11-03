@@ -26,6 +26,15 @@ from rt4d_codeplug.dropdowns import (
     REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
     NOAA_CHANNEL_VALUES
 )
+# Custom firmware settings
+from rt4d_codeplug.dropdowns import (
+    SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES, GREEN_KEY_LONG_VALUES,
+    VOLTAGE_DISPLAY_VALUES, LIVE_SUB_TONE_VALUES, SPECTRUM_THRESHOLD_VALUES,
+    SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
+    SCAN_CONTINUE_VALUES, SCAN_RETURN_CUSTOM_VALUES, CALLSIGN_LOOKUP_VALUES,
+    DMR_SCAN_SPEED_VALUES, PTT_LOCK_VALUES, ZONE_CHANNEL_DISPLAY_VALUES,
+    DMR_GID_NAME_VALUES
+)
 
 
 class SettingsDialog(QDialog):
@@ -474,25 +483,24 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
+    def _set_combo_value(self, combo, value):
+        """Helper method to set combo box to matching value"""
+        for i in range(combo.count()):
+            if combo.itemData(i) == value:
+                combo.setCurrentIndex(i)
+                break
+
     def load_settings(self):
         """Load settings into form"""
-        # Startup/Boot settings
-        for i in range(self.combo_startup_picture.count()):
-            if self.combo_startup_picture.itemData(i) == self.settings.startup_picture_enable:
-                self.combo_startup_picture.setCurrentIndex(i)
-                break
-        for i in range(self.combo_tx_protection.count()):
-            if self.combo_tx_protection.itemData(i) == self.settings.tx_protection:
-                self.combo_tx_protection.setCurrentIndex(i)
-                break
-        for i in range(self.combo_startup_beep.count()):
-            if self.combo_startup_beep.itemData(i) == self.settings.startup_beep_enable:
-                self.combo_startup_beep.setCurrentIndex(i)
-                break
-        for i in range(self.combo_startup_label.count()):
-            if self.combo_startup_label.itemData(i) == self.settings.startup_label_enable:
-                self.combo_startup_label.setCurrentIndex(i)
-                break
+        # Startup/Boot settings combo boxes
+        combo_settings = [
+            (self.combo_startup_picture, self.settings.startup_picture_enable),
+            (self.combo_tx_protection, self.settings.tx_protection),
+            (self.combo_startup_beep, self.settings.startup_beep_enable),
+            (self.combo_startup_label, self.settings.startup_label_enable),
+        ]
+        for combo, value in combo_settings:
+            self._set_combo_value(combo, value)
         self.spin_startup_line.setValue(self.settings.startup_display_line)
         self.spin_startup_column.setValue(self.settings.startup_display_column)
 
@@ -506,203 +514,164 @@ class SettingsDialog(QDialog):
         self.spin_clock_second.setValue(seconds)
 
         # Frequency lock ranges
-        for i in range(self.combo_freq_lock_1.count()):
-            if self.combo_freq_lock_1.itemData(i) == self.settings.freq_lock_1_mode:
-                self.combo_freq_lock_1.setCurrentIndex(i)
-                break
+        freq_lock_combos = [
+            (self.combo_freq_lock_1, self.settings.freq_lock_1_mode),
+            (self.combo_freq_lock_2, self.settings.freq_lock_2_mode),
+            (self.combo_freq_lock_3, self.settings.freq_lock_3_mode),
+            (self.combo_freq_lock_4, self.settings.freq_lock_4_mode),
+        ]
+        for combo, value in freq_lock_combos:
+            self._set_combo_value(combo, value)
         self.spin_freq_lock_1_start.setValue(self.settings.freq_lock_1_start)
         self.spin_freq_lock_1_end.setValue(self.settings.freq_lock_1_end)
-        for i in range(self.combo_freq_lock_2.count()):
-            if self.combo_freq_lock_2.itemData(i) == self.settings.freq_lock_2_mode:
-                self.combo_freq_lock_2.setCurrentIndex(i)
-                break
         self.spin_freq_lock_2_start.setValue(self.settings.freq_lock_2_start)
         self.spin_freq_lock_2_end.setValue(self.settings.freq_lock_2_end)
-        for i in range(self.combo_freq_lock_3.count()):
-            if self.combo_freq_lock_3.itemData(i) == self.settings.freq_lock_3_mode:
-                self.combo_freq_lock_3.setCurrentIndex(i)
-                break
         self.spin_freq_lock_3_start.setValue(self.settings.freq_lock_3_start)
         self.spin_freq_lock_3_end.setValue(self.settings.freq_lock_3_end)
-        for i in range(self.combo_freq_lock_4.count()):
-            if self.combo_freq_lock_4.itemData(i) == self.settings.freq_lock_4_mode:
-                self.combo_freq_lock_4.setCurrentIndex(i)
-                break
         self.spin_freq_lock_4_start.setValue(self.settings.freq_lock_4_start)
         self.spin_freq_lock_4_end.setValue(self.settings.freq_lock_4_end)
 
-        # Scan settings
-        for i in range(self.combo_scan_direction.count()):
-            if self.combo_scan_direction.itemData(i) == self.settings.scan_direction:
-                self.combo_scan_direction.setCurrentIndex(i)
-                break
-        for i in range(self.combo_scan_mode.count()):
-            if self.combo_scan_mode.itemData(i) == self.settings.scan_mode:
-                self.combo_scan_mode.setCurrentIndex(i)
-                break
-        for i in range(self.combo_scan_return.count()):
-            if self.combo_scan_return.itemData(i) == self.settings.scan_return:
-                self.combo_scan_return.setCurrentIndex(i)
-                break
-        for i in range(self.combo_scan_dwell.count()):
-            if self.combo_scan_dwell.itemData(i) == self.settings.scan_dwell:
-                self.combo_scan_dwell.setCurrentIndex(i)
-                break
+        # All other combo boxes
+        other_combos = [
+            # Scan settings
+            (self.combo_scan_direction, self.settings.scan_direction),
+            (self.combo_scan_mode, self.settings.scan_mode),
+            (self.combo_scan_return, self.settings.scan_return),
+            (self.combo_scan_dwell, self.settings.scan_dwell),
+            # Analog audio settings
+            (self.combo_squelch_level, self.settings.squelch_level),
+            (self.combo_tx_start_beep, self.settings.tx_start_beep),
+            (self.combo_roger_beep, self.settings.roger_beep),
+            # DMR audio settings
+            (self.combo_digital_squelch, self.settings.digital_squelch),
+            (self.combo_call_start_beep, self.settings.call_start_beep),
+            (self.combo_call_end_beep, self.settings.call_end_beep),
+            # Display settings
+            (self.combo_lcd_contrast, self.settings.lcd_contrast),
+            (self.combo_display_lines, self.settings.display_lines),
+            (self.combo_dual_display_mode, self.settings.dual_display_mode),
+            # DMR operation settings
+            (self.combo_remote_control, self.settings.remote_control),
+            (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
+            (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
+            (self.combo_group_id_display, self.settings.group_id_display),
+            (self.combo_call_timing_display, self.settings.call_timing_display),
+            # Advanced features
+            (self.combo_noaa_channel, self.settings.noaa_channel),
+            # Function keys
+            (self.combo_key_fs1_short, self.settings.key_fs1_short),
+            (self.combo_key_fs1_long, self.settings.key_fs1_long),
+            (self.combo_key_fs2_short, self.settings.key_fs2_short),
+            (self.combo_key_fs2_long, self.settings.key_fs2_long),
+            (self.combo_key_alarm_short, self.settings.key_alarm_short),
+            (self.combo_key_alarm_long, self.settings.key_alarm_long),
+            (self.combo_key_0, self.settings.key_0),
+            (self.combo_key_1, self.settings.key_1),
+            (self.combo_key_2, self.settings.key_2),
+            (self.combo_key_3, self.settings.key_3),
+            (self.combo_key_4, self.settings.key_4),
+            (self.combo_key_5, self.settings.key_5),
+            (self.combo_key_6, self.settings.key_6),
+            (self.combo_key_7, self.settings.key_7),
+            (self.combo_key_8, self.settings.key_8),
+            (self.combo_key_9, self.settings.key_9),
+        ]
+        for combo, value in other_combos:
+            self._set_combo_value(combo, value)
 
-        # Analog audio settings
-        for i in range(self.combo_squelch_level.count()):
-            if self.combo_squelch_level.itemData(i) == self.settings.squelch_level:
-                self.combo_squelch_level.setCurrentIndex(i)
-                break
+        # Spin boxes
         self.spin_tx_mic_gain.setValue(self.settings.tx_mic_gain)
         self.spin_rx_speaker_volume.setValue(self.settings.rx_speaker_volume)
-        for i in range(self.combo_tx_start_beep.count()):
-            if self.combo_tx_start_beep.itemData(i) == self.settings.tx_start_beep:
-                self.combo_tx_start_beep.setCurrentIndex(i)
-                break
-        for i in range(self.combo_roger_beep.count()):
-            if self.combo_roger_beep.itemData(i) == self.settings.roger_beep:
-                self.combo_roger_beep.setCurrentIndex(i)
-                break
         self.spin_tone_frequency.setValue(self.settings.tone_frequency)
-
-        # DMR audio settings
-        for i in range(self.combo_digital_squelch.count()):
-            if self.combo_digital_squelch.itemData(i) == self.settings.digital_squelch:
-                self.combo_digital_squelch.setCurrentIndex(i)
-                break
         self.spin_call_mic_gain.setValue(self.settings.call_mic_gain)
         self.spin_call_speaker_volume.setValue(self.settings.call_speaker_volume)
-        for i in range(self.combo_call_start_beep.count()):
-            if self.combo_call_start_beep.itemData(i) == self.settings.call_start_beep:
-                self.combo_call_start_beep.setCurrentIndex(i)
-                break
-        for i in range(self.combo_call_end_beep.count()):
-            if self.combo_call_end_beep.itemData(i) == self.settings.call_end_beep:
-                self.combo_call_end_beep.setCurrentIndex(i)
-                break
-
-        # Display settings
-        for i in range(self.combo_lcd_contrast.count()):
-            if self.combo_lcd_contrast.itemData(i) == self.settings.lcd_contrast:
-                self.combo_lcd_contrast.setCurrentIndex(i)
-                break
-        for i in range(self.combo_display_lines.count()):
-            if self.combo_display_lines.itemData(i) == self.settings.display_lines:
-                self.combo_display_lines.setCurrentIndex(i)
-                break
-        for i in range(self.combo_dual_display_mode.count()):
-            if self.combo_dual_display_mode.itemData(i) == self.settings.dual_display_mode:
-                self.combo_dual_display_mode.setCurrentIndex(i)
-                break
-
-        # DMR operation settings
-        for i in range(self.combo_remote_control.count()):
-            if self.combo_remote_control.itemData(i) == self.settings.remote_control:
-                self.combo_remote_control.setCurrentIndex(i)
-                break
-        for i in range(self.combo_group_call_hang_time.count()):
-            if self.combo_group_call_hang_time.itemData(i) == self.settings.group_call_hang_time:
-                self.combo_group_call_hang_time.setCurrentIndex(i)
-                break
-        for i in range(self.combo_private_call_hang_time.count()):
-            if self.combo_private_call_hang_time.itemData(i) == self.settings.private_call_hang_time:
-                self.combo_private_call_hang_time.setCurrentIndex(i)
-                break
-        for i in range(self.combo_group_id_display.count()):
-            if self.combo_group_id_display.itemData(i) == self.settings.group_id_display:
-                self.combo_group_id_display.setCurrentIndex(i)
-                break
-        for i in range(self.combo_call_timing_display.count()):
-            if self.combo_call_timing_display.itemData(i) == self.settings.call_timing_display:
-                self.combo_call_timing_display.setCurrentIndex(i)
-                break
-
-        # Advanced features
-        for i in range(self.combo_noaa_channel.count()):
-            if self.combo_noaa_channel.itemData(i) == self.settings.noaa_channel:
-                self.combo_noaa_channel.setCurrentIndex(i)
-                break
         self.spin_spectrum_scan_mode.setValue(self.settings.spectrum_scan_mode)
         self.spin_detection_range.setValue(self.settings.detection_range)
         self.spin_relay_delay.setValue(self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
-        # Function keys
-        for i in range(self.combo_key_fs1_short.count()):
-            if self.combo_key_fs1_short.itemData(i) == self.settings.key_fs1_short:
-                self.combo_key_fs1_short.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_fs1_long.count()):
-            if self.combo_key_fs1_long.itemData(i) == self.settings.key_fs1_long:
-                self.combo_key_fs1_long.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_fs2_short.count()):
-            if self.combo_key_fs2_short.itemData(i) == self.settings.key_fs2_short:
-                self.combo_key_fs2_short.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_fs2_long.count()):
-            if self.combo_key_fs2_long.itemData(i) == self.settings.key_fs2_long:
-                self.combo_key_fs2_long.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_alarm_short.count()):
-            if self.combo_key_alarm_short.itemData(i) == self.settings.key_alarm_short:
-                self.combo_key_alarm_short.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_alarm_long.count()):
-            if self.combo_key_alarm_long.itemData(i) == self.settings.key_alarm_long:
-                self.combo_key_alarm_long.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_0.count()):
-            if self.combo_key_0.itemData(i) == self.settings.key_0:
-                self.combo_key_0.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_1.count()):
-            if self.combo_key_1.itemData(i) == self.settings.key_1:
-                self.combo_key_1.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_2.count()):
-            if self.combo_key_2.itemData(i) == self.settings.key_2:
-                self.combo_key_2.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_3.count()):
-            if self.combo_key_3.itemData(i) == self.settings.key_3:
-                self.combo_key_3.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_4.count()):
-            if self.combo_key_4.itemData(i) == self.settings.key_4:
-                self.combo_key_4.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_5.count()):
-            if self.combo_key_5.itemData(i) == self.settings.key_5:
-                self.combo_key_5.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_6.count()):
-            if self.combo_key_6.itemData(i) == self.settings.key_6:
-                self.combo_key_6.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_7.count()):
-            if self.combo_key_7.itemData(i) == self.settings.key_7:
-                self.combo_key_7.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_8.count()):
-            if self.combo_key_8.itemData(i) == self.settings.key_8:
-                self.combo_key_8.setCurrentIndex(i)
-                break
-        for i in range(self.combo_key_9.count()):
-            if self.combo_key_9.itemData(i) == self.settings.key_9:
-                self.combo_key_9.setCurrentIndex(i)
-                break
-
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
-        # Startup/Boot settings
-        self.settings.startup_picture_enable = self.combo_startup_picture.currentData()
-        self.settings.tx_protection = self.combo_tx_protection.currentData()
-        self.settings.startup_beep_enable = self.combo_startup_beep.currentData()
-        self.settings.startup_label_enable = self.combo_startup_label.currentData()
+        # List of (attribute_name, combo_box/spin_box) pairs
+        combo_mappings = [
+            # Startup/Boot settings
+            ('startup_picture_enable', self.combo_startup_picture),
+            ('tx_protection', self.combo_tx_protection),
+            ('startup_beep_enable', self.combo_startup_beep),
+            ('startup_label_enable', self.combo_startup_label),
+            # Frequency lock ranges
+            ('freq_lock_1_mode', self.combo_freq_lock_1),
+            ('freq_lock_2_mode', self.combo_freq_lock_2),
+            ('freq_lock_3_mode', self.combo_freq_lock_3),
+            ('freq_lock_4_mode', self.combo_freq_lock_4),
+            # Scan settings
+            ('scan_direction', self.combo_scan_direction),
+            ('scan_mode', self.combo_scan_mode),
+            ('scan_return', self.combo_scan_return),
+            ('scan_dwell', self.combo_scan_dwell),
+            # Analog audio settings
+            ('squelch_level', self.combo_squelch_level),
+            ('tx_start_beep', self.combo_tx_start_beep),
+            ('roger_beep', self.combo_roger_beep),
+            # DMR audio settings
+            ('digital_squelch', self.combo_digital_squelch),
+            ('call_start_beep', self.combo_call_start_beep),
+            ('call_end_beep', self.combo_call_end_beep),
+            # Display settings
+            ('lcd_contrast', self.combo_lcd_contrast),
+            ('display_lines', self.combo_display_lines),
+            ('dual_display_mode', self.combo_dual_display_mode),
+            # DMR operation settings
+            ('remote_control', self.combo_remote_control),
+            ('group_call_hang_time', self.combo_group_call_hang_time),
+            ('private_call_hang_time', self.combo_private_call_hang_time),
+            ('group_id_display', self.combo_group_id_display),
+            ('call_timing_display', self.combo_call_timing_display),
+            # Advanced features
+            ('noaa_channel', self.combo_noaa_channel),
+            # Function keys
+            ('key_fs1_short', self.combo_key_fs1_short),
+            ('key_fs1_long', self.combo_key_fs1_long),
+            ('key_fs2_short', self.combo_key_fs2_short),
+            ('key_fs2_long', self.combo_key_fs2_long),
+            ('key_alarm_short', self.combo_key_alarm_short),
+            ('key_alarm_long', self.combo_key_alarm_long),
+            ('key_0', self.combo_key_0),
+            ('key_1', self.combo_key_1),
+            ('key_2', self.combo_key_2),
+            ('key_3', self.combo_key_3),
+            ('key_4', self.combo_key_4),
+            ('key_5', self.combo_key_5),
+            ('key_6', self.combo_key_6),
+            ('key_7', self.combo_key_7),
+            ('key_8', self.combo_key_8),
+            ('key_9', self.combo_key_9),
+        ]
+
+        # Save all combo box values
+        for attr_name, combo in combo_mappings:
+            setattr(self.settings, attr_name, combo.currentData())
+
+        # Spin boxes
         self.settings.startup_display_line = self.spin_startup_line.value()
         self.settings.startup_display_column = self.spin_startup_column.value()
+        self.settings.freq_lock_1_start = self.spin_freq_lock_1_start.value()
+        self.settings.freq_lock_1_end = self.spin_freq_lock_1_end.value()
+        self.settings.freq_lock_2_start = self.spin_freq_lock_2_start.value()
+        self.settings.freq_lock_2_end = self.spin_freq_lock_2_end.value()
+        self.settings.freq_lock_3_start = self.spin_freq_lock_3_start.value()
+        self.settings.freq_lock_3_end = self.spin_freq_lock_3_end.value()
+        self.settings.freq_lock_4_start = self.spin_freq_lock_4_start.value()
+        self.settings.freq_lock_4_end = self.spin_freq_lock_4_end.value()
+        self.settings.tx_mic_gain = self.spin_tx_mic_gain.value()
+        self.settings.rx_speaker_volume = self.spin_rx_speaker_volume.value()
+        self.settings.tone_frequency = self.spin_tone_frequency.value()
+        self.settings.call_mic_gain = self.spin_call_mic_gain.value()
+        self.settings.call_speaker_volume = self.spin_call_speaker_volume.value()
+        self.settings.spectrum_scan_mode = self.spin_spectrum_scan_mode.value()
+        self.settings.detection_range = self.spin_detection_range.value()
+        self.settings.relay_delay = self.spin_relay_delay.value()
+        self.settings.glitch_filter = self.spin_glitch_filter.value()
 
         # Radio clock - convert hour/minute/second to total seconds
         hours = self.spin_clock_hour.value()
@@ -710,77 +679,288 @@ class SettingsDialog(QDialog):
         seconds = self.spin_clock_second.value()
         self.settings.radio_time_seconds = hours * 3600 + minutes * 60 + seconds
 
-        # Frequency lock ranges
-        self.settings.freq_lock_1_mode = self.combo_freq_lock_1.currentData()
-        self.settings.freq_lock_1_start = self.spin_freq_lock_1_start.value()
-        self.settings.freq_lock_1_end = self.spin_freq_lock_1_end.value()
-        self.settings.freq_lock_2_mode = self.combo_freq_lock_2.currentData()
-        self.settings.freq_lock_2_start = self.spin_freq_lock_2_start.value()
-        self.settings.freq_lock_2_end = self.spin_freq_lock_2_end.value()
-        self.settings.freq_lock_3_mode = self.combo_freq_lock_3.currentData()
-        self.settings.freq_lock_3_start = self.spin_freq_lock_3_start.value()
-        self.settings.freq_lock_3_end = self.spin_freq_lock_3_end.value()
-        self.settings.freq_lock_4_mode = self.combo_freq_lock_4.currentData()
-        self.settings.freq_lock_4_start = self.spin_freq_lock_4_start.value()
-        self.settings.freq_lock_4_end = self.spin_freq_lock_4_end.value()
+        return self.settings
 
-        # Scan settings
-        self.settings.scan_direction = self.combo_scan_direction.currentData()
-        self.settings.scan_mode = self.combo_scan_mode.currentData()
-        self.settings.scan_return = self.combo_scan_return.currentData()
-        self.settings.scan_dwell = self.combo_scan_dwell.currentData()
+    def accept(self):
+        """Accept and save settings"""
+        self.save_settings()
+        super().accept()
 
-        # Analog audio settings
-        self.settings.squelch_level = self.combo_squelch_level.currentData()
-        self.settings.tx_mic_gain = self.spin_tx_mic_gain.value()
-        self.settings.rx_speaker_volume = self.spin_rx_speaker_volume.value()
-        self.settings.tx_start_beep = self.combo_tx_start_beep.currentData()
-        self.settings.roger_beep = self.combo_roger_beep.currentData()
-        self.settings.tone_frequency = self.spin_tone_frequency.value()
 
-        # DMR audio settings
-        self.settings.digital_squelch = self.combo_digital_squelch.currentData()
-        self.settings.call_mic_gain = self.spin_call_mic_gain.value()
-        self.settings.call_speaker_volume = self.spin_call_speaker_volume.value()
-        self.settings.call_start_beep = self.combo_call_start_beep.currentData()
-        self.settings.call_end_beep = self.combo_call_end_beep.currentData()
+class CustomFirmwareDialog(QDialog):
+    """Dialog for editing DT custom firmware settings"""
 
-        # Display settings
-        self.settings.lcd_contrast = self.combo_lcd_contrast.currentData()
-        self.settings.display_lines = self.combo_display_lines.currentData()
-        self.settings.dual_display_mode = self.combo_dual_display_mode.currentData()
+    def __init__(self, settings: Optional[RadioSettings], parent=None):
+        super().__init__(parent)
+        self.settings = settings or RadioSettings()
+        self.init_ui()
+        self.load_settings()
 
-        # DMR operation settings
-        self.settings.remote_control = self.combo_remote_control.currentData()
-        self.settings.group_call_hang_time = self.combo_group_call_hang_time.currentData()
-        self.settings.private_call_hang_time = self.combo_private_call_hang_time.currentData()
-        self.settings.group_id_display = self.combo_group_id_display.currentData()
-        self.settings.call_timing_display = self.combo_call_timing_display.currentData()
+    def init_ui(self):
+        """Initialize UI"""
+        self.setWindowTitle("DT Custom Firmware Settings")
+        self.setModal(True)
+        self.setMinimumWidth(500)
+        self.setMinimumHeight(600)
 
-        # Advanced features
-        self.settings.noaa_channel = self.combo_noaa_channel.currentData()
-        self.settings.spectrum_scan_mode = self.spin_spectrum_scan_mode.value()
-        self.settings.detection_range = self.spin_detection_range.value()
-        self.settings.relay_delay = self.spin_relay_delay.value()
-        self.settings.glitch_filter = self.spin_glitch_filter.value()
+        main_layout = QVBoxLayout()
+        self.setLayout(main_layout)
 
-        # Function keys
-        self.settings.key_fs1_short = self.combo_key_fs1_short.currentData()
-        self.settings.key_fs1_long = self.combo_key_fs1_long.currentData()
-        self.settings.key_fs2_short = self.combo_key_fs2_short.currentData()
-        self.settings.key_fs2_long = self.combo_key_fs2_long.currentData()
-        self.settings.key_alarm_short = self.combo_key_alarm_short.currentData()
-        self.settings.key_alarm_long = self.combo_key_alarm_long.currentData()
-        self.settings.key_0 = self.combo_key_0.currentData()
-        self.settings.key_1 = self.combo_key_1.currentData()
-        self.settings.key_2 = self.combo_key_2.currentData()
-        self.settings.key_3 = self.combo_key_3.currentData()
-        self.settings.key_4 = self.combo_key_4.currentData()
-        self.settings.key_5 = self.combo_key_5.currentData()
-        self.settings.key_6 = self.combo_key_6.currentData()
-        self.settings.key_7 = self.combo_key_7.currentData()
-        self.settings.key_8 = self.combo_key_8.currentData()
-        self.settings.key_9 = self.combo_key_9.currentData()
+        # Warning/Info label
+        info_label = QLabel(
+            "<b>DualTachyon Custom Firmware Settings</b><br/><br/>"
+            "<i>These settings are only available with DualTachyon's custom firmware. "
+            "If you are using stock firmware, these values will be ignored by the radio.</i>"
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("QLabel { background-color: #fff3cd; color: #856404; border: 1px solid #ffc107; padding: 10px; border-radius: 4px; }")
+        main_layout.addWidget(info_label)
+
+        # Scroll area for settings
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll_widget = QWidget()
+        scroll_layout = QVBoxLayout()
+        scroll_widget.setLayout(scroll_layout)
+        scroll.setWidget(scroll_widget)
+        main_layout.addWidget(scroll)
+
+        # Scan Settings section
+        scan_group = QGroupBox("Scan Settings")
+        scan_layout = QFormLayout()
+
+        self.combo_scan_speed_analog = QComboBox()
+        for label, value in SCAN_SPEED_ANALOG_VALUES:
+            self.combo_scan_speed_analog.addItem(label, value)
+        scan_layout.addRow("Analog Scan Speed:", self.combo_scan_speed_analog)
+
+        self.combo_dmr_scan_speed = QComboBox()
+        for label, value in DMR_SCAN_SPEED_VALUES:
+            self.combo_dmr_scan_speed.addItem(label, value)
+        scan_layout.addRow("DMR Scan Speed:", self.combo_dmr_scan_speed)
+
+        self.combo_scan_end = QComboBox()
+        for label, value in SCAN_END_VALUES:
+            self.combo_scan_end.addItem(label, value)
+        scan_layout.addRow("Scan End:", self.combo_scan_end)
+
+        self.combo_scan_continue = QComboBox()
+        for label, value in SCAN_CONTINUE_VALUES:
+            self.combo_scan_continue.addItem(label, value)
+        scan_layout.addRow("Scan Continue:", self.combo_scan_continue)
+
+        self.combo_scan_return_custom = QComboBox()
+        for label, value in SCAN_RETURN_CUSTOM_VALUES:
+            self.combo_scan_return_custom.addItem(label, value)
+        scan_layout.addRow("Scan Return:", self.combo_scan_return_custom)
+
+        scan_group.setLayout(scan_layout)
+        scroll_layout.addWidget(scan_group)
+
+        # Display Settings section
+        display_group = QGroupBox("Display Settings")
+        display_layout = QFormLayout()
+
+        self.combo_tx_backlight = QComboBox()
+        for label, value in TX_BACKLIGHT_VALUES:
+            self.combo_tx_backlight.addItem(label, value)
+        display_layout.addRow("TX Backlight:", self.combo_tx_backlight)
+
+        self.combo_voltage_display = QComboBox()
+        for label, value in VOLTAGE_DISPLAY_VALUES:
+            self.combo_voltage_display.addItem(label, value)
+        display_layout.addRow("Voltage Display:", self.combo_voltage_display)
+
+        self.combo_zone_channel_display = QComboBox()
+        for label, value in ZONE_CHANNEL_DISPLAY_VALUES:
+            self.combo_zone_channel_display.addItem(label, value)
+        display_layout.addRow("Show Zone CH:", self.combo_zone_channel_display)
+
+        display_group.setLayout(display_layout)
+        scroll_layout.addWidget(display_group)
+
+        # Audio & Tone Settings section
+        audio_group = QGroupBox("Audio & Tone Settings")
+        audio_layout = QFormLayout()
+
+        self.combo_live_sub_tone = QComboBox()
+        for label, value in LIVE_SUB_TONE_VALUES:
+            self.combo_live_sub_tone.addItem(label, value)
+        audio_layout.addRow("Live Sub-tone:", self.combo_live_sub_tone)
+
+        self.combo_tot_warning = QComboBox()
+        for label, value in TOT_WARNING_VALUES:
+            self.combo_tot_warning.addItem(label, value)
+        audio_layout.addRow("TOT Warning Beep:", self.combo_tot_warning)
+
+        audio_group.setLayout(audio_layout)
+        scroll_layout.addWidget(audio_group)
+
+        # Function Keys section
+        keys_group = QGroupBox("Function Keys")
+        keys_layout = QFormLayout()
+
+        self.combo_green_key_long = QComboBox()
+        for label, value in GREEN_KEY_LONG_VALUES:
+            self.combo_green_key_long.addItem(label, value)
+        keys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
+
+        keys_group.setLayout(keys_layout)
+        scroll_layout.addWidget(keys_group)
+
+        # PTT & DTMF Settings section
+        ptt_group = QGroupBox("PTT & DTMF Settings")
+        ptt_layout = QFormLayout()
+
+        self.combo_sub_tone_ptt = QComboBox()
+        for label, value in SUB_TONE_PTT_VALUES:
+            self.combo_sub_tone_ptt.addItem(label, value)
+        ptt_layout.addRow("Sub-tone PTT:", self.combo_sub_tone_ptt)
+
+        self.combo_ptt_lock = QComboBox()
+        for label, value in PTT_LOCK_VALUES:
+            self.combo_ptt_lock.addItem(label, value)
+        ptt_layout.addRow("PTT Lock:", self.combo_ptt_lock)
+
+        ptt_group.setLayout(ptt_layout)
+        scroll_layout.addWidget(ptt_group)
+
+        # DMR Settings section
+        dmr_group = QGroupBox("DMR Settings")
+        dmr_layout = QFormLayout()
+
+        self.combo_dmr_gid_name = QComboBox()
+        for label, value in DMR_GID_NAME_VALUES:
+            self.combo_dmr_gid_name.addItem(label, value)
+        dmr_layout.addRow("Show DMR Group Name:", self.combo_dmr_gid_name)
+
+        self.combo_callsign_lookup = QComboBox()
+        for label, value in CALLSIGN_LOOKUP_VALUES:
+            self.combo_callsign_lookup.addItem(label, value)
+        dmr_layout.addRow("Callsign Lookup:", self.combo_callsign_lookup)
+
+        dmr_group.setLayout(dmr_layout)
+        scroll_layout.addWidget(dmr_group)
+
+        # Advanced Settings section
+        advanced_group = QGroupBox("Advanced Settings")
+        advanced_layout = QFormLayout()
+
+        self.combo_spectrum_threshold = QComboBox()
+        for label, value in SPECTRUM_THRESHOLD_VALUES:
+            self.combo_spectrum_threshold.addItem(label, value)
+        advanced_layout.addRow("Spectrum Threshold:", self.combo_spectrum_threshold)
+
+        # VFO offsets (frequency offsets in Hz)
+        self.spin_vfo_a_offset = QSpinBox()
+        self.spin_vfo_a_offset.setRange(-100000000, 100000000)
+        self.spin_vfo_a_offset.setSuffix(" Hz")
+        advanced_layout.addRow("VFO A Offset:", self.spin_vfo_a_offset)
+
+        self.spin_vfo_b_offset = QSpinBox()
+        self.spin_vfo_b_offset.setRange(-100000000, 100000000)
+        self.spin_vfo_b_offset.setSuffix(" Hz")
+        advanced_layout.addRow("VFO B Offset:", self.spin_vfo_b_offset)
+
+        advanced_group.setLayout(advanced_layout)
+        scroll_layout.addWidget(advanced_group)
+
+        scroll_layout.addStretch()
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        btn_ok = QPushButton("OK")
+        btn_ok.clicked.connect(self.accept)
+        button_layout.addWidget(btn_ok)
+
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.clicked.connect(self.reject)
+        button_layout.addWidget(btn_cancel)
+
+        main_layout.addLayout(button_layout)
+
+    def _set_combo_value(self, combo, value):
+        """Helper method to set combo box to matching value"""
+        for i in range(combo.count()):
+            if combo.itemData(i) == value:
+                combo.setCurrentIndex(i)
+                break
+
+    def load_settings(self):
+        """Load settings into form"""
+        # List of (combo_box, settings_value) pairs
+        combo_settings = [
+            # Scan settings
+            (self.combo_scan_speed_analog, self.settings.scan_speed_analog),
+            (self.combo_dmr_scan_speed, self.settings.dmr_scan_speed),
+            (self.combo_scan_end, self.settings.scan_end),
+            (self.combo_scan_continue, self.settings.scan_continue),
+            (self.combo_scan_return_custom, self.settings.scan_return),
+            # Display settings
+            (self.combo_tx_backlight, self.settings.tx_backlight),
+            (self.combo_voltage_display, self.settings.voltage_display),
+            (self.combo_zone_channel_display, self.settings.zone_channel_display),
+            # Audio settings
+            (self.combo_live_sub_tone, self.settings.live_sub_tone),
+            (self.combo_tot_warning, self.settings.tot_warning),
+            # Function keys
+            (self.combo_green_key_long, self.settings.green_key_long),
+            # PTT settings
+            (self.combo_sub_tone_ptt, self.settings.sub_tone_ptt),
+            (self.combo_ptt_lock, self.settings.ptt_lock),
+            # DMR settings
+            (self.combo_dmr_gid_name, self.settings.dmr_gid_name),
+            (self.combo_callsign_lookup, self.settings.callsign_lookup),
+            # Advanced settings
+            (self.combo_spectrum_threshold, self.settings.spectrum_threshold),
+        ]
+
+        # Set all combo boxes
+        for combo, value in combo_settings:
+            self._set_combo_value(combo, value)
+
+        # Spin boxes (non-combo settings)
+        self.spin_vfo_a_offset.setValue(self.settings.vfo_a_offset)
+        self.spin_vfo_b_offset.setValue(self.settings.vfo_b_offset)
+
+    def save_settings(self) -> RadioSettings:
+        """Save form data to settings"""
+        # List of (attribute_name, combo_box) pairs for combo boxes
+        combo_mappings = [
+            # Scan settings
+            ('scan_speed_analog', self.combo_scan_speed_analog),
+            ('dmr_scan_speed', self.combo_dmr_scan_speed),
+            ('scan_end', self.combo_scan_end),
+            ('scan_continue', self.combo_scan_continue),
+            ('scan_return', self.combo_scan_return_custom),
+            # Display settings
+            ('tx_backlight', self.combo_tx_backlight),
+            ('voltage_display', self.combo_voltage_display),
+            ('zone_channel_display', self.combo_zone_channel_display),
+            # Audio settings
+            ('live_sub_tone', self.combo_live_sub_tone),
+            ('tot_warning', self.combo_tot_warning),
+            # Function keys
+            ('green_key_long', self.combo_green_key_long),
+            # PTT settings
+            ('sub_tone_ptt', self.combo_sub_tone_ptt),
+            ('ptt_lock', self.combo_ptt_lock),
+            # DMR settings
+            ('dmr_gid_name', self.combo_dmr_gid_name),
+            ('callsign_lookup', self.combo_callsign_lookup),
+            # Advanced settings
+            ('spectrum_threshold', self.combo_spectrum_threshold),
+        ]
+
+        # Save all combo box values
+        for attr_name, combo in combo_mappings:
+            setattr(self.settings, attr_name, combo.currentData())
+
+        # Spin boxes (non-combo settings)
+        self.settings.vfo_a_offset = self.spin_vfo_a_offset.value()
+        self.settings.vfo_b_offset = self.spin_vfo_b_offset.value()
 
         return self.settings
 
@@ -820,6 +1000,13 @@ class SettingsWidget(QWidget):
         self.btn_edit_advanced.clicked.connect(self.open_settings_dialog)
         self.btn_edit_advanced.setStyleSheet("QPushButton { font-weight: bold; padding: 8px; }")
         button_layout_top.addWidget(self.btn_edit_advanced)
+
+        self.btn_edit_custom_fw = QPushButton(" Custom Firmware Settings...")
+        self.btn_edit_custom_fw.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
+        self.btn_edit_custom_fw.setToolTip("Open DualTachyon custom firmware settings (only applies if using DT's custom firmware)")
+        self.btn_edit_custom_fw.clicked.connect(self.open_custom_fw_dialog)
+        self.btn_edit_custom_fw.setStyleSheet("QPushButton { font-weight: bold; padding: 8px; }")
+        button_layout_top.addWidget(self.btn_edit_custom_fw)
 
         button_layout_top.addStretch()
         main_layout.addLayout(button_layout_top)
@@ -1203,6 +1390,17 @@ class SettingsWidget(QWidget):
             # Settings were modified in the dialog
             # Reload the widget to reflect any changes
             self.load_settings(self.settings)
+
+    def open_custom_fw_dialog(self):
+        """Open the custom firmware settings dialog"""
+        if not self.settings:
+            return
+
+        # Create and show custom firmware settings dialog
+        dialog = CustomFirmwareDialog(self.settings, self)
+        if dialog.exec() == QDialog.Accepted:
+            # Settings were modified in the dialog
+            # Emit data modified signal
             self.data_modified.emit()
 
     def set_enabled(self, enabled: bool):
@@ -1253,6 +1451,7 @@ class SettingsWidget(QWidget):
         self.combo_startup_picture_widget.setEnabled(enabled)
         self.combo_tx_protection_widget.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
+        self.btn_edit_custom_fw.setEnabled(enabled)
 
     def load_settings(self, settings: Optional[RadioSettings]):
         """Load settings"""
