@@ -401,8 +401,9 @@ NOAA_CHANNEL_VALUES = [
     ("10 (163.275 MHz)", 9),
 ]
 
-# Function key actions - stores dropdown INDEX (0-39)
-# CPS MainForm.cs line 369: CBOX_KEY array with 120 items = 40 per language
+# Function key actions - stores dropdown INDEX (0-44)
+# CPS MainForm.cs line 369: CBOX_KEY array with 120 items = 40 per language (stock firmware)
+# Custom firmware extends this to 45 function types (indices 40-44)
 # CPS stores directly: bufCFG[170] = (byte)cboxFS1S.SelectedIndex (lines 5514-5525)
 FUNCTION_KEY_VALUES = [
     ("None", 0),
@@ -445,6 +446,12 @@ FUNCTION_KEY_VALUES = [
     ("Color Code Switch", 37),
     ("DMR Encrypt On/Off", 38),
     ("RX Group List Selection", 39),
+    # --- Custom Firmware Extensions (requires custom firmware) ---
+    ("Address Book (Custom FW)", 40),          # Custom FW only
+    ("Contacts List (Custom FW)", 41),         # Custom FW only
+    ("Next Zone (Custom FW)", 42),             # Custom FW only
+    ("Send DTMF (Custom FW)", 43),             # Custom FW only
+    ("Freq Monitor (Custom FW)", 44),          # Custom FW only
 ]
 
 # DTMF Send Delay (offset 512)
