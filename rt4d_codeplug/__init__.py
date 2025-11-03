@@ -3,7 +3,7 @@
 A Python library and GUI for parsing, editing, and flashing RT-4D radio codeplug files.
 """
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 from .models import (
     Channel, Contact, GroupList, Zone, Codeplug, RadioSettings,
