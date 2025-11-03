@@ -505,13 +505,13 @@ class CodeplugSerializer:
         # VFO offsets are 32-bit little-endian integers (convert signed to unsigned)
         # Stored in units of 10 Hz, so divide by 10 before storing
         vfo_a_offset = settings.vfo_a_offset // 10  # Convert Hz to storage units
-        vfo_a_offset = vfo_a_offset if vfo_a_offset >= 0 else 0x100000000 + vfo_a_offset
+        vfo_a_offset &= 0xFFFFFFFF
         data[915] = vfo_a_offset & 0xFF
         data[916] = (vfo_a_offset >> 8) & 0xFF
         data[917] = (vfo_a_offset >> 16) & 0xFF
         data[918] = (vfo_a_offset >> 24) & 0xFF
         vfo_b_offset = settings.vfo_b_offset // 10  # Convert Hz to storage units
-        vfo_b_offset = vfo_b_offset if vfo_b_offset >= 0 else 0x100000000 + vfo_b_offset
+        vfo_b_offset &= 0xFFFFFFFF
         data[919] = vfo_b_offset & 0xFF
         data[920] = (vfo_b_offset >> 8) & 0xFF
         data[921] = (vfo_b_offset >> 16) & 0xFF
