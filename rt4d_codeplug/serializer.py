@@ -490,6 +490,33 @@ class CodeplugSerializer:
             code = settings.dtmf_codes[i] if i < len(settings.dtmf_codes) else ""
             data[offset:offset+16] = encode_gbk(code, 16)
 
+        # DT Custom Firmware Settings (offset 0x380 = 896)
+        data[896] = settings.scan_speed_analog & 0xFF
+        data[897] = settings.tx_backlight & 0xFF
+        data[898] = settings.green_key_long & 0xFF
+        data[899] = settings.voltage_display & 0xFF
+        data[900] = settings.live_sub_tone & 0xFF
+        data[901] = settings.spectrum_threshold & 0xFF
+        data[902] = settings.sub_tone_ptt & 0xFF
+        data[903] = settings.tot_warning & 0xFF
+        data[904] = settings.scan_end & 0xFF
+        data[905] = settings.scan_continue & 0xFF
+        data[914] = settings.scan_return & 0xFF
+        # VFO offsets are 32-bit little-endian integers
+        data[915] = settings.vfo_a_offset & 0xFF
+        data[916] = (settings.vfo_a_offset >> 8) & 0xFF
+        data[917] = (settings.vfo_a_offset >> 16) & 0xFF
+        data[918] = (settings.vfo_a_offset >> 24) & 0xFF
+        data[919] = settings.vfo_b_offset & 0xFF
+        data[920] = (settings.vfo_b_offset >> 8) & 0xFF
+        data[921] = (settings.vfo_b_offset >> 16) & 0xFF
+        data[922] = (settings.vfo_b_offset >> 24) & 0xFF
+        data[923] = settings.callsign_lookup & 0xFF
+        data[924] = settings.dmr_scan_speed & 0xFF
+        data[925] = settings.ptt_lock & 0xFF
+        data[926] = settings.zone_channel_display & 0xFF
+        data[927] = settings.dmr_gid_name & 0xFF
+
         return bytes(data)
 
     @staticmethod

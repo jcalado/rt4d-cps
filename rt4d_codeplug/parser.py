@@ -556,6 +556,33 @@ class CodeplugParser:
             code = decode_gbk(code_bytes)
             settings.dtmf_codes.append(code)
 
+        # DT Custom Firmware Settings (offset 0x380 = 896)
+        settings.scan_speed_analog = cfg_data[896]
+        settings.tx_backlight = cfg_data[897]
+        settings.green_key_long = cfg_data[898]
+        settings.voltage_display = cfg_data[899]
+        settings.live_sub_tone = cfg_data[900]
+        settings.spectrum_threshold = cfg_data[901]
+        settings.sub_tone_ptt = cfg_data[902]
+        settings.tot_warning = cfg_data[903]
+        settings.scan_end = cfg_data[904]
+        settings.scan_continue = cfg_data[905]
+        settings.scan_return = cfg_data[914]
+        # VFO offsets are 32-bit little-endian integers
+        settings.vfo_a_offset = (cfg_data[915] |
+                                 (cfg_data[916] << 8) |
+                                 (cfg_data[917] << 16) |
+                                 (cfg_data[918] << 24))
+        settings.vfo_b_offset = (cfg_data[919] |
+                                 (cfg_data[920] << 8) |
+                                 (cfg_data[921] << 16) |
+                                 (cfg_data[922] << 24))
+        settings.callsign_lookup = cfg_data[923]
+        settings.dmr_scan_speed = cfg_data[924]
+        settings.ptt_lock = cfg_data[925]
+        settings.zone_channel_display = cfg_data[926]
+        settings.dmr_gid_name = cfg_data[927]
+
         return settings
 
     @staticmethod

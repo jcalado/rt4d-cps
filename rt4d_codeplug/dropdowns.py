@@ -486,3 +486,108 @@ DTMF_PRESET_VALUES = [
     ("DTMF-09", 8), ("DTMF-10", 9), ("DTMF-11", 10), ("DTMF-12", 11),
     ("DTMF-13", 12), ("DTMF-14", 13), ("DTMF-15", 14), ("DTMF-16", 15),
 ]
+
+# === DT Custom Firmware Settings (offset 0x380) ===
+
+# Scan Speed for Analog channels (offset 0x380)
+SCAN_SPEED_ANALOG_VALUES = [
+    ("Fast", 0),
+    ("Medium", 1),
+    ("Slow", 2),
+]
+
+# TX Backlight (offset 0x381)
+TX_BACKLIGHT_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Green Key Long Press - same values as function keys (offset 0x382)
+GREEN_KEY_LONG_VALUES = FUNCTION_KEY_VALUES
+
+# Voltage Display (offset 0x383)
+VOLTAGE_DISPLAY_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Live Sub-tone Detection (offset 0x384)
+LIVE_SUB_TONE_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Spectrum Threshold (offset 0x385)
+# Level to open squelch - typically not shown in CPS per DT's notes
+SPECTRUM_THRESHOLD_VALUES = [
+    ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4),
+    ("5", 5), ("6", 6), ("7", 7), ("8", 8), ("9", 9),
+]
+
+# Sub-tone PTT (offset 0x386)
+# Enable pressing PTT from the DTMF list (e.g., EchoLink/Allstar)
+SUB_TONE_PTT_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# TOT Warning (offset 0x387)
+# Beep before TOT timeout
+TOT_WARNING_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Scan End behavior (offset 0x388)
+SCAN_END_VALUES = [
+    ("Continue", 0),
+    ("Stop", 1),
+]
+
+# Scan Continue mode (offset 0x389)
+SCAN_CONTINUE_VALUES = [
+    ("Time Operate (TO)", 0),
+    ("Carrier Operate (CO)", 1),
+    ("Search Operate (SE)", 2),
+]
+
+# Scan Return (offset 0x392)
+SCAN_RETURN_CUSTOM_VALUES = [
+    ("Original CH", 0),
+    ("Current CH", 1),
+    ("Last Call CH", 2),
+]
+
+# Callsign Lookup (offset 0x39B)
+# Look up callsign and display in Call Log
+CALLSIGN_LOOKUP_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# DMR Scan Speed (offset 0x39C)
+DMR_SCAN_SPEED_VALUES = [
+    ("Fast", 0),
+    ("Medium", 1),
+    ("Slow", 2),
+]
+
+# PTT Lock (offset 0x39D)
+PTT_LOCK_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# Zone Channel Display (offset 0x39E)
+# Show "Zone CH" on display
+ZONE_CHANNEL_DISPLAY_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
+
+# DMR Group ID Name (offset 0x39F)
+# Show DMR group name if available
+DMR_GID_NAME_VALUES = [
+    ("Off", 0),
+    ("On", 1),
+]
