@@ -86,10 +86,13 @@ CTDCS_SELECT_VALUES = [
     ("Decode Sub-tone", 4),
 ]
 
-# Tail Tone Elimination
+# Tail Tone Elimination - stores dropdown INDEX (0-4) in upper 3 bits at offset 0x13
+# CPS stores: (byte >> 4) & 7, so values 0-7 possible, but only 0-4 used
+# CPS MainForm.cs line 17043: 5 items - "关闭", "55Hz", "120°相移", "180°相移", "240°相移"
+# Note: AnalogCH.cs has a copy-paste bug showing 41 TOT items, ignore it - MainForm is correct
 TAIL_TONE_VALUES = [
     ("Off", 0),
-    ("55Hz", 1),
+    ("55Hz No Shift", 1),
     ("120° Phase Shift", 2),
     ("180° Phase Shift", 3),
     ("240° Phase Shift", 4),
