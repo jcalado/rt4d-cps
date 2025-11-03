@@ -490,10 +490,12 @@ DTMF_PRESET_VALUES = [
 # === DT Custom Firmware Settings (offset 0x380) ===
 
 # Scan Speed for Analog channels (offset 0x380)
+# DT custom firmware: 4 values representing milliseconds
 SCAN_SPEED_ANALOG_VALUES = [
-    ("Fast", 0),
-    ("Medium", 1),
-    ("Slow", 2),
+    ("60 ms", 0),
+    ("100 ms", 1),
+    ("150 ms", 2),
+    ("200 ms", 3),
 ]
 
 # TX Backlight (offset 0x381)
@@ -545,10 +547,16 @@ SCAN_END_VALUES = [
 ]
 
 # Scan Continue mode (offset 0x389)
+# DT custom firmware: values from 0 to 31
+# Old style scanner modes (TO/CO/SE) are gone and configurable by other options
 SCAN_CONTINUE_VALUES = [
-    ("Time Operate (TO)", 0),
-    ("Carrier Operate (CO)", 1),
-    ("Search Operate (SE)", 2),
+    ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5),
+    ("6", 6), ("7", 7), ("8", 8), ("9", 9), ("10", 10),
+    ("11", 11), ("12", 12), ("13", 13), ("14", 14), ("15", 15),
+    ("16", 16), ("17", 17), ("18", 18), ("19", 19), ("20", 20),
+    ("21", 21), ("22", 22), ("23", 23), ("24", 24), ("25", 25),
+    ("26", 26), ("27", 27), ("28", 28), ("29", 29), ("30", 30),
+    ("31", 31),
 ]
 
 # Scan Return (offset 0x392)
@@ -573,9 +581,11 @@ DMR_SCAN_SPEED_VALUES = [
 ]
 
 # PTT Lock (offset 0x39D)
+# DT custom firmware: 3 options
 PTT_LOCK_VALUES = [
     ("Off", 0),
-    ("On", 1),
+    ("When Locked", 1),
+    ("Always", 2),
 ]
 
 # Zone Channel Display (offset 0x39E)
