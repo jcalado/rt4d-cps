@@ -46,7 +46,7 @@ class GroupListWidget(QWidget):
         self.table.setHorizontalHeaderLabels(["#", "Name", "Contacts"])
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setSelectionMode(QAbstractItemView.SingleSelection)
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
         self.table.verticalHeader().setVisible(False)
 
         # Resize columns
@@ -56,6 +56,7 @@ class GroupListWidget(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
         self.table.itemSelectionChanged.connect(self.on_selection_changed)
+        self.table.itemChanged.connect(self.on_item_changed)
         left_layout.addWidget(self.table)
 
         # Buttons
@@ -129,6 +130,8 @@ class GroupListWidget(QWidget):
         if not self.codeplug:
             return
 
+        # Block signals while refreshing to avoid triggering itemChanged
+        self.table.blockSignals(True)
         self.table.setRowCount(0)
         group_lists = sorted(self.codeplug.get_active_group_lists(), key=lambda g: g.index)
         palette = self.table.palette()
@@ -137,16 +140,22 @@ class GroupListWidget(QWidget):
         for row, gl in enumerate(group_lists):
             self.table.insertRow(row)
 
-            # Index
+            # Index (read-only)
             item_index = QTableWidgetItem(str(gl.index))
             item_index.setBackground(readonly_bg)
+            item_index.setFlags(item_index.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, 0, item_index)
 
-            # Name
-            self.table.setItem(row, 1, QTableWidgetItem(gl.name))
+            # Name (editable)
+            item_name = QTableWidgetItem(gl.name)
+            self.table.setItem(row, 1, item_name)
 
-            # Contact count
-            self.table.setItem(row, 2, QTableWidgetItem(str(len(gl.contacts))))
+            # Contact count (read-only)
+            item_count = QTableWidgetItem(str(len(gl.contacts)))
+            item_count.setFlags(item_count.flags() & ~Qt.ItemIsEditable)
+            self.table.setItem(row, 2, item_count)
+
+        self.table.blockSignals(False)
 
     def refresh_available_contacts(self):
         """Refresh available contacts list"""
@@ -184,6 +193,29 @@ class GroupListWidget(QWidget):
             self.refresh_selected_contacts()
             self.btn_add_contact.setEnabled(True)
             self.btn_remove_contact.setEnabled(True)
+
+    def on_item_changed(self, item: QTableWidgetItem):
+        """Handle table item changes (name editing)"""
+        if not self.codeplug or item.column() != 1:  # Only handle Name column
+            return
+
+        # Get the group list
+        row = item.row()
+        index_item = self.table.item(row, 0)
+        if not index_item:
+            return
+
+        gl_index = int(index_item.text())
+        group_list = self.codeplug.get_group_list(gl_index)
+
+        if group_list:
+            new_name = item.text().strip()
+            if new_name and new_name != group_list.name:
+                group_list.name = new_name
+                # Update details label if this is the currently selected group list
+                if self.current_group_list and self.current_group_list.index == gl_index:
+                    self.details_label.setText(f"<b>{group_list.name}</b>")
+                self.data_modified.emit()
 
     def refresh_selected_contacts(self):
         """Refresh selected contacts list"""
@@ -259,7 +291,7 @@ class GroupListWidget(QWidget):
         # Create new group list
         new_gl = GroupList(
             index=next_index,
-            name=f"Group {next_index + 1}"
+            name=f"Group {next_index}"
         )
 
         self.codeplug.add_group_list(new_gl)
