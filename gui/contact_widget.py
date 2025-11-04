@@ -134,20 +134,32 @@ class ContactWidget(QWidget):
         for row, contact in enumerate(contacts):
             self.table.insertRow(row)
 
+            # Check if this is the protected first contact
+            is_protected = (contact.index == 1)
+
             # Index
             item_index = QTableWidgetItem(str(contact.index))
             item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
             # Name
-            self.table.setItem(row, 1, QTableWidgetItem(contact.name))
+            item_name = QTableWidgetItem(contact.name)
+            if is_protected:
+                item_name.setBackground(readonly_bg)
+            self.table.setItem(row, 1, item_name)
 
             # Type
             type_name = contact.contact_type.name.replace("_", " ").title()
-            self.table.setItem(row, 2, QTableWidgetItem(type_name))
+            item_type = QTableWidgetItem(type_name)
+            if is_protected:
+                item_type.setBackground(readonly_bg)
+            self.table.setItem(row, 2, item_type)
 
             # DMR ID
-            self.table.setItem(row, 3, QTableWidgetItem(str(contact.dmr_id)))
+            item_id = QTableWidgetItem(str(contact.dmr_id))
+            if is_protected:
+                item_id.setBackground(readonly_bg)
+            self.table.setItem(row, 3, item_id)
 
     def on_selection_changed(self):
         """Handle contact selection"""
@@ -168,9 +180,13 @@ class ContactWidget(QWidget):
         if self.current_contact:
             self.details_label.setText(f"<b>{self.current_contact.name}</b>")
             self.load_contact_details()
-            self.edit_name.setEnabled(True)
-            self.combo_type.setEnabled(True)
-            self.spin_dmr_id.setEnabled(True)
+            # Protect the first contact (All call) from editing
+            is_protected = (contact_index == 1)
+            self.edit_name.setEnabled(not is_protected)
+            self.combo_type.setEnabled(not is_protected)
+            self.spin_dmr_id.setEnabled(not is_protected)
+            if is_protected:
+                self.details_label.setText(f"<b>{self.current_contact.name}</b> (Protected)")
 
     def load_contact_details(self):
         """Load contact details into form"""
@@ -248,7 +264,7 @@ class ContactWidget(QWidget):
         # Create new contact
         new_contact = Contact(
             index=next_index,
-            name=f"Contact {next_index + 1}",
+            name=f"Contact {next_index}",
             contact_type=ContactType.GROUP,
             dmr_id=1
         )
@@ -266,6 +282,16 @@ class ContactWidget(QWidget):
 
         index_item = self.table.item(current_row, 0)
         contact_index = int(index_item.text())
+
+        # Protect the first contact (All call) from deletion
+        if contact_index == 1:
+            QMessageBox.warning(
+                self,
+                "Cannot Delete",
+                "The first contact (All call) cannot be deleted."
+            )
+            return
+
         contact = self.codeplug.get_contact(contact_index)
 
         if contact:
