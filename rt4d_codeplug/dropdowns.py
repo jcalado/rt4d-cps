@@ -45,10 +45,10 @@ DMR_MONITOR_VALUES = [
     ("On", 1),
 ]
 
-# DMR Mode (Dual-slot)
+# DCDM
 DMR_MODE_VALUES = [
-    ("Dual-slot off", 0),
-    ("Direct Dual-slot", 1),
+    ("Off", 0),
+    ("On", 1),
 ]
 
 # Analog modulation - offset 0x00

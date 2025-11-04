@@ -316,7 +316,7 @@ class ChannelTableWidget(QWidget):
         for label, value in DMR_MODE_VALUES:
             self.detail_dmr_mode.addItem(label, value)
         self.detail_dmr_mode.currentIndexChanged.connect(self.on_detail_changed)
-        dmr_layout.addRow("DMR Mode:", self.detail_dmr_mode)
+        dmr_layout.addRow("DCDM:", self.detail_dmr_mode)
 
         self.detail_dmr_monitor = QComboBox()
         for label, value in DMR_MONITOR_VALUES:
@@ -1362,7 +1362,7 @@ class ChannelTableWidget(QWidget):
                         dmr_encrypt = row.get('DMR Enrcypt', 'None')  # Note: typo in original format
                         channel.encrypt_index = self._find_encryption_index(dmr_encrypt)
 
-                        dmr_mode = row.get('DMR Mode', 'Dual-slot off')
+                        dmr_mode = row.get('DCDM', 'Off')
                         channel.dmr_mode = self._find_dropdown_value(DMR_MODE_VALUES, dmr_mode)
 
                         timeslot_str = row.get('Timeslot', '1')
