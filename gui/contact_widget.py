@@ -230,6 +230,10 @@ class ContactWidget(QWidget):
             self.current_contact.contact_type = ContactType.GROUP
         elif type_value == ContactType.ALL_CALL.value:
             self.current_contact.contact_type = ContactType.ALL_CALL
+            # All Call contacts must have DMR ID 16777215
+            self.spin_dmr_id.blockSignals(True)
+            self.spin_dmr_id.setValue(16777215)
+            self.spin_dmr_id.blockSignals(False)
 
         self.current_contact.dmr_id = self.spin_dmr_id.value()
 

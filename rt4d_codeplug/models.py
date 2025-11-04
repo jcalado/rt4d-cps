@@ -122,13 +122,18 @@ class Contact:
             self.name = self.name[:16]
         if self.dmr_id < 0 or self.dmr_id > 16777215:  # 24-bit max
             raise ValueError(f"Invalid DMR ID: {self.dmr_id}")
+        # All Call contacts must have DMR ID 16777215 (0xFFFFFF)
+        if self.contact_type == ContactType.ALL_CALL and self.dmr_id != 16777215:
+            self.dmr_id = 16777215
 
     def is_empty(self) -> bool:
         """Check if contact is empty/unused"""
-        # All Call contacts can have dmr_id=0, so don't filter them out
         if not self.name:
             return True
-        if self.dmr_id == 0 and self.contact_type != ContactType.ALL_CALL:
+        # All Call contacts must have dmr_id=16777215, so check for that
+        if self.contact_type == ContactType.ALL_CALL:
+            return False
+        if self.dmr_id == 0:
             return True
         return False
 
