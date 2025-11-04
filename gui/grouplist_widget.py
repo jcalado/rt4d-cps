@@ -138,7 +138,7 @@ class GroupListWidget(QWidget):
             self.table.insertRow(row)
 
             # Index
-            item_index = QTableWidgetItem(str(gl.index + 1))
+            item_index = QTableWidgetItem(str(gl.index))
             item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
@@ -176,7 +176,7 @@ class GroupListWidget(QWidget):
 
         # Get selected group list
         index_item = self.table.item(current_row, 0)
-        gl_index = int(index_item.text()) - 1
+        gl_index = int(index_item.text())
         self.current_group_list = self.codeplug.get_group_list(gl_index)
 
         if self.current_group_list:
@@ -274,7 +274,7 @@ class GroupListWidget(QWidget):
             return
 
         index_item = self.table.item(current_row, 0)
-        gl_index = int(index_item.text()) - 1
+        gl_index = int(index_item.text())
         group_list = self.codeplug.get_group_list(gl_index)
 
         if group_list:

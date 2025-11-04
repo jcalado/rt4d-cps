@@ -135,7 +135,7 @@ class ContactWidget(QWidget):
             self.table.insertRow(row)
 
             # Index
-            item_index = QTableWidgetItem(str(contact.index + 1))
+            item_index = QTableWidgetItem(str(contact.index))
             item_index.setBackground(readonly_bg)
             self.table.setItem(row, 0, item_index)
 
@@ -162,7 +162,7 @@ class ContactWidget(QWidget):
 
         # Get selected contact
         index_item = self.table.item(current_row, 0)
-        contact_index = int(index_item.text()) - 1
+        contact_index = int(index_item.text())
         self.current_contact = self.codeplug.get_contact(contact_index)
 
         if self.current_contact:
@@ -265,7 +265,7 @@ class ContactWidget(QWidget):
             return
 
         index_item = self.table.item(current_row, 0)
-        contact_index = int(index_item.text()) - 1
+        contact_index = int(index_item.text())
         contact = self.codeplug.get_contact(contact_index)
 
         if contact:
