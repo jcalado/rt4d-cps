@@ -15,6 +15,7 @@ class RT4DUART:
         self.port: Optional[serial.Serial] = None
         self.read_timeout = 10.0  # seconds
         self.write_timeout = 2.0  # seconds
+        self.actual_baudrate: int = 0  # Track which baud rate is actually being used
 
     def open(self, port_name: str, baudrate: int = 115200):
         """Open serial port connection"""
@@ -29,6 +30,52 @@ class RT4DUART:
         )
         if not self.port.is_open:
             raise IOError(f"Failed to open port {port_name}")
+        self.actual_baudrate = baudrate
+
+    def open_with_fallback(self, port_name: str, baudrate: int = 115200) -> tuple[bool, int, str]:
+        """Open serial port with automatic fallback to 115200 if higher speed fails
+
+        Args:
+            port_name: Serial port name
+            baudrate: Requested baud rate
+
+        Returns:
+            tuple: (success, actual_baudrate, message)
+                - success: True if connection established
+                - actual_baudrate: The baud rate that worked
+                - message: Description of what happened
+        """
+        # Try requested baud rate first
+        try:
+            self.open(port_name, baudrate)
+
+            # Test if connection works with a notify command
+            if self.command_notify():
+                return (True, baudrate, f"Connected at {baudrate} baud")
+
+            # Connection test failed - try fallback if using high speed
+            self.close()
+
+            if baudrate > 115200:
+                print(f"Connection failed at {baudrate} baud, trying 115200...")
+                print("Note: High-speed mode (256000) requires holding # during radio boot")
+
+                try:
+                    self.open(port_name, 115200)
+
+                    if self.command_notify():
+                        return (True, 115200, f"Fallback: Connected at 115200 baud (requested {baudrate} failed)")
+
+                    self.close()
+                    return (False, 0, f"Connection failed at both {baudrate} and 115200 baud")
+
+                except Exception as e:
+                    return (False, 0, f"Fallback connection error: {str(e)}")
+            else:
+                return (False, 0, f"Connection test failed at {baudrate} baud")
+
+        except Exception as e:
+            return (False, 0, f"Error opening port: {str(e)}")
 
     def close(self):
         """Close serial port"""

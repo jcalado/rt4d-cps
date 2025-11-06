@@ -29,16 +29,25 @@ class AddressBookWriteThread(QThread):
         uart = RT4DUART()
 
         try:
-            # Open serial port
+            # Open serial port with automatic fallback
             self.log_message.emit(f"Opening {self.port_name} at {self.baudrate} baud...")
-            uart.open(self.port_name, self.baudrate)
+            if self.baudrate > 115200:
+                self.log_message.emit("Note: High-speed mode requires holding # during radio boot")
 
-            # Send notify command
-            self.log_message.emit("Connecting to radio...")
-            if not uart.command_notify():
-                self.write_finished.emit(False, "Failed to connect to radio. Is it in normal mode?")
-                uart.close()
+            success, actual_baud, message = uart.open_with_fallback(self.port_name, self.baudrate)
+
+            if not success:
+                self.write_finished.emit(False, f"Connection failed: {message}")
                 return
+
+            # Log which baud rate is being used
+            if actual_baud != self.baudrate:
+                self.log_message.emit(f"⚠️ Using {actual_baud} baud (fallback from {self.baudrate})")
+                self.log_message.emit("Tip: Hold # during radio boot for high-speed mode")
+            else:
+                self.log_message.emit(f"✓ Connected at {actual_baud} baud")
+
+            self.log_message.emit("Radio connected successfully")
 
             # Export database to radio format
             self.log_message.emit(f"Preparing {len(self.database):,} contacts for upload...")
@@ -111,9 +120,16 @@ class RadioAddressBookDialog(QDialog):
         self.baud_combo = QComboBox()
         self.baud_combo.addItems(["115200", "256000"])
         self.baud_combo.setCurrentIndex(0)
+        self.baud_combo.currentIndexChanged.connect(self.on_baud_changed)
         baud_layout.addWidget(self.baud_combo)
         baud_layout.addStretch()
         layout.addLayout(baud_layout)
+
+        # High-speed mode warning (shown when 256000 is selected)
+        self.highspeed_warning = QLabel("⚠️ High-speed mode: Hold # key during radio boot")
+        self.highspeed_warning.setStyleSheet("color: orange; font-weight: bold;")
+        self.highspeed_warning.setVisible(False)  # Hidden by default for 115200
+        layout.addWidget(self.highspeed_warning)
 
         # Progress bar
         self.progress_bar = QProgressBar()
@@ -155,6 +171,12 @@ class RadioAddressBookDialog(QDialog):
 
         if self.port_combo.count() == 0:
             self.port_combo.addItem("No ports found", None)
+
+    def on_baud_changed(self):
+        """Handle baud rate selection change"""
+        # Show warning if 256000 is selected
+        selected_baud = self.baud_combo.currentText()
+        self.highspeed_warning.setVisible(selected_baud == "256000")
 
     def log(self, message: str):
         """Add message to log"""
