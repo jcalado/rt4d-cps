@@ -1,12 +1,165 @@
 """Address Book Widget - DMR User Database Manager"""
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget, QTableView,
     QTableWidgetItem, QFileDialog, QMessageBox, QLabel, QLineEdit,
     QProgressDialog, QHeaderView, QApplication
 )
-from PySide6.QtCore import Qt, Signal, QTimer, QThread
+from PySide6.QtCore import Qt, Signal, QTimer, QThread, QAbstractTableModel, QModelIndex
 from rt4d_codeplug.global_contacts import GlobalContactDatabase, GlobalContactCSVParser
+
+
+class ContactTableModel(QAbstractTableModel):
+    """Table model for displaying contacts with virtual scrolling and pagination
+
+    This model provides:
+    - Virtual scrolling (only visible rows are rendered)
+    - Pagination support (load more contacts on demand)
+    - Efficient sorting without widget overhead
+    - Memory efficient display of 100k+ contacts
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._contacts = []
+        self._displayed_count = 0  # Number of contacts currently shown (for pagination)
+        self._headers = ["DMR ID", "Callsign", "Name", "City", "State", "Country", "Remarks"]
+
+    def set_contacts(self, contacts, initial_count=1000):
+        """Set contacts to display with optional initial count limit
+
+        Args:
+            contacts: List of GlobalContact objects to display
+            initial_count: Initial number of contacts to show (for pagination)
+        """
+        self.beginResetModel()
+        self._contacts = contacts
+        self._displayed_count = min(len(contacts), initial_count)
+        self.endResetModel()
+
+    def load_more(self, count=1000):
+        """Load more contacts for pagination
+
+        Args:
+            count: Number of additional contacts to load
+
+        Returns:
+            True if more contacts were loaded, False if no more available
+        """
+        if self._displayed_count >= len(self._contacts):
+            return False  # No more to load
+
+        old_count = self._displayed_count
+        new_count = min(len(self._contacts), self._displayed_count + count)
+
+        if new_count > old_count:
+            self.beginInsertRows(QModelIndex(), old_count, new_count - 1)
+            self._displayed_count = new_count
+            self.endInsertRows()
+            return True
+        return False
+
+    def has_more(self):
+        """Check if more contacts are available to load"""
+        return self._displayed_count < len(self._contacts)
+
+    def total_contacts(self):
+        """Get total number of contacts (including not yet displayed)"""
+        return len(self._contacts)
+
+    def rowCount(self, parent=QModelIndex()):
+        """Return number of rows (contacts) currently displayed"""
+        return self._displayed_count if not parent.isValid() else 0
+
+    def columnCount(self, parent=QModelIndex()):
+        """Return number of columns"""
+        return 7 if not parent.isValid() else 0
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        """Return data for a specific cell
+
+        Args:
+            index: QModelIndex for the cell
+            role: Qt role (DisplayRole, UserRole, etc.)
+
+        Returns:
+            Data for the cell, or None if invalid
+        """
+        if not index.isValid() or index.row() >= self._displayed_count:
+            return None
+
+        contact = self._contacts[index.row()]
+        col = index.column()
+
+        if role == Qt.ItemDataRole.DisplayRole:
+            if col == 0:
+                return str(contact.dmr_id)
+            elif col == 1:
+                return contact.callsign
+            elif col == 2:
+                return contact.name
+            elif col == 3:
+                return contact.city
+            elif col == 4:
+                return contact.state
+            elif col == 5:
+                return contact.country
+            elif col == 6:
+                return contact.remarks
+        elif role == Qt.ItemDataRole.UserRole:
+            # Store DMR ID for programmatic access
+            if col == 0:
+                return contact.dmr_id
+
+        return None
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        """Return header labels
+
+        Args:
+            section: Column or row number
+            orientation: Horizontal or Vertical
+            role: Qt role
+
+        Returns:
+            Header text for the section
+        """
+        if role == Qt.ItemDataRole.DisplayRole:
+            if orientation == Qt.Orientation.Horizontal and section < len(self._headers):
+                return self._headers[section]
+        return None
+
+    def sort(self, column, order=Qt.SortOrder.AscendingOrder):
+        """Sort contacts by column
+
+        Args:
+            column: Column index to sort by
+            order: Ascending or Descending
+        """
+        if not self._contacts:
+            return
+
+        self.layoutAboutToBeChanged.emit()
+
+        reverse = (order == Qt.SortOrder.DescendingOrder)
+
+        # Sort based on column
+        if column == 0:  # DMR ID
+            self._contacts.sort(key=lambda c: c.dmr_id, reverse=reverse)
+        elif column == 1:  # Callsign
+            self._contacts.sort(key=lambda c: c.callsign.lower(), reverse=reverse)
+        elif column == 2:  # Name
+            self._contacts.sort(key=lambda c: c.name.lower(), reverse=reverse)
+        elif column == 3:  # City
+            self._contacts.sort(key=lambda c: c.city.lower(), reverse=reverse)
+        elif column == 4:  # State
+            self._contacts.sort(key=lambda c: c.state.lower(), reverse=reverse)
+        elif column == 5:  # Country
+            self._contacts.sort(key=lambda c: c.country.lower(), reverse=reverse)
+        elif column == 6:  # Remarks
+            self._contacts.sort(key=lambda c: c.remarks.lower(), reverse=reverse)
+
+        self.layoutChanged.emit()
 
 
 class ImportWorker(QThread):
@@ -21,17 +174,18 @@ class ImportWorker(QThread):
         self.max_contacts = max_contacts
 
     def run(self):
-        """Import CSV in background thread"""
+        """Import CSV in background thread with deferred index building for performance"""
         try:
-            self.progress_update.emit("Parsing CSV file...")
+            # Note: parse_csv does 3 phases internally:
+            # 1. Parse CSV rows (fast)
+            # 2. Build search index (slower, but optimized with deferred building)
+            # 3. Sort contacts (fast)
+            self.progress_update.emit("Importing contacts (parsing, indexing, sorting)...")
             new_db = GlobalContactCSVParser.parse_csv(self.filename, max_contacts=self.max_contacts)
 
             if len(new_db) == 0:
                 self.import_complete.emit(None, "No valid contacts found in CSV file.")
                 return
-
-            self.progress_update.emit(f"Sorting {len(new_db):,} contacts...")
-            # Database is already sorted by parser
 
             self.import_complete.emit(new_db, f"Successfully imported {len(new_db):,} contacts!")
 
@@ -40,30 +194,25 @@ class ImportWorker(QThread):
 
 
 class SearchWorker(QThread):
-    """Background thread for searching contacts"""
+    """Background thread for searching contacts using indexed search"""
 
     search_complete = Signal(list)  # Emits list of matching contacts
 
-    def __init__(self, database, search_term, max_results):
+    def __init__(self, database, search_term):
         super().__init__()
         self.database = database
         self.search_term = search_term.lower()
-        self.max_results = max_results
         self._cancelled = False
 
     def run(self):
-        """Perform search in background thread"""
-        matches = []
+        """Perform search in background thread using indexed search"""
+        if self._cancelled:
+            return
 
-        for contact in self.database.contacts:
-            if self._cancelled:
-                return
-
-            if contact.matches_search(self.search_term):
-                matches.append(contact)
-
-                if len(matches) >= self.max_results:
-                    break
+        # Use indexed search (trie + hash map) - much faster than linear scan
+        # Performance: O(m + k) where m=query length, k=results vs O(n) for linear scan
+        # Returns ALL matches - pagination is handled by ContactTableModel
+        matches = self.database.search(self.search_term)
 
         if not self._cancelled:
             self.search_complete.emit(matches)
@@ -83,21 +232,17 @@ class AddressBookWidget(QWidget):
         super().__init__(parent)
         self.database = GlobalContactDatabase()
         self.filtered_contacts = []  # For search results
-        self.max_display_results = 1000  # Limit displayed results for performance
+
+        # Table model for virtual scrolling and pagination
+        self.table_model = ContactTableModel(self)
 
         # Search worker thread
         self.search_worker = None
 
-        # Table population state
-        self._populating = False
-        self._populate_contacts = []
-        self._populate_index = 0
-        self._base_stats_text = "Contacts: 0"
-
-        # Search debounce timer (wait 1s after user stops typing)
+        # Search debounce timer (wait 200ms after user stops typing)
         self.search_timer = QTimer()
         self.search_timer.setSingleShot(True)
-        self.search_timer.setInterval(1000)  # 1 second
+        self.search_timer.setInterval(200)  # 200ms - reduced due to faster indexed search
         self.search_timer.timeout.connect(self.perform_search)
 
         self.init_ui()
@@ -131,16 +276,13 @@ class AddressBookWidget(QWidget):
         self.stats_label = QLabel("Contacts: 0")
         layout.addWidget(self.stats_label)
 
-        # Table
-        self.table = QTableWidget()
-        self.table.setColumnCount(7)
-        self.table.setHorizontalHeaderLabels([
-            "DMR ID", "Callsign", "Name", "City", "State", "Country", "Remarks"
-        ])
+        # Table with virtual scrolling (QTableView + Model)
+        self.table = QTableView()
+        self.table.setModel(self.table_model)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.table.horizontalHeader().setStretchLastSection(True)
-        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
-        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.table.setEditTriggers(QTableView.EditTrigger.NoEditTriggers)
         self.table.setSortingEnabled(True)
         self.table.verticalHeader().setVisible(False)
         layout.addWidget(self.table)
@@ -161,6 +303,12 @@ class AddressBookWidget(QWidget):
         self.clear_btn.clicked.connect(self.on_clear)
         self.clear_btn.setEnabled(False)
         button_layout.addWidget(self.clear_btn)
+
+        self.load_more_btn = QPushButton("Load More Results...")
+        self.load_more_btn.clicked.connect(self.on_load_more)
+        self.load_more_btn.setEnabled(False)
+        self.load_more_btn.setVisible(False)  # Hidden by default
+        button_layout.addWidget(self.load_more_btn)
 
         button_layout.addStretch()
 
@@ -197,7 +345,7 @@ class AddressBookWidget(QWidget):
         QApplication.processEvents()
 
         # Start import in background thread
-        MAX_CONTACTS = 100000
+        MAX_CONTACTS = 500000
         self.import_worker = ImportWorker(filename, MAX_CONTACTS)
         self.import_worker.progress_update.connect(self.on_import_progress)
         self.import_worker.import_complete.connect(self.on_import_complete)
@@ -313,8 +461,8 @@ class AddressBookWidget(QWidget):
         self.stats_label.setText("Searching...")
         QApplication.processEvents()  # Update UI immediately
 
-        # Start background search
-        self.search_worker = SearchWorker(self.database, text, self.max_display_results)
+        # Start background search (returns all matches - pagination handled by model)
+        self.search_worker = SearchWorker(self.database, text)
         self.search_worker.search_complete.connect(self.on_search_complete)
         self.search_worker.start()
 
@@ -324,94 +472,82 @@ class AddressBookWidget(QWidget):
         self.refresh_table()
 
     def refresh_table(self):
-        """Refresh table with current contacts"""
-        # Cancel any ongoing population
-        self._populating = False
-
+        """Refresh table with current contacts using model (instant with virtual scrolling)"""
         # Determine which contacts to show
         if self.filtered_contacts:
             contacts = self.filtered_contacts
         else:
-            # Limit initial display for performance
-            contacts = self.database.contacts[:self.max_display_results]
+            contacts = self.database.contacts
 
-        # Update stats - save the base text
+        # Set contacts in model (with initial pagination limit of 1000)
+        # This is INSTANT due to virtual scrolling - only visible rows are rendered
+        self.table_model.set_contacts(contacts, initial_count=1000)
+
+        # Update stats
         total = len(self.database)
-        filtered_total = len(self.filtered_contacts) if self.filtered_contacts else total
-        shown = len(contacts)
+        displayed = self.table_model.rowCount()
+        total_available = self.table_model.total_contacts()
 
+        # Update stats label with pagination info
         if self.filtered_contacts:
-            if len(self.filtered_contacts) >= self.max_display_results:
-                self._base_stats_text = f"Showing {shown:,} of {filtered_total:,}+ matches (limited for performance)"
+            if displayed < total_available:
+                self.stats_label.setText(
+                    f"Showing {displayed:,} of {total_available:,} matches "
+                    f"(out of {total:,} total contacts)"
+                )
             else:
-                self._base_stats_text = f"Showing {shown:,} of {total:,} contacts"
+                self.stats_label.setText(f"Showing all {total_available:,} matches (out of {total:,} total contacts)")
         else:
-            if total > self.max_display_results:
-                self._base_stats_text = f"Showing {shown:,} of {total:,} contacts (use search to find more)"
+            if displayed < total:
+                self.stats_label.setText(f"Showing {displayed:,} of {total:,} contacts")
             else:
-                self._base_stats_text = f"Contacts: {total:,}"
+                self.stats_label.setText(f"Contacts: {total:,}")
 
-        self.stats_label.setText(self._base_stats_text)
+        # Show/hide Load More button based on pagination state
+        if self.table_model.has_more():
+            self.load_more_btn.setVisible(True)
+            self.load_more_btn.setEnabled(True)
+            remaining = total_available - displayed
+            self.load_more_btn.setText(f"Load More ({remaining:,} remaining)...")
+        else:
+            self.load_more_btn.setVisible(False)
 
-        # Update buttons
+        # Update other buttons
         has_contacts = total > 0
         self.export_btn.setEnabled(has_contacts)
         self.clear_btn.setEnabled(has_contacts)
         self.write_radio_btn.setEnabled(has_contacts)
 
-        # Prepare for chunked population
-        self.table.blockSignals(True)
-        self.table.setSortingEnabled(False)
-        self.table.setRowCount(shown)
+    def on_load_more(self):
+        """Load more contacts for pagination"""
+        # Load next batch of 1000 contacts
+        if self.table_model.load_more(count=1000):
+            # Update stats
+            displayed = self.table_model.rowCount()
+            total_available = self.table_model.total_contacts()
+            total = len(self.database)
 
-        # Start chunked population
-        self._populate_contacts = contacts
-        self._populate_index = 0
-        self._populating = True
-        self._populate_chunk()
+            # Update stats label
+            if self.filtered_contacts:
+                if displayed < total_available:
+                    self.stats_label.setText(
+                        f"Showing {displayed:,} of {total_available:,} matches "
+                        f"(out of {total:,} total contacts)"
+                    )
+                else:
+                    self.stats_label.setText(f"Showing all {total_available:,} matches (out of {total:,} total contacts)")
+            else:
+                if displayed < total:
+                    self.stats_label.setText(f"Showing {displayed:,} of {total:,} contacts")
+                else:
+                    self.stats_label.setText(f"Contacts: {total:,}")
 
-    def _populate_chunk(self):
-        """Populate table in chunks to keep UI responsive"""
-        if not self._populating:
-            return
-
-        CHUNK_SIZE = 250  # Populate 250 rows at a time (increased for better performance)
-        start_idx = self._populate_index
-        end_idx = min(start_idx + CHUNK_SIZE, len(self._populate_contacts))
-
-        # Populate this chunk
-        for row in range(start_idx, end_idx):
-            contact = self._populate_contacts[row]
-
-            # DMR ID
-            item = QTableWidgetItem(str(contact.dmr_id))
-            item.setData(Qt.ItemDataRole.UserRole, contact.dmr_id)
-            self.table.setItem(row, 0, item)
-
-            # Other fields
-            self.table.setItem(row, 1, QTableWidgetItem(contact.callsign))
-            self.table.setItem(row, 2, QTableWidgetItem(contact.name))
-            self.table.setItem(row, 3, QTableWidgetItem(contact.city))
-            self.table.setItem(row, 4, QTableWidgetItem(contact.state))
-            self.table.setItem(row, 5, QTableWidgetItem(contact.country))
-            self.table.setItem(row, 6, QTableWidgetItem(contact.remarks))
-
-        self._populate_index = end_idx
-
-        # Check if done
-        if self._populate_index >= len(self._populate_contacts):
-            # Finished - re-enable sorting and signals
-            self.table.setSortingEnabled(True)
-            self.table.blockSignals(False)
-            self._populating = False
-            # Restore base stats text
-            self.stats_label.setText(self._base_stats_text)
-        else:
-            # Update progress - REPLACE text, don't append!
-            progress = int((self._populate_index / len(self._populate_contacts)) * 100)
-            self.stats_label.setText(f"{self._base_stats_text} - Loading {progress}%")
-            # Schedule next chunk after yielding to event loop
-            QTimer.singleShot(0, self._populate_chunk)
+            # Update Load More button
+            if self.table_model.has_more():
+                remaining = total_available - displayed
+                self.load_more_btn.setText(f"Load More ({remaining:,} remaining)...")
+            else:
+                self.load_more_btn.setVisible(False)
 
     def on_write_to_radio(self):
         """Write address book to radio via UART"""
