@@ -166,22 +166,63 @@ class ImportWorker(QThread):
     """Background thread for importing CSV"""
 
     progress_update = Signal(str)  # Status message
+    progress_numeric = Signal(int, int)  # (current, total) for progress bar
     import_complete = Signal(object, str)  # database, message (None if error)
 
     def __init__(self, filename, max_contacts):
         super().__init__()
         self.filename = filename
         self.max_contacts = max_contacts
+        self.estimated_total = 0
 
     def run(self):
         """Import CSV in background thread with deferred index building for performance"""
         try:
+            # Count lines in file for progress estimation
+            self.progress_update.emit("Counting rows...")
+            try:
+                with open(self.filename, 'r', encoding='utf-8-sig', errors='ignore') as f:
+                    # Skip header and count data rows
+                    self.estimated_total = sum(1 for line in f) - 1
+                    if self.estimated_total < 0:
+                        self.estimated_total = 0
+            except Exception:
+                # If counting fails, use 0 (will fall back to indeterminate)
+                self.estimated_total = 0
+
+            # Define progress callback with protection against widget deletion
+            def progress_callback(current, total):
+                try:
+                    # Check if progress dialog still exists and wasn't cancelled
+                    if hasattr(self, 'import_progress') and self.import_progress:
+                        self.progress_numeric.emit(current, total)
+                        # Cap progress at total to avoid >100%
+                        if current <= total:
+                            self.progress_update.emit(f"Importing contacts... ({current:,} / ~{total:,})")
+                except (RuntimeError, AttributeError):
+                    # Widget deleted or signal disconnected - stop reporting progress
+                    pass
+
+            # Define status callback for phase updates
+            def status_callback(message):
+                try:
+                    if hasattr(self, 'import_progress') and self.import_progress:
+                        self.progress_update.emit(message)
+                except (RuntimeError, AttributeError):
+                    pass
+
             # Note: parse_csv does 3 phases internally:
             # 1. Parse CSV rows (fast)
             # 2. Build search index (slower, but optimized with deferred building)
             # 3. Sort contacts (fast)
-            self.progress_update.emit("Importing contacts (parsing, indexing, sorting)...")
-            new_db = GlobalContactCSVParser.parse_csv(self.filename, max_contacts=self.max_contacts)
+            self.progress_update.emit("Parsing CSV rows...")
+            new_db = GlobalContactCSVParser.parse_csv(
+                self.filename,
+                max_contacts=self.max_contacts,
+                progress_callback=progress_callback if self.estimated_total > 0 else None,
+                estimated_total=self.estimated_total if self.estimated_total > 0 else None,
+                status_callback=status_callback
+            )
 
             if len(new_db) == 0:
                 self.import_complete.emit(None, "No valid contacts found in CSV file.")
@@ -335,12 +376,13 @@ class AddressBookWidget(QWidget):
         # Disable import button during import
         self.import_btn.setEnabled(False)
 
-        # Show progress dialog
-        self.import_progress = QProgressDialog("Starting import...", None, 0, 0, self)
+        # Show progress dialog (initially determinate, will show percentage)
+        self.import_progress = QProgressDialog("Starting import...", None, 0, 100, self)
         self.import_progress.setWindowTitle("Importing Contacts")
         self.import_progress.setWindowModality(Qt.WindowModality.WindowModal)
         self.import_progress.setMinimumDuration(0)  # Show immediately
         self.import_progress.setCancelButton(None)  # No cancel during import
+        self.import_progress.setValue(0)
         self.import_progress.show()
         QApplication.processEvents()
 
@@ -348,17 +390,38 @@ class AddressBookWidget(QWidget):
         MAX_CONTACTS = 500000
         self.import_worker = ImportWorker(filename, MAX_CONTACTS)
         self.import_worker.progress_update.connect(self.on_import_progress)
+        self.import_worker.progress_numeric.connect(self.on_import_progress_numeric)
         self.import_worker.import_complete.connect(self.on_import_complete)
         self.import_worker.start()
 
     def on_import_progress(self, message):
-        """Update import progress"""
+        """Update import progress text"""
         self.import_progress.setLabelText(message)
-        QApplication.processEvents()
+        # Note: No processEvents() - Qt signals already handle thread-safe updates
+
+    def on_import_progress_numeric(self, current, total):
+        """Update import progress bar with numeric progress"""
+        if total > 0:
+            # Calculate percentage, cap at 100% to avoid >100% display
+            percentage = min(100, int((current / total) * 100))
+            self.import_progress.setValue(percentage)
+            # Note: No processEvents() - prevents re-entrancy issues with frequent updates
 
     def on_import_complete(self, new_db, message):
         """Handle import completion"""
+        # Ensure thread is fully finished before ANY GUI operations
+        if hasattr(self, 'import_worker') and self.import_worker:
+            self.import_worker.wait(2000)  # Wait up to 2 seconds for cleanup
+
         self.import_progress.close()
+
+        # Use QTimer to defer dialog display (let event loop settle)
+        # This prevents Qt event loop corruption from showing modal dialogs
+        # while thread cleanup is still happening
+        QTimer.singleShot(100, lambda: self._complete_import_ui(new_db, message))
+
+    def _complete_import_ui(self, new_db, message):
+        """Deferred UI updates after thread fully exits (prevents crashes)"""
         self.import_btn.setEnabled(True)
 
         if new_db is None:
@@ -459,7 +522,7 @@ class AddressBookWidget(QWidget):
 
         # Show searching indicator
         self.stats_label.setText("Searching...")
-        QApplication.processEvents()  # Update UI immediately
+        # Note: No processEvents() needed - Qt handles this automatically
 
         # Start background search (returns all matches - pagination handled by model)
         self.search_worker = SearchWorker(self.database, text)

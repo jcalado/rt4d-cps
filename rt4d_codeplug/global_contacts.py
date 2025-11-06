@@ -313,12 +313,18 @@ class GlobalContactCSVParser:
     """
 
     @staticmethod
-    def parse_csv(filename: str, max_contacts: Optional[int] = None) -> GlobalContactDatabase:
+    def parse_csv(filename: str, max_contacts: Optional[int] = None,
+                  progress_callback: Optional[callable] = None,
+                  estimated_total: Optional[int] = None,
+                  status_callback: Optional[callable] = None) -> GlobalContactDatabase:
         """Parse CSV file and return database
 
         Args:
             filename: Path to CSV file
             max_contacts: Optional limit on number of contacts to load
+            progress_callback: Optional callback(current, total) called periodically
+            estimated_total: Optional estimated total rows for progress reporting
+            status_callback: Optional callback(message) for status updates
 
         Returns:
             GlobalContactDatabase with parsed contacts
@@ -363,6 +369,10 @@ class GlobalContactCSVParser:
                         # Skip index building during import for 3-10x speedup
                         db.add_contact(contact, build_index=False)
 
+                        # Report progress periodically (every 100 rows for performance)
+                        if progress_callback and estimated_total and len(db) % 100 == 0:
+                            progress_callback(len(db), estimated_total)
+
                         # Check limit
                         if max_contacts and len(db) >= max_contacts:
                             break
@@ -376,11 +386,27 @@ class GlobalContactCSVParser:
             if f:
                 f.close()
 
+        # Report final progress after parsing
+        if progress_callback and estimated_total:
+            progress_callback(len(db), estimated_total)
+
         # Build search index after all contacts loaded (much faster than incremental)
-        db.rebuild_index()
+        if status_callback:
+            status_callback(f"Building search index for {len(db):,} contacts...")
+        try:
+            db.rebuild_index()
+        except (MemoryError, RecursionError) as e:
+            raise ValueError(f"Failed to build search index for {len(db)} contacts: {str(e)}")
+        except Exception as e:
+            raise ValueError(f"Unexpected error building search index: {str(e)}")
 
         # Sort by DMR ID (required for radio upload)
-        db.sort_by_id()
+        if status_callback:
+            status_callback(f"Sorting {len(db):,} contacts by DMR ID...")
+        try:
+            db.sort_by_id()
+        except (MemoryError, Exception) as e:
+            raise ValueError(f"Failed to sort {len(db)} contacts: {str(e)}")
 
         return db
 
