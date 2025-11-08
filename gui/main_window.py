@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtCore import Qt, QSize
 
-from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
+from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer, __version__
 from .channel_table import ChannelTableWidget
 from .contact_widget import ContactWidget
 from .grouplist_widget import GroupListWidget
@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
         """Initialize the user interface"""
-        self.setWindowTitle("RT-4D Editor")
+        self.setWindowTitle(f"RT-4D Editor v{__version__}")
         self.setGeometry(100, 100, 1000, 700)
 
         # Create menu bar
@@ -370,7 +370,8 @@ class MainWindow(QMainWindow):
         QMessageBox.about(
             self,
             "About RT-4D Editor",
-            "RT-4D Channel Editor & Flasher\n\n"
+            f"RT-4D Channel Editor & Flasher\n"
+            f"Version {__version__}\n\n"
             "A desktop application for editing RT-4D radio codeplug files.\n\n"
             "Brought to you by: CS7BLE / Joel Calado\n"
             "https://www.jcalado.com"
@@ -401,7 +402,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         """Update window title"""
-        title = "RT-4D Editor"
+        title = f"RT-4D Editor v{__version__}"
         if self.current_file:
             title += f" - {self.current_file.name}"
         if self.modified:
