@@ -14,6 +14,7 @@ from rt4d_codeplug.dropdowns import (
     VOICE_PROMPT_VALUES, KEY_BEEP_VALUES, KEY_LOCK_VALUES,
     DUAL_WATCH_VALUES, WORK_MODE_VALUES, TALKAROUND_VALUES,
     ALARM_TYPE_VALUES, LOCK_TIMER_VALUES, LED_ON_OFF_VALUES,
+    LED_TIMER_VALUES, MENU_TIMER_VALUES,
     BACKLIGHT_BRIGHTNESS_VALUES, POWER_SAVE_START_VALUES,
     TX_PRIORITY_GLOBAL_VALUES, MAIN_PTT_VALUES, VFO_STEP_VALUES,
     MAIN_BAND_VALUES, DISPLAY_MODE_VALUES, CLOCK_MODE_VALUES,
@@ -1111,11 +1112,11 @@ class SettingsWidget(QWidget):
         self.combo_led_on_off.currentIndexChanged.connect(self.on_settings_changed)
         display_layout.addRow("LED On/Off:", self.combo_led_on_off)
 
-        self.spin_led_timer = QSpinBox()
-        self.spin_led_timer.setRange(0, 255)
-        self.spin_led_timer.setSuffix(" seconds")
-        self.spin_led_timer.valueChanged.connect(self.on_settings_changed)
-        display_layout.addRow("LED Timer:", self.spin_led_timer)
+        self.combo_led_timer = QComboBox()
+        for label, value in LED_TIMER_VALUES:
+            self.combo_led_timer.addItem(label, value)
+        self.combo_led_timer.currentIndexChanged.connect(self.on_settings_changed)
+        display_layout.addRow("LED Timer:", self.combo_led_timer)
 
         self.combo_backlight = QComboBox()
         for label, value in BACKLIGHT_BRIGHTNESS_VALUES:
@@ -1123,11 +1124,11 @@ class SettingsWidget(QWidget):
         self.combo_backlight.currentIndexChanged.connect(self.on_settings_changed)
         display_layout.addRow("Backlight Brightness:", self.combo_backlight)
 
-        self.spin_menu_timer = QSpinBox()
-        self.spin_menu_timer.setRange(0, 255)
-        self.spin_menu_timer.setSuffix(" seconds")
-        self.spin_menu_timer.valueChanged.connect(self.on_settings_changed)
-        display_layout.addRow("Menu Timer:", self.spin_menu_timer)
+        self.combo_menu_timer = QComboBox()
+        for label, value in MENU_TIMER_VALUES:
+            self.combo_menu_timer.addItem(label, value)
+        self.combo_menu_timer.currentIndexChanged.connect(self.on_settings_changed)
+        display_layout.addRow("Menu Timer:", self.combo_menu_timer)
 
         self.combo_display_mode_a = QComboBox()
         for label, value in DISPLAY_MODE_VALUES:
@@ -1415,9 +1416,9 @@ class SettingsWidget(QWidget):
         self.combo_key_lock.setEnabled(enabled)
         self.combo_lock_timer.setEnabled(enabled)
         self.combo_led_on_off.setEnabled(enabled)
-        self.spin_led_timer.setEnabled(enabled)
+        self.combo_led_timer.setEnabled(enabled)
         self.combo_backlight.setEnabled(enabled)
-        self.spin_menu_timer.setEnabled(enabled)
+        self.combo_menu_timer.setEnabled(enabled)
         self.combo_display_mode_a.setEnabled(enabled)
         self.combo_display_mode_b.setEnabled(enabled)
         self.spin_power_save.setEnabled(enabled)
@@ -1472,9 +1473,9 @@ class SettingsWidget(QWidget):
         self.combo_key_lock.blockSignals(True)
         self.combo_lock_timer.blockSignals(True)
         self.combo_led_on_off.blockSignals(True)
-        self.spin_led_timer.blockSignals(True)
+        self.combo_led_timer.blockSignals(True)
         self.combo_backlight.blockSignals(True)
-        self.spin_menu_timer.blockSignals(True)
+        self.combo_menu_timer.blockSignals(True)
         self.combo_display_mode_a.blockSignals(True)
         self.combo_display_mode_b.blockSignals(True)
         self.spin_power_save.blockSignals(True)
@@ -1551,7 +1552,10 @@ class SettingsWidget(QWidget):
                 self.combo_led_on_off.setCurrentIndex(i)
                 break
 
-        self.spin_led_timer.setValue(settings.led_timer)
+        for i in range(self.combo_led_timer.count()):
+            if self.combo_led_timer.itemData(i) == settings.led_timer:
+                self.combo_led_timer.setCurrentIndex(i)
+                break
 
         # Backlight brightness
         for i in range(self.combo_backlight.count()):
@@ -1559,7 +1563,10 @@ class SettingsWidget(QWidget):
                 self.combo_backlight.setCurrentIndex(i)
                 break
 
-        self.spin_menu_timer.setValue(settings.menu_timer)
+        for i in range(self.combo_menu_timer.count()):
+            if self.combo_menu_timer.itemData(i) == settings.menu_timer:
+                self.combo_menu_timer.setCurrentIndex(i)
+                break
 
         # Display mode A
         for i in range(self.combo_display_mode_a.count()):
@@ -1694,9 +1701,9 @@ class SettingsWidget(QWidget):
         self.combo_key_lock.blockSignals(False)
         self.combo_lock_timer.blockSignals(False)
         self.combo_led_on_off.blockSignals(False)
-        self.spin_led_timer.blockSignals(False)
+        self.combo_led_timer.blockSignals(False)
         self.combo_backlight.blockSignals(False)
-        self.spin_menu_timer.blockSignals(False)
+        self.combo_menu_timer.blockSignals(False)
         self.combo_display_mode_a.blockSignals(False)
         self.combo_display_mode_b.blockSignals(False)
         self.spin_power_save.blockSignals(False)
@@ -1750,9 +1757,9 @@ class SettingsWidget(QWidget):
         self.settings.key_lock = self.combo_key_lock.currentData()
         self.settings.lock_timer = self.combo_lock_timer.currentData()
         self.settings.led_on_off = self.combo_led_on_off.currentData()
-        self.settings.led_timer = self.spin_led_timer.value()
+        self.settings.led_timer = self.combo_led_timer.currentData()
         self.settings.backlight_brightness = self.combo_backlight.currentData()
-        self.settings.menu_timer = self.spin_menu_timer.value()
+        self.settings.menu_timer = self.combo_menu_timer.currentData()
         self.settings.display_mode_a = self.combo_display_mode_a.currentData()
         self.settings.display_mode_b = self.combo_display_mode_b.currentData()
         self.settings.power_save_mode = self.spin_power_save.value()

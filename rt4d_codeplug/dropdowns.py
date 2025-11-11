@@ -1,18 +1,11 @@
 """Dropdown values extracted from RT-4D CPS"""
 
-# Timeout (TOT) values - stores dropdown INDEX (0-40), not seconds
-# Matches CPS dropdown order: "不限时" (index 0), "15" (index 1), "30" (index 2), etc.
-TOT_VALUES = [
-    ("Unlimited", 0),
-    ("15s", 1), ("30s", 2), ("45s", 3), ("60s", 4), ("75s", 5),
-    ("90s", 6), ("105s", 7), ("120s", 8), ("135s", 9), ("150s", 10),
-    ("165s", 11), ("180s", 12), ("195s", 13), ("210s", 14), ("225s", 15),
-    ("240s", 16), ("255s", 17), ("270s", 18), ("285s", 19), ("300s", 20),
-    ("315s", 21), ("330s", 22), ("345s", 23), ("360s", 24), ("375s", 25),
-    ("390s", 26), ("405s", 27), ("420s", 28), ("435s", 29), ("450s", 30),
-    ("465s", 31), ("480s", 32), ("495s", 33), ("510s", 34), ("525s", 35),
-    ("540s", 36), ("555s", 37), ("570s", 38), ("585s", 39), ("600s", 40),
-]
+from rt4d_codeplug.timer_conversion import generate_timer_values, TOT_MAX_INDEX, LED_MENU_MAX_INDEX, LOCK_MAX_INDEX, POWER_SAVE_MAX_INDEX
+
+# Timeout (TOT) values - stores firmware INDEX (0-40), converted to seconds via CONV_GetDuration()
+# Firmware conversion: index 0=0s, 1=5s, 2=10s, 3=15s, 4=30s, 5=45s, 6=60s, etc.
+# Formula: if (index <= 3) { seconds = index * 5 } else { seconds = (index - 2) * 15 }
+TOT_VALUES = [(label, index) for index, label in generate_timer_values(TOT_MAX_INDEX).items()]
 
 # TX Priority values
 TX_PRIORITY_VALUES = [
@@ -175,19 +168,15 @@ ALARM_TYPE_VALUES = [
     ("Local+Remote", 2),
 ]
 
-# Lock timer values (seconds) - Off, then 5-600s
-LOCK_TIMER_VALUES = [
-    ("Off", 0),
-    ("5s", 5), ("10s", 10), ("15s", 15), ("30s", 30), ("45s", 45),
-    ("60s", 60), ("75s", 75), ("90s", 90), ("105s", 105), ("120s", 120),
-    ("135s", 135), ("150s", 150), ("165s", 165), ("180s", 180), ("195s", 195),
-    ("210s", 210), ("225s", 225), ("240s", 240), ("255s", 255), ("270s", 270),
-    ("285s", 285), ("300s", 300), ("315s", 315), ("330s", 330), ("345s", 345),
-    ("360s", 360), ("375s", 375), ("390s", 390), ("405s", 405), ("420s", 420),
-    ("435s", 435), ("450s", 450), ("465s", 465), ("480s", 480), ("495s", 495),
-    ("510s", 510), ("525s", 525), ("540s", 540), ("555s", 555), ("570s", 570),
-    ("585s", 585), ("600s", 600),
-]
+# Lock timer values - stores firmware INDEX, converted to seconds via CONV_GetDuration()
+# Same conversion as TOT: index 0=0s (Off), 1=5s, 2=10s, 3=15s, 4=30s, etc.
+LOCK_TIMER_VALUES = [(label, index) for index, label in generate_timer_values(LOCK_MAX_INDEX).items()]
+
+# LED timer values - stores firmware INDEX, converted to seconds via CONV_GetDuration()
+LED_TIMER_VALUES = [(label, index) for index, label in generate_timer_values(LED_MENU_MAX_INDEX).items()]
+
+# Menu timer values - stores firmware INDEX, converted to seconds via CONV_GetDuration()
+MENU_TIMER_VALUES = [(label, index) for index, label in generate_timer_values(LED_MENU_MAX_INDEX).items()]
 
 # LED on/off
 LED_ON_OFF_VALUES = [
@@ -204,19 +193,9 @@ BACKLIGHT_BRIGHTNESS_VALUES = [
     ("4", 4),
 ]
 
-# Power save start timer (seconds) - 0-600s
-POWER_SAVE_START_VALUES = [
-    ("0s", 0),
-    ("5s", 5), ("10s", 10), ("15s", 15), ("30s", 30), ("45s", 45),
-    ("60s", 60), ("75s", 75), ("90s", 90), ("105s", 105), ("120s", 120),
-    ("135s", 135), ("150s", 150), ("165s", 165), ("180s", 180), ("195s", 195),
-    ("210s", 210), ("225s", 225), ("240s", 240), ("255s", 255), ("270s", 270),
-    ("285s", 285), ("300s", 300), ("315s", 315), ("330s", 330), ("345s", 345),
-    ("360s", 360), ("375s", 375), ("390s", 390), ("405s", 405), ("420s", 420),
-    ("435s", 435), ("450s", 450), ("465s", 465), ("480s", 480), ("495s", 495),
-    ("510s", 510), ("525s", 525), ("540s", 540), ("555s", 555), ("570s", 570),
-    ("585s", 585), ("600s", 600),
-]
+# Power save start timer - stores firmware INDEX, converted to seconds via CONV_GetDuration()
+# Same conversion as TOT: index 0=0s, 1=5s, 2=10s, 3=15s, 4=30s, etc.
+POWER_SAVE_START_VALUES = [(label, index) for index, label in generate_timer_values(POWER_SAVE_MAX_INDEX).items()]
 
 # Global TX Priority
 TX_PRIORITY_GLOBAL_VALUES = [
