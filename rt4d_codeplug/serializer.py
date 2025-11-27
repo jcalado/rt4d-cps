@@ -2,7 +2,8 @@
 
 import struct
 from .models import (Codeplug, Channel, Contact, Zone, ChannelMode, PowerLevel,
-                      ScanMode, ContactType, EncryptionKey, EncryptionType)
+                      ScanMode, ContactType, EncryptionKey, EncryptionType,
+                      AnalogModulation)
 from .constants import *
 from .tones import encode_subaudio_bytes
 
@@ -23,9 +24,14 @@ class CodeplugSerializer:
         # Write CFG section
         data[OFFSET_CFG:OFFSET_CFG + SIZE_CFG] = codeplug.cfg_data
 
+        use_beta_layout = bool(codeplug.settings and codeplug.settings.beta41)
+
         # Write channels
         for channel in codeplug.channels:
-            ch_data = CodeplugSerializer.serialize_channel(channel)
+            if use_beta_layout:
+                ch_data = CodeplugSerializer.serialize_channel_new(channel)
+            else:
+                ch_data = CodeplugSerializer.serialize_channel(channel)
             offset = OFFSET_CHANNELS + (channel.index * CHANNEL_SIZE)
             data[offset:offset + CHANNEL_SIZE] = ch_data
 
@@ -43,12 +49,13 @@ class CodeplugSerializer:
             data[offset:offset + ZONE_SIZE] = zone_data
 
         # Write group lists
+        group_list_size = GROUP_LIST_SIZE_NEW if use_beta_layout else GROUP_LIST_SIZE
+        max_contacts = MAX_GROUP_LIST_IDS_NEW if use_beta_layout else MAX_GROUP_LIST_IDS
         for group_list in codeplug.group_lists:
-            gl_data = CodeplugSerializer.serialize_group_list(group_list)
-            GROUP_LIST_SIZE = 272
+            gl_data = CodeplugSerializer.serialize_group_list(group_list, group_list_size, max_contacts)
             # Group list index is 1-based, convert to 0-based slot for file offset
-            offset = OFFSET_GROUPLISTS + ((group_list.index - 1) * GROUP_LIST_SIZE)
-            data[offset:offset + GROUP_LIST_SIZE] = gl_data
+            offset = OFFSET_GROUPLISTS + ((group_list.index - 1) * group_list_size)
+            data[offset:offset + group_list_size] = gl_data
 
         # Write encryption keys
         for key in codeplug.encryption_keys:
@@ -70,7 +77,7 @@ class CodeplugSerializer:
             return bytes(data)
 
         # Basic fields
-        data[0x01] = 0x01 if channel.enabled else 0xFF
+        data[0x01] = 0x01
         data[0x02] = channel.mode.value
 
         # Frequencies (32-bit little-endian)
@@ -115,8 +122,11 @@ class CodeplugSerializer:
                 contact_slot = channel.contact_index - 1  # Convert index to slot
             struct.pack_into('<H', data, 0x18, contact_slot)
             struct.pack_into('<H', data, 0x1A, channel.encrypt_index)
-            # DMR ID is always written at offset 0x1C-0x1F (BCD encoded)
-            bcd_bytes = CodeplugSerializer._to_bcd(channel.dmr_id)
+            # DMR ID: write 0 if using radio ID, otherwise write channel DMR ID
+            if channel.use_radio_id:
+                bcd_bytes = CodeplugSerializer._to_bcd(0)
+            else:
+                bcd_bytes = CodeplugSerializer._to_bcd(channel.dmr_id)
             data[0x1C:0x20] = bcd_bytes
 
         # Analog specific
@@ -146,9 +156,79 @@ class CodeplugSerializer:
 
             # Encrypted sub-audio codes (offsets 0x14-0x1F)
             # Write as 32-bit little-endian integers
-            data[0x14:0x18] = struct.pack('<I', channel.encrypted_code_1)
-            data[0x18:0x1C] = struct.pack('<I', channel.encrypted_code_2)
-            data[0x1C:0x20] = struct.pack('<I', channel.encrypted_code_3)
+            data[0x14:0x18] = struct.pack('<I', channel.mute_code)
+
+        return bytes(data)
+
+    @staticmethod
+    def serialize_channel_new(channel: Channel) -> bytes:
+        """Serialize a single beta41+ channel to 48 bytes"""
+        data = bytearray(b'\xff' * CHANNEL_SIZE)
+
+        if channel.is_empty():
+            return bytes(data)
+
+        # 0x00 layout bits
+        data[0x00] = 0x00
+        data[0x00] |= (channel.dmr_monitor & 0x01)
+        data[0x00] |= (channel.dmr_time_slot & 0x01) << 1
+        data[0x00] |= (channel.dmr_mode & 0x01) << 2
+        # Bit 3: 0=use radio ID, 1=use channel ID (inverted from old layout)
+        data[0x00] |= (0x00 if channel.use_radio_id else 0x08)
+        if channel.mode != ChannelMode.DIGITAL:
+            data[0x00] |= 0x40
+
+        data[0x01] = (channel.scramble & 0x0F) | ((channel.dmr_color_code & 0x0F) << 4)
+
+        tot_value = channel.tot if channel.mode == ChannelMode.DIGITAL else (channel.tot_analog or channel.tot)
+        data[0x02] = tot_value & 0x3F
+        if channel.power == PowerLevel.HIGH:
+            data[0x02] |= 0x40
+
+        data[0x03] = (channel.tail_tone & 0x07)
+        data[0x03] |= (channel.tx_priority_analog & 0x03) << 3
+        data[0x03] |= (channel.tx_priority & 0x03) << 5
+        if channel.scan == ScanMode.REMOVE:
+            data[0x03] |= 0x80
+
+        modulation = channel.analog_modulation.value if channel.analog_modulation else AnalogModulation.FM.value
+        data[0x04] = ((channel.ctdcs_select & 0x07) << 1)
+        data[0x04] |= (modulation & 0x03) << 4
+        data[0x04] |= (channel.bandwidth & 0x01) << 6
+
+        # Frequencies (32-bit little-endian)
+        rx_freq_int = int(channel.rx_freq * FREQ_MULTIPLIER) if channel.rx_freq else 0
+        tx_freq_int = int(channel.tx_freq * FREQ_MULTIPLIER) if channel.tx_freq else 0
+        struct.pack_into('<I', data, 0x05, rx_freq_int)
+        struct.pack_into('<I', data, 0x09, tx_freq_int)
+
+        # RX/TX tones
+        data[0x0D:0x0F] = encode_subaudio_bytes(channel.rx_ctcss)
+        data[0x0F:0x11] = encode_subaudio_bytes(channel.tx_ctcss)
+
+        contact_slot = 0xFFFF if channel.contact_index == 0 else max(channel.contact_index - 1, 0)
+        struct.pack_into('<H', data, 0x11, contact_slot)
+
+        data[0x13] = channel.group_list_index & 0xFF
+        struct.pack_into('<H', data, 0x14, channel.encrypt_index & 0xFFFF)
+
+        if channel.use_radio_id:
+            bcd_bytes = CodeplugSerializer._to_bcd(0)
+        else:
+            bcd_bytes = CodeplugSerializer._to_bcd(channel.dmr_id)
+        data[0x16:0x1A] = bcd_bytes
+        data[0x1A:0x1E] = struct.pack('<I', channel.mute_code & 0xFFFFFFFF)
+
+        # Channel name (GBK encoding, 16 bytes)
+        try:
+            name_bytes = channel.name.encode('gbk')[:16]
+        except Exception:
+            name_bytes = channel.name.encode('latin-1', errors='ignore')[:16]
+
+        for i, byte in enumerate(name_bytes):
+            data[0x20 + i] = byte
+        for i in range(len(name_bytes), 16):
+            data[0x20 + i] = EMPTY_BYTE
 
         return bytes(data)
 
@@ -264,10 +344,9 @@ class CodeplugSerializer:
         return bytes(data)
 
     @staticmethod
-    def serialize_group_list(group_list) -> bytes:
-        """Serialize a single group list to 272 bytes"""
-        GROUP_LIST_SIZE = 272
-        data = bytearray(b'\xff' * GROUP_LIST_SIZE)
+    def serialize_group_list(group_list, group_list_size: int = 272, max_contacts: int = 128) -> bytes:
+        """Serialize a single group list to the specified size"""
+        data = bytearray(b'\xff' * group_list_size)
 
         if group_list.is_empty():
             return bytes(data)
@@ -289,8 +368,8 @@ class CodeplugSerializer:
         for i in range(len(name_bytes), 14):
             data[0x02 + i] = EMPTY_BYTE
 
-        # Contact indices (128 × 2 bytes starting at offset 0x10)
-        for i in range(128):
+        # Contact indices (max_contacts × 2 bytes starting at offset 0x10)
+        for i in range(max_contacts):
             if i < len(group_list.contacts):
                 contact_idx = group_list.contacts[i]
                 struct.pack_into('<H', data, 0x10 + (i * 2), contact_idx)
@@ -424,8 +503,6 @@ class CodeplugSerializer:
         data[171] = settings.key_fs1_long
         data[172] = settings.key_fs2_short
         data[173] = settings.key_fs2_long
-        data[174] = settings.key_alarm_short
-        data[175] = settings.key_alarm_long
         data[176] = settings.key_0
         data[177] = settings.key_1
         data[178] = settings.key_2
@@ -463,15 +540,15 @@ class CodeplugSerializer:
         data[395] = settings.private_call_hang_time & 0xFF
         data[396] = (settings.private_call_hang_time >> 8) & 0xFF
         data[400] = settings.group_id_display
-        data[404] = settings.call_timing_display
+        data[404] = settings.call_group_display
 
         # Advanced Features
         data[272] = settings.noaa_channel
         data[273] = settings.spectrum_scan_mode
         data[274] = settings.detection_range & 0xFF
         data[275] = (settings.detection_range >> 8) & 0xFF
-        data[276] = settings.relay_delay
-        data[842] = settings.glitch_filter
+        data[276] = max(0, min(255, int(settings.relay_delay)))  # Restore relay_delay assignment
+        data[277] = settings.glitch_filter
 
         # DTMF System
         data[512] = settings.dtmf_send_delay & 0xFF
@@ -521,6 +598,9 @@ class CodeplugSerializer:
         data[925] = settings.ptt_lock & 0xFF
         data[926] = settings.zone_channel_display & 0xFF
         data[927] = settings.dmr_gid_name & 0xFF
+        
+        if settings.beta41:
+            data[4092:4096] = BETA41_MAGIC
 
         return bytes(data)
 

@@ -16,6 +16,7 @@ from rt4d_codeplug import (
 )
 from rt4d_uart import RT4DUART
 from rt4d_codeplug.constants import SPI_REGIONS
+from rt4d_codeplug.utils import detect_settings_bank
 
 
 def list_channels(codeplug: Codeplug, verbose: bool = False):
@@ -185,9 +186,13 @@ def backup_from_radio(port: str, output_file: str, regions: list = None):
 
         codeplug_data = bytearray(b'\xff' * TOTAL_SIZE)
 
+        # Detect which bank contains active settings (beta41+ dual-bank support)
+        settings_bank_addr = detect_settings_bank(uart)
+        print(f"Detected settings at bank address: 0x{settings_bank_addr:06X}")
+
         # Map region names to offsets in .4rdmf file
         region_map = {
-            'main_settings': (OFFSET_CFG, SIZE_CFG, 0x002000),
+            'main_settings': (OFFSET_CFG, SIZE_CFG, settings_bank_addr),
             'channels': (OFFSET_CHANNELS, SIZE_CHANNELS, 0x004000),
             'contacts': (OFFSET_CONTACTS, SIZE_CONTACTS, 0x05C000),
             'groups': (OFFSET_GROUPLISTS, SIZE_GROUPLISTS, 0x07C000),

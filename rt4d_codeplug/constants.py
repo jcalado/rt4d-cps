@@ -25,11 +25,17 @@ TOTAL_SIZE = 275456  # 0x43400
 CHANNEL_SIZE = 48
 CONTACT_SIZE = 32
 ZONE_SIZE = 512
+GROUP_LIST_SIZE = 272
+GROUP_LIST_SIZE_NEW = 80
 
 # Max counts
 MAX_CHANNELS = 1024
 MAX_CONTACTS = 2048
 MAX_ZONES = 256
+MAX_GROUP_LISTS = 32
+MAX_GROUP_LIST_IDS = 128
+MAX_GROUP_LISTS_NEW = 150
+MAX_GROUP_LIST_IDS_NEW = 32
 
 # SPI Flash Memory Map (for direct radio flashing)
 SPI_REGIONS = {
@@ -69,3 +75,12 @@ EMPTY_BYTE = 0xFF
 # Frequency conversion
 # Stored frequency = actual_freq_mhz × 100000
 FREQ_MULTIPLIER = 100000
+
+# Beta firmware layout detection
+BETA41_MAGIC = b'DTCN'
+
+# Settings bank addresses (SPI flash)
+SETTINGS_BANK0_ADDR = 0x002000  # Bank 0 settings location
+SETTINGS_BANK1_ADDR = 0x003000  # Bank 1 settings location (beta41+)
+BANK0_MAGIC_OFFSET = 0x002FFC   # DTCN magic location for bank 0 (0x2000 + 0xFFC)
+BANK1_MAGIC_OFFSET = 0x003FFC   # DTCN magic location for bank 1 (0x3000 + 0xFFC)

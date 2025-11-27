@@ -4,7 +4,7 @@ import struct
 from typing import Optional
 from .models import (Channel, Contact, GroupList, Zone, Codeplug, ChannelMode,
                       PowerLevel, ScanMode, ContactType, EncryptionKey, EncryptionType,
-                      AnalogModulation)
+                      AnalogModulation, RadioSettings)
 from .constants import *
 from .tones import decode_subaudio_bytes
 
@@ -17,6 +17,7 @@ class CodeplugParser:
         if len(data) != TOTAL_SIZE:
             raise ValueError(f"Invalid file size: {len(data)} (expected {TOTAL_SIZE})")
         self.data = data
+        self._beta41_layout = False
 
     def parse(self) -> Codeplug:
         """Parse the complete codeplug"""
@@ -31,11 +32,17 @@ class CodeplugParser:
         # Parse radio settings
         print("Parsing radio settings...")
         codeplug.settings = self.parse_settings(codeplug.cfg_data)
+        if codeplug.settings:
+            self._beta41_layout = bool(codeplug.settings.beta41)
+            print(f"Detected beta41+ layout: {self._beta41_layout}")
 
         # Parse channels
         print("Parsing channels...")
         for i in range(MAX_CHANNELS):
-            channel = self.parse_channel(i)
+            if self._beta41_layout:
+                channel = self.parse_channel_new(i)
+            else:
+                channel = self.parse_channel(i)
             if channel and not channel.is_empty():
                 codeplug.add_channel(channel)
 
@@ -50,8 +57,16 @@ class CodeplugParser:
         # Parse group lists
         print(f"Parsed {len(codeplug.contacts)} contacts")
         print("Parsing group lists...")
-        for i in range(32):  # Max 32 group lists
-            group_list = self.parse_group_list(i)
+        if self._beta41_layout:
+            max_lists = MAX_GROUP_LISTS_NEW
+            group_list_size = GROUP_LIST_SIZE_NEW
+            max_group_list_ids = MAX_GROUP_LIST_IDS_NEW
+        else:
+            max_lists = MAX_GROUP_LISTS
+            group_list_size = GROUP_LIST_SIZE
+            max_group_list_ids = MAX_GROUP_LIST_IDS
+        for i in range(max_lists):
+            group_list = self.parse_group_list(i, max_lists, group_list_size, max_group_list_ids)
             if group_list and not group_list.is_empty():
                 codeplug.add_group_list(group_list)
 
@@ -79,14 +94,12 @@ class CodeplugParser:
         offset = OFFSET_CHANNELS + (index * CHANNEL_SIZE)
         ch_data = self.data[offset:offset + CHANNEL_SIZE]
 
-        # Check if channel is empty (both bytes 0 and 1 are 0xFF means empty)
-        if ch_data[0] == EMPTY_BYTE and ch_data[1] == EMPTY_BYTE:
+        # Check if channel is empty
+        if ch_data[2] >= 2:
             return None
 
         try:
             # Basic fields
-            # Byte 1 indicates if channel is enabled (0x01 = enabled)
-            enabled = ch_data[1] == 0x01
             mode_byte = ch_data[0x02]
             mode = ChannelMode.DIGITAL if mode_byte == CHANNEL_MODE_DIGITAL else ChannelMode.ANALOG
 
@@ -118,7 +131,6 @@ class CodeplugParser:
                 mode=mode,
                 power=power,
                 scan=scan,
-                enabled=enabled
             )
 
             # Digital/DMR specific fields
@@ -185,9 +197,89 @@ class CodeplugParser:
 
                 # Encrypted sub-audio codes (offsets 0x14-0x1F)
                 # Read as 32-bit little-endian integers
-                channel.encrypted_code_1 = struct.unpack('<I', ch_data[0x14:0x18])[0]
-                channel.encrypted_code_2 = struct.unpack('<I', ch_data[0x18:0x1C])[0]
-                channel.encrypted_code_3 = struct.unpack('<I', ch_data[0x1C:0x20])[0]
+                channel.mute_code = struct.unpack('<I', ch_data[0x14:0x18])[0]
+
+            return channel
+
+        except Exception as e:
+            print(f"Warning: Error parsing channel {index}: {e}")
+            return None
+
+
+    def parse_channel_new(self, index: int) -> Optional[Channel]:
+        """Parse a single channel using the beta41+ layout"""
+        offset = OFFSET_CHANNELS + (index * CHANNEL_SIZE)
+        ch_data = self.data[offset:offset + CHANNEL_SIZE]
+
+        try:
+            # Detect empty slot (all 0xFF or no freqs/name)
+            if all(b == EMPTY_BYTE for b in ch_data):
+                return None
+
+            rx_freq_int = struct.unpack('<I', ch_data[0x05:0x09])[0]
+            tx_freq_int = struct.unpack('<I', ch_data[0x09:0x0D])[0]
+            name_bytes = bytes([b for b in ch_data[0x20:0x30] if b != EMPTY_BYTE])
+            if not name_bytes and rx_freq_int in (0, 0xFFFFFFFF) and tx_freq_int in (0, 0xFFFFFFFF):
+                return None
+
+            rx_freq = 0.0 if rx_freq_int in (0, 0xFFFFFFFF) else rx_freq_int / FREQ_MULTIPLIER
+            tx_freq = 0.0 if tx_freq_int in (0, 0xFFFFFFFF) else tx_freq_int / FREQ_MULTIPLIER
+
+            try:
+                name = name_bytes.decode('gbk', errors='ignore').strip()
+            except Exception:
+                name = name_bytes.decode('latin-1', errors='ignore').strip()
+
+            mode = ChannelMode.ANALOG if (ch_data[0x00] & 0x40) else ChannelMode.DIGITAL
+            power = PowerLevel.HIGH if (ch_data[0x02] & 0x40) else PowerLevel.LOW
+            scan = ScanMode.REMOVE if (ch_data[0x03] & 0x80) else ScanMode.ADD
+
+            channel = Channel(
+                index=index,
+                name=name,
+                rx_freq=rx_freq,
+                tx_freq=tx_freq,
+                mode=mode,
+                power=power,
+                scan=scan,
+            )
+
+            channel.dmr_monitor = ch_data[0x00] & 0x01
+            channel.dmr_time_slot = (ch_data[0x00] >> 1) & 0x01
+            channel.dmr_mode = (ch_data[0x00] >> 2) & 0x01
+            # Bit 3: 0=use radio ID, 1=use channel ID (inverted from old layout)
+            channel.use_radio_id = not bool((ch_data[0x00] >> 3) & 0x01)
+            channel.scramble = ch_data[0x01] & 0x0F
+            channel.dmr_color_code = (ch_data[0x01] >> 4) & 0x0F
+            channel.tot = ch_data[0x02] & 0x3F
+            # channel.tot_analog = channel.tot
+            channel.tail_tone = ch_data[0x03] & 0x07
+            channel.tx_priority_analog = (ch_data[0x03] >> 3) & 0x03
+            channel.tx_priority = (ch_data[0x03] >> 5) & 0x03
+            channel.ctdcs_select = (ch_data[0x04] >> 1) & 0x07
+
+            modulation_bits = (ch_data[0x04] >> 4) & 0x03
+            try:
+                channel.analog_modulation = AnalogModulation(modulation_bits)
+            except ValueError:
+                channel.analog_modulation = AnalogModulation.FM
+
+            channel.bandwidth = (ch_data[0x04] >> 6) & 0x01
+
+            # Sub-audio
+            channel.rx_ctcss = decode_subaudio_bytes(ch_data[0x0D:0x0F])
+            channel.tx_ctcss = decode_subaudio_bytes(ch_data[0x0F:0x11])
+
+            contact_slot = struct.unpack('<H', ch_data[0x11:0x13])[0]
+            if contact_slot == 0xFFFF:
+                channel.contact_index = 0
+            else:
+                channel.contact_index = contact_slot + 1
+
+            channel.group_list_index = ch_data[0x13]
+            channel.encrypt_index = struct.unpack('<H', ch_data[0x14:0x16])[0]
+            channel.dmr_id = self._parse_bcd(ch_data[0x16:0x1A])
+            channel.mute_code = struct.unpack('<I', ch_data[0x1A:0x1E])[0]
 
             return channel
 
@@ -201,7 +293,7 @@ class CodeplugParser:
         contact_data = self.data[offset:offset + CONTACT_SIZE]
 
         # Check if contact is empty
-        if contact_data[0] == 0 or contact_data[0] == EMPTY_BYTE:
+        if contact_data[1] > 2:
             return None
 
         try:
@@ -228,11 +320,8 @@ class CodeplugParser:
             dmr_id_bytes = contact_data[0x02:0x06]
             dmr_id = self._parse_bcd(dmr_id_bytes)
 
-            # Contact index is stored in byte 0 (1-based)
-            contact_index = contact_data[0x00]
-
             return Contact(
-                index=contact_index,
+                index=index,
                 name=name,
                 contact_type=contact_type,
                 dmr_id=dmr_id
@@ -242,12 +331,10 @@ class CodeplugParser:
             print(f"Warning: Error parsing contact {index}: {e}")
             return None
 
-    def parse_group_list(self, index: int) -> Optional[GroupList]:
+    def parse_group_list(self, index: int, maxlist: int, datasize: int, listsize: int) -> Optional[GroupList]:
         """Parse a single group list"""
-        # Group list size is 272 bytes (0x110)
-        GROUP_LIST_SIZE = 272
-        offset = OFFSET_GROUPLISTS + (index * GROUP_LIST_SIZE)
-        gl_data = self.data[offset:offset + GROUP_LIST_SIZE]
+        offset = OFFSET_GROUPLISTS + (index * datasize)
+        gl_data = self.data[offset:offset + datasize]
 
         # Check if group list is empty (byte 1 should be 0x01 for enabled)
         if gl_data[1] != 0x01:
@@ -259,7 +346,7 @@ class CodeplugParser:
             name_bytes = bytes([b for b in name_bytes if b != EMPTY_BYTE])
             try:
                 name = name_bytes.decode('gbk', errors='ignore').strip()
-            except:
+            except Exception:
                 name = name_bytes.decode('latin-1', errors='ignore').strip()
 
             if not name:
@@ -267,7 +354,7 @@ class CodeplugParser:
 
             # Parse contact indices (128 × 2 bytes starting at offset 0x10)
             contacts = []
-            for i in range(128):
+            for i in range(listsize):
                 contact_offset = 0x10 + (i * 2)
                 contact_index = struct.unpack('<H', gl_data[contact_offset:contact_offset + 2])[0]
                 # 0xFFFF means empty slot
@@ -483,8 +570,8 @@ class CodeplugParser:
 
         # Scan settings
         settings.scan_direction = cfg_data[162]
-        settings.scan_mode = cfg_data[163]
-        settings.scan_return = cfg_data[164]
+        settings.scan_mode = cfg_data[163] # Unused in REFW
+        settings.scan_return = cfg_data[0x392] # Since REFW
         settings.scan_dwell = cfg_data[165]
 
         # Function keys
@@ -492,8 +579,6 @@ class CodeplugParser:
         settings.key_fs1_long = cfg_data[171]
         settings.key_fs2_short = cfg_data[172]
         settings.key_fs2_long = cfg_data[173]
-        settings.key_alarm_short = cfg_data[174]
-        settings.key_alarm_long = cfg_data[175]
         settings.key_0 = cfg_data[176]
         settings.key_1 = cfg_data[177]
         settings.key_2 = cfg_data[178]
@@ -528,14 +613,14 @@ class CodeplugParser:
         settings.group_call_hang_time = cfg_data[389] | (cfg_data[390] << 8)
         settings.private_call_hang_time = cfg_data[395] | (cfg_data[396] << 8)
         settings.group_id_display = cfg_data[400]
-        settings.call_timing_display = cfg_data[404]
+        settings.call_group_display = cfg_data[404]
 
         # Advanced Features
-        settings.noaa_channel = cfg_data[272]
-        settings.spectrum_scan_mode = cfg_data[273]
-        settings.detection_range = cfg_data[274] | (cfg_data[275] << 8)
-        settings.relay_delay = cfg_data[276]
-        settings.glitch_filter = cfg_data[842]
+        settings.detection_range = cfg_data[0x110]
+        settings.relay_delay = cfg_data[0x111] | (cfg_data[0x112] << 8)
+        settings.noaa_channel = cfg_data[0x113] # Unused
+        settings.glitch_filter = cfg_data[0x114]
+        settings.spectrum_step = cfg_data[0x115] | (cfg_data[0x116] << 8)
 
         # DTMF System
         settings.dtmf_send_delay = cfg_data[512]
@@ -591,6 +676,7 @@ class CodeplugParser:
         settings.ptt_lock = cfg_data[925]
         settings.zone_channel_display = cfg_data[926]
         settings.dmr_gid_name = cfg_data[927]
+        settings.beta41 = cfg_data[4092:4096] == BETA41_MAGIC
 
         return settings
 

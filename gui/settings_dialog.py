@@ -341,10 +341,10 @@ class SettingsDialog(QDialog):
             self.combo_group_id_display.addItem(label, value)
         dmr_layout.addRow("Show Group ID:", self.combo_group_id_display)
 
-        self.combo_call_timing_display = QComboBox()
+        self.combo_call_group_display = QComboBox()
         for label, value in DISPLAY_ENABLE_VALUES:
-            self.combo_call_timing_display.addItem(label, value)
-        dmr_layout.addRow("Show Call Timing:", self.combo_call_timing_display)
+            self.combo_call_group_display.addItem(label, value)
+        dmr_layout.addRow("Show Call Group:", self.combo_call_group_display)
 
         dmr_group.setLayout(dmr_layout)
         scroll_layout.addWidget(dmr_group)
@@ -402,17 +402,6 @@ class SettingsDialog(QDialog):
         for label, value in FUNCTION_KEY_VALUES:
             self.combo_key_fs2_long.addItem(label, value)
         funckeys_layout.addRow("FS2 (Long Press):", self.combo_key_fs2_long)
-
-        # Alarm/Emergency button
-        self.combo_key_alarm_short = QComboBox()
-        for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_alarm_short.addItem(label, value)
-        funckeys_layout.addRow("Alarm (Short Press):", self.combo_key_alarm_short)
-
-        self.combo_key_alarm_long = QComboBox()
-        for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_alarm_long.addItem(label, value)
-        funckeys_layout.addRow("Alarm (Long Press):", self.combo_key_alarm_long)
 
         # Numeric keys 0-9
         self.combo_key_0 = QComboBox()
@@ -556,7 +545,7 @@ class SettingsDialog(QDialog):
             (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
             (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
             (self.combo_group_id_display, self.settings.group_id_display),
-            (self.combo_call_timing_display, self.settings.call_timing_display),
+            (self.combo_call_group_display, self.settings.call_group_display),
             # Advanced features
             (self.combo_noaa_channel, self.settings.noaa_channel),
             # Function keys
@@ -564,8 +553,6 @@ class SettingsDialog(QDialog):
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
             (self.combo_key_fs2_short, self.settings.key_fs2_short),
             (self.combo_key_fs2_long, self.settings.key_fs2_long),
-            (self.combo_key_alarm_short, self.settings.key_alarm_short),
-            (self.combo_key_alarm_long, self.settings.key_alarm_long),
             (self.combo_key_0, self.settings.key_0),
             (self.combo_key_1, self.settings.key_1),
             (self.combo_key_2, self.settings.key_2),
@@ -588,7 +575,11 @@ class SettingsDialog(QDialog):
         self.spin_call_speaker_volume.setValue(self.settings.call_speaker_volume)
         self.spin_spectrum_scan_mode.setValue(self.settings.spectrum_scan_mode)
         self.spin_detection_range.setValue(self.settings.detection_range)
-        self.spin_relay_delay.setValue(self.settings.relay_delay)
+        relay_delay = max(
+            self.spin_relay_delay.minimum(),
+            min(self.spin_relay_delay.maximum(), self.settings.relay_delay),
+        )
+        self.spin_relay_delay.setValue(relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
     def save_settings(self) -> RadioSettings:
@@ -627,7 +618,7 @@ class SettingsDialog(QDialog):
             ('group_call_hang_time', self.combo_group_call_hang_time),
             ('private_call_hang_time', self.combo_private_call_hang_time),
             ('group_id_display', self.combo_group_id_display),
-            ('call_timing_display', self.combo_call_timing_display),
+            ('call_group_display', self.combo_call_group_display),
             # Advanced features
             ('noaa_channel', self.combo_noaa_channel),
             # Function keys
@@ -635,8 +626,6 @@ class SettingsDialog(QDialog):
             ('key_fs1_long', self.combo_key_fs1_long),
             ('key_fs2_short', self.combo_key_fs2_short),
             ('key_fs2_long', self.combo_key_fs2_long),
-            ('key_alarm_short', self.combo_key_alarm_short),
-            ('key_alarm_long', self.combo_key_alarm_long),
             ('key_0', self.combo_key_0),
             ('key_1', self.combo_key_1),
             ('key_2', self.combo_key_2),
@@ -709,8 +698,8 @@ class CustomFirmwareDialog(QDialog):
 
         # Warning/Info label
         info_label = QLabel(
-            "<b>DualTachyon Custom Firmware Settings</b><br/><br/>"
-            "<i>These settings are only available with DualTachyon's custom firmware. "
+            "<b>REFW Settings</b><br/><br/>"
+            "<i>These settings are only available with REFW custom firmware. "
             "If you are using stock firmware, these values will be ignored by the radio.</i>"
         )
         info_label.setWordWrap(True)
@@ -1002,9 +991,9 @@ class SettingsWidget(QWidget):
         self.btn_edit_advanced.setStyleSheet("QPushButton { font-weight: bold; padding: 8px; }")
         button_layout_top.addWidget(self.btn_edit_advanced)
 
-        self.btn_edit_custom_fw = QPushButton(" Custom Firmware Settings...")
+        self.btn_edit_custom_fw = QPushButton(" REFW Settings...")
         self.btn_edit_custom_fw.setIcon(self.style().standardIcon(QStyle.SP_ComputerIcon))
-        self.btn_edit_custom_fw.setToolTip("Open DualTachyon custom firmware settings (only applies if using DT's custom firmware)")
+        self.btn_edit_custom_fw.setToolTip("Open REFW settings (only applies if using custom firmware)")
         self.btn_edit_custom_fw.clicked.connect(self.open_custom_fw_dialog)
         self.btn_edit_custom_fw.setStyleSheet("QPushButton { font-weight: bold; padding: 8px; }")
         button_layout_top.addWidget(self.btn_edit_custom_fw)

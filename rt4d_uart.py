@@ -245,7 +245,9 @@ class RT4DUART:
         """Read a specific region from SPI flash"""
         data = bytearray()
         kb_offset = address // 1024  # Convert byte address to KB offset
-        num_blocks = (size + 1023) // 1024  # Round up to nearest KB
+        byte_offset = address % 1024  # Offset within first block
+        # Account for byte offset when calculating blocks needed
+        num_blocks = (byte_offset + size + 1023) // 1024
 
         for i in range(num_blocks):
             block_data = self.command_read_spi(kb_offset + i)
@@ -254,8 +256,8 @@ class RT4DUART:
                 return None
             data.extend(block_data)
 
-        # Return only the requested size
-        return bytes(data[:size])
+        # Return bytes starting from the offset within first block
+        return bytes(data[byte_offset:byte_offset + size])
 
     def write_spi_region(self, data: bytes, region_name: str) -> bool:
         """Write data to a specific SPI region"""

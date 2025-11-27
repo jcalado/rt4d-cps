@@ -15,6 +15,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
 from rt4d_uart import RT4DUART
 from rt4d_codeplug.constants import SPI_REGIONS
+from rt4d_codeplug.utils import detect_settings_bank
 
 
 class RadioWorker(QThread):
@@ -80,8 +81,12 @@ class RadioWorker(QThread):
         # Selective backup
         codeplug_data = bytearray(b'\xff' * TOTAL_SIZE)
 
+        # Detect which bank contains active settings (beta41+ dual-bank support)
+        settings_bank_addr = detect_settings_bank(uart)
+        self.progress.emit(5, f"Detected settings at bank 0x{settings_bank_addr:06X}")
+
         region_map = {
-            'main_settings': (OFFSET_CFG, SIZE_CFG, 0x002000),
+            'main_settings': (OFFSET_CFG, SIZE_CFG, settings_bank_addr),
             'channels': (OFFSET_CHANNELS, SIZE_CHANNELS, 0x004000),
             'contacts': (OFFSET_CONTACTS, SIZE_CONTACTS, 0x05C000),
             'groups': (OFFSET_GROUPLISTS, SIZE_GROUPLISTS, 0x07C000),
@@ -398,6 +403,29 @@ class RadioFlashDialog(QDialog):
         region_group = QGroupBox("Regions to Flash")
         region_layout = QVBoxLayout()
 
+        # Beta41+ layout control
+        self.check_beta41 = QCheckBox("Use Beta41+ Layout (REFW)")
+        self.check_beta41.setToolTip(
+            "Enable this to write channels in the REFW Beta41+ layout.\n"
+            "Only enable if your radio has REFW Beta41 or newer custom firmware installed.\n"
+            "WARNING: Stock firmware does NOT support this layout!"
+        )
+        # Initialize from codeplug settings
+        if self.codeplug and self.codeplug.settings:
+            self.check_beta41.setChecked(self.codeplug.settings.beta41)
+        region_layout.addWidget(self.check_beta41)
+
+        # Info label for Beta41+ warning
+        self.label_beta41_info = QLabel(
+            "ℹ️  REFW Beta41+ layout is incompatible with stock firmware."
+        )
+        self.label_beta41_info.setStyleSheet("color: #0066cc; font-size: 10px;")
+        self.label_beta41_info.setWordWrap(True)
+        region_layout.addWidget(self.label_beta41_info)
+
+        # Spacing after beta41 section
+        region_layout.addSpacing(10)
+
         self.check_settings = QCheckBox("Main Settings")
         self.check_settings.setChecked(True)
         region_layout.addWidget(self.check_settings)
@@ -479,6 +507,10 @@ class RadioFlashDialog(QDialog):
 
         if reply != QMessageBox.Yes:
             return
+
+        # Apply beta41 layout setting from checkbox
+        if self.codeplug and self.codeplug.settings:
+            self.codeplug.settings.beta41 = self.check_beta41.isChecked()
 
         # Determine regions
         regions = []

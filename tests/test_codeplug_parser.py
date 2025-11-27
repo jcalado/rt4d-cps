@@ -5,11 +5,15 @@ from pathlib import Path
 import pytest
 
 from rt4d_codeplug import ChannelMode, CodeplugParser, CodeplugSerializer
+from rt4d_codeplug.models import Codeplug, RadioSettings
+from rt4d_codeplug.constants import TOTAL_SIZE
 
 
 @pytest.fixture(scope="module")
 def codeplug():
     fixture_path = Path(__file__).resolve().parent.parent / "tests.4rdmf"
+    if not fixture_path.exists():
+        fixture_path = Path(__file__).resolve().parent.parent / "codeplug.new.4rdmf"
     parser = CodeplugParser.from_file(str(fixture_path))
     with contextlib.redirect_stdout(io.StringIO()):
         return parser.parse()
@@ -90,3 +94,17 @@ def test_serializer_round_trip_preserves_key_fields(codeplug):
     assert snapshot_channels(reparsed.channels) == original_channels
     assert snapshot_contacts(reparsed.contacts) == original_contacts
     assert snapshot_zones(reparsed.zones) == original_zones
+
+
+def test_beta41_settings_round_trip_preserves_magic_bytes():
+    codeplug = Codeplug(settings=RadioSettings(beta41=True))
+
+    serialized = CodeplugSerializer.serialize(codeplug)
+
+    assert len(serialized) == TOTAL_SIZE
+
+    parser = CodeplugParser(serialized)
+    with contextlib.redirect_stdout(io.StringIO()):
+        reparsed = parser.parse()
+
+    assert reparsed.settings.beta41 is True

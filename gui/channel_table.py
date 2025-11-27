@@ -291,10 +291,6 @@ class ChannelTableWidget(QWidget):
         self.detail_scan.currentIndexChanged.connect(self.on_detail_changed)
         basic_layout.addRow("Scan:", self.detail_scan)
 
-        self.detail_enabled = QCheckBox("Channel Enabled")
-        self.detail_enabled.stateChanged.connect(self.on_detail_changed)
-        basic_layout.addRow("", self.detail_enabled)
-
         basic_group.setLayout(basic_layout)
         layout.addWidget(basic_group)
 
@@ -426,26 +422,12 @@ class ChannelTableWidget(QWidget):
         # Encrypted Sub-audio Codes (used when CT/DCS Select is set to Encrypted 1/2/3)
         hex_validator = QRegularExpressionValidator(QRegularExpression("[0-9A-Fa-f]{0,8}"))
 
-        self.detail_encrypted_code_1 = QLineEdit()
-        self.detail_encrypted_code_1.setPlaceholderText("00000000")
-        self.detail_encrypted_code_1.setMaxLength(8)
-        self.detail_encrypted_code_1.setValidator(hex_validator)
-        self.detail_encrypted_code_1.textChanged.connect(self.on_detail_changed)
-        analog_layout.addRow("Encrypted Code 1:", self.detail_encrypted_code_1)
-
-        self.detail_encrypted_code_2 = QLineEdit()
-        self.detail_encrypted_code_2.setPlaceholderText("00000000")
-        self.detail_encrypted_code_2.setMaxLength(8)
-        self.detail_encrypted_code_2.setValidator(hex_validator)
-        self.detail_encrypted_code_2.textChanged.connect(self.on_detail_changed)
-        analog_layout.addRow("Encrypted Code 2:", self.detail_encrypted_code_2)
-
-        self.detail_encrypted_code_3 = QLineEdit()
-        self.detail_encrypted_code_3.setPlaceholderText("00000000")
-        self.detail_encrypted_code_3.setMaxLength(8)
-        self.detail_encrypted_code_3.setValidator(hex_validator)
-        self.detail_encrypted_code_3.textChanged.connect(self.on_detail_changed)
-        analog_layout.addRow("Encrypted Code 3:", self.detail_encrypted_code_3)
+        self.detail_mute_code = QLineEdit()
+        self.detail_mute_code.setPlaceholderText("00000000")
+        self.detail_mute_code.setMaxLength(8)
+        self.detail_mute_code.setValidator(hex_validator)
+        self.detail_mute_code.textChanged.connect(self.on_detail_changed)
+        analog_layout.addRow("Mute Code:", self.detail_mute_code)
 
         self.analog_group.setLayout(analog_layout)
         layout.addWidget(self.analog_group)
@@ -467,7 +449,6 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.setEnabled(enabled)
         self.detail_power.setEnabled(enabled)
         self.detail_scan.setEnabled(enabled)
-        self.detail_enabled.setEnabled(enabled)
         self.dmr_group.setEnabled(enabled)
         self.analog_group.setEnabled(enabled)
 
@@ -516,7 +497,6 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.blockSignals(True)
         self.detail_power.blockSignals(True)
         self.detail_scan.blockSignals(True)
-        self.detail_enabled.blockSignals(True)
         self.detail_time_slot.blockSignals(True)
         self.detail_color_code.blockSignals(True)
         self.detail_dmr_mode.blockSignals(True)
@@ -536,9 +516,7 @@ class ChannelTableWidget(QWidget):
         self.detail_tot_analog.blockSignals(True)
         self.detail_ctdcs_select.blockSignals(True)
         self.detail_tail_tone.blockSignals(True)
-        self.detail_encrypted_code_1.blockSignals(True)
-        self.detail_encrypted_code_2.blockSignals(True)
-        self.detail_encrypted_code_3.blockSignals(True)
+        self.detail_mute_code.blockSignals(True)
 
         # Load basic settings
         self.detail_name.setText(channel.name)
@@ -547,7 +525,6 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.setCurrentIndex(1 if channel.is_digital() else 0)
         self.detail_power.setCurrentIndex(0 if channel.power == PowerLevel.HIGH else 1)
         self.detail_scan.setCurrentIndex(0 if channel.scan == ScanMode.ADD else 1)
-        self.detail_enabled.setChecked(channel.enabled)
 
         # Load DMR settings
         self.detail_time_slot.setCurrentIndex(channel.dmr_time_slot)
@@ -655,9 +632,7 @@ class ChannelTableWidget(QWidget):
                 self.detail_tail_tone.setCurrentIndex(i)
                 break
         # Encrypted codes (display as 8-digit hex)
-        self.detail_encrypted_code_1.setText(f"{channel.encrypted_code_1:08X}")
-        self.detail_encrypted_code_2.setText(f"{channel.encrypted_code_2:08X}")
-        self.detail_encrypted_code_3.setText(f"{channel.encrypted_code_3:08X}")
+        self.detail_mute_code.setText(f"{channel.mute_code:08X}")
 
         # Show/hide groups based on mode
         self.dmr_group.setVisible(channel.is_digital())
@@ -670,7 +645,6 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.blockSignals(False)
         self.detail_power.blockSignals(False)
         self.detail_scan.blockSignals(False)
-        self.detail_enabled.blockSignals(False)
         self.detail_time_slot.blockSignals(False)
         self.detail_color_code.blockSignals(False)
         self.detail_dmr_mode.blockSignals(False)
@@ -690,9 +664,7 @@ class ChannelTableWidget(QWidget):
         self.detail_tot_analog.blockSignals(False)
         self.detail_ctdcs_select.blockSignals(False)
         self.detail_tail_tone.blockSignals(False)
-        self.detail_encrypted_code_1.blockSignals(False)
-        self.detail_encrypted_code_2.blockSignals(False)
-        self.detail_encrypted_code_3.blockSignals(False)
+        self.detail_mute_code.blockSignals(False)
 
     def on_mode_changed(self):
         """Handle mode change"""
@@ -726,7 +698,6 @@ class ChannelTableWidget(QWidget):
         channel.mode = ChannelMode.DIGITAL if self.detail_mode.currentIndex() == 1 else ChannelMode.ANALOG
         channel.power = PowerLevel.HIGH if self.detail_power.currentIndex() == 0 else PowerLevel.LOW
         channel.scan = ScanMode.ADD if self.detail_scan.currentIndex() == 0 else ScanMode.REMOVE
-        channel.enabled = self.detail_enabled.isChecked()
 
         # DMR settings
         channel.dmr_time_slot = self.detail_time_slot.currentIndex()
@@ -755,17 +726,9 @@ class ChannelTableWidget(QWidget):
         channel.tail_tone = self.detail_tail_tone.currentData()
         # Encrypted codes - parse as hex integers
         try:
-            channel.encrypted_code_1 = int(self.detail_encrypted_code_1.text() or "0", 16)
+            channel.mute_code = int(self.detail_mute_code.text() or "0", 16)
         except ValueError:
-            channel.encrypted_code_1 = 0
-        try:
-            channel.encrypted_code_2 = int(self.detail_encrypted_code_2.text() or "0", 16)
-        except ValueError:
-            channel.encrypted_code_2 = 0
-        try:
-            channel.encrypted_code_3 = int(self.detail_encrypted_code_3.text() or "0", 16)
-        except ValueError:
-            channel.encrypted_code_3 = 0
+            channel.mute_code = 0
 
         # Refresh the table row
         self.table.blockSignals(True)
@@ -1136,7 +1099,6 @@ class ChannelTableWidget(QWidget):
             mode=ChannelMode.ANALOG,
             power=PowerLevel.HIGH,
             scan=ScanMode.ADD,
-            enabled=True
         )
 
         self.codeplug.add_channel(new_channel)
@@ -1331,7 +1293,7 @@ class ChannelTableWidget(QWidget):
                     # Check if channel exists
                     channel = self.codeplug.get_channel(index)
                     if not channel:
-                        channel = Channel(index=index, enabled=True)
+                        channel = Channel(index=index)
                         self.codeplug.add_channel(channel)
 
                     # Common fields
@@ -1409,14 +1371,8 @@ class ChannelTableWidget(QWidget):
                         dcs_type = row.get('DCS Type', 'Normal Sub-tone')
                         channel.ctdcs_select = self._find_dropdown_value(CTDCS_SELECT_VALUES, dcs_type)
 
-                        mute_code_1_str = row.get('ANA Mute Code 1', '')
-                        channel.encrypted_code_1 = int(mute_code_1_str, 16) if mute_code_1_str else 0
-
-                        mute_code_2_str = row.get('ANA Mute Code 2', '')
-                        channel.encrypted_code_2 = int(mute_code_2_str, 16) if mute_code_2_str else 0
-
-                        mute_code_3_str = row.get('ANA Mute Code 3', '')
-                        channel.encrypted_code_3 = int(mute_code_3_str, 16) if mute_code_3_str else 0
+                        mute_code_str = row.get('ANA Mute Code', '')
+                        channel.mute_code = int(mute_code_str, 16) if mute_code_str else 0
 
                         am_fm_rx = row.get('AM_FM RX', 'FM')
                         channel.analog_modulation = AnalogModulation(self._find_dropdown_value(ANALOG_MODULATION_VALUES, am_fm_rx))
@@ -1483,9 +1439,7 @@ class ChannelTableWidget(QWidget):
                     tail_tone = ''
                     scrambler = ''
                     dcs_type = ''
-                    mute_code_1 = ''
-                    mute_code_2 = ''
-                    mute_code_3 = ''
+                    mute_code = ''
                     am_fm_rx = ''
                 else:
                     # Analog-specific fields
@@ -1508,9 +1462,7 @@ class ChannelTableWidget(QWidget):
                     tail_tone = self._get_dropdown_label(TAIL_TONE_VALUES, ch.tail_tone)
                     scrambler = self._get_dropdown_label(SCRAMBLER_VALUES, ch.scramble)
                     dcs_type = self._get_dropdown_label(CTDCS_SELECT_VALUES, ch.ctdcs_select)
-                    mute_code_1 = f"{ch.encrypted_code_1:08X}" if ch.encrypted_code_1 else ''
-                    mute_code_2 = f"{ch.encrypted_code_2:08X}" if ch.encrypted_code_2 else ''
-                    mute_code_3 = f"{ch.encrypted_code_3:08X}" if ch.encrypted_code_3 else ''
+                    mute_code = f"{ch.mute_code:08X}" if ch.mute_code else ''
                     am_fm_rx = self._get_dropdown_label(ANALOG_MODULATION_VALUES, ch.analog_modulation.value)
 
                 writer.writerow([
@@ -1518,5 +1470,5 @@ class ChannelTableWidget(QWidget):
                     channel_name, tg_list, contact, dmr_encrypt, dmr_mode, timeslot, colour_code,
                     dmr_politely_tx, dmr_tot, promiscuos_mode, channel_id, id_select,
                     rx_tone, tx_tone, bandwidth, busy_lock, ana_tot, tail_tone, scrambler,
-                    dcs_type, mute_code_1, mute_code_2, mute_code_3, am_fm_rx
+                    dcs_type, mute_code, 0, 0, am_fm_rx
                 ])

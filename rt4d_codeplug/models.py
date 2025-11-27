@@ -80,9 +80,7 @@ class Channel:
     tot_analog: int = 0  # Transmit timeout for analog (offset 0x12, lower 5 bits)
     ctdcs_select: int = 0  # CT/DCS select mode (offset 0x12, bits 5-7): 0=Normal, 1=Encrypt1, 2=Encrypt2, 3=Encrypt3, 4=Decode
     tail_tone: int = 0  # Tail tone elimination (offset 0x13, upper 4 bits)
-    encrypted_code_1: int = 0  # Encrypted sub-audio code 1 (offset 0x14-0x17, 32-bit hex)
-    encrypted_code_2: int = 0  # Encrypted sub-audio code 2 (offset 0x18-0x1B, 32-bit hex)
-    encrypted_code_3: int = 0  # Encrypted sub-audio code 3 (offset 0x1C-0x1F, 32-bit hex)
+    mute_code: int = 0  # Encrypted sub-audio code 1 (offset 0x14-0x17, 32-bit hex)
 
     def __post_init__(self):
         """Validate channel data"""
@@ -97,7 +95,7 @@ class Channel:
 
     def is_empty(self) -> bool:
         """Check if channel is empty/unused"""
-        return not self.enabled or self.rx_freq == 0.0
+        return self.rx_freq == 0.0
 
     def is_digital(self) -> bool:
         """Check if channel is digital/DMR"""
@@ -181,22 +179,22 @@ class GroupList:
     """DMR Group List (RX Group)"""
     index: int
     name: str = ""
-    contacts: List[int] = field(default_factory=list)  # List of contact indices (max 128)
+    contacts: List[int] = field(default_factory=list)  # List of contact indices (max 128 old, 32 new layout)
 
     def __post_init__(self):
         """Validate group list data"""
         if len(self.name) > 14:
             self.name = self.name[:14]
-        if len(self.contacts) > 128:
-            self.contacts = self.contacts[:128]
+        # Note: max contacts depends on layout (128 for old, 32 for B41+)
+        # Actual enforcement happens at serialization time
 
     def is_empty(self) -> bool:
         """Check if group list is empty/unused"""
         return not self.name
 
-    def add_contact(self, contact_index: int):
+    def add_contact(self, contact_index: int, max_contacts: int = 128):
         """Add a contact to this group list"""
-        if len(self.contacts) < 128 and contact_index not in self.contacts:
+        if len(self.contacts) < max_contacts and contact_index not in self.contacts:
             self.contacts.append(contact_index)
 
     def remove_contact(self, contact_index: int):
@@ -278,7 +276,7 @@ class RadioSettings:
     group_call_hang_time: int = 3000  # Group call hang time in ms (offset 389-390, 16-bit LE)
     private_call_hang_time: int = 3000  # Private call hang time in ms (offset 395-396, 16-bit LE)
     group_id_display: int = 0  # Show group ID during calls (offset 400)
-    call_timing_display: int = 0  # Show call timing during calls (offset 404)
+    call_group_display: int = 0  # Show call group during calls (offset 404)
 
     # Power
     power_save_mode: int = 0
@@ -351,8 +349,6 @@ class RadioSettings:
     key_fs1_long: int = 0  # FS1 long press action
     key_fs2_short: int = 0  # FS2 short press action
     key_fs2_long: int = 0  # FS2 long press action
-    key_alarm_short: int = 0  # Alarm/Emergency button short press
-    key_alarm_long: int = 0  # Alarm/Emergency button long press
     key_0: int = 0  # Numeric key 0 action
     key_1: int = 0  # Numeric key 1 action
     key_2: int = 0  # Numeric key 2 action
@@ -405,6 +401,7 @@ class RadioSettings:
     ptt_lock: int = 0  # PTT lock feature (offset 925/0x39D)
     zone_channel_display: int = 0  # Show Zone CH on display (offset 926/0x39E)
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 927/0x39F)
+    beta41: bool = False # Indicates the settings are Beta41+ compatible
 
 
 @dataclass

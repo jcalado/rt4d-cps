@@ -4,14 +4,14 @@ from rt4d_codeplug.models import Channel, GroupList, Zone
 
 
 def test_channel_validation_truncates_and_validates():
-    ch = Channel(index=1, name="A" * 40, rx_freq=145.5, tx_freq=145.5, enabled=True)
+    ch = Channel(index=1, name="A" * 40, rx_freq=145.5, tx_freq=145.5)
     assert len(ch.name) == 16
     assert not ch.is_empty()
 
     with pytest.raises(ValueError):
-        Channel(index=2, rx_freq=1200.0, tx_freq=1200.0, enabled=True)
+        Channel(index=2, rx_freq=1200.0, tx_freq=1200.0)
 
-    empty = Channel(index=3, rx_freq=0.0, tx_freq=0.0, enabled=True)
+    empty = Channel(index=3, rx_freq=0.0, tx_freq=0.0)
     assert empty.is_empty()
 
 
