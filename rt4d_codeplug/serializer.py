@@ -17,6 +17,24 @@ class CodeplugSerializer:
         # Initialize with empty data (all 0xFF)
         data = bytearray(b'\xff' * TOTAL_SIZE)
 
+        # Recalculate indices from list positions before serialization
+        for i, ch in enumerate(codeplug.channels):
+            ch.index = i
+        for i, c in enumerate(codeplug.contacts):
+            c.index = i + 1  # Contacts are 1-based
+        for i, gl in enumerate(codeplug.group_lists):
+            gl.index = i + 1  # Group lists are 1-based
+        for i, z in enumerate(codeplug.zones):
+            z.index = i
+        for i, ek in enumerate(codeplug.encryption_keys):
+            ek.index = i
+
+        # Build UUID→index maps for cross-reference resolution
+        contact_idx_map = {c.uuid: c.index for c in codeplug.contacts}
+        group_list_idx_map = {gl.uuid: gl.index for gl in codeplug.group_lists}
+        encrypt_idx_map = {ek.uuid: ek.index for ek in codeplug.encryption_keys}
+        channel_idx_map = {ch.uuid: ch.index for ch in codeplug.channels}
+
         # Serialize settings to cfg_data if settings exist
         if codeplug.settings:
             codeplug.cfg_data = CodeplugSerializer.serialize_settings(codeplug.settings, codeplug.cfg_data)
@@ -29,9 +47,9 @@ class CodeplugSerializer:
         # Write channels
         for channel in codeplug.channels:
             if use_beta_layout:
-                ch_data = CodeplugSerializer.serialize_channel_new(channel)
+                ch_data = CodeplugSerializer.serialize_channel_new(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
             else:
-                ch_data = CodeplugSerializer.serialize_channel(channel)
+                ch_data = CodeplugSerializer.serialize_channel(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
             offset = OFFSET_CHANNELS + (channel.index * CHANNEL_SIZE)
             data[offset:offset + CHANNEL_SIZE] = ch_data
 
@@ -44,7 +62,7 @@ class CodeplugSerializer:
 
         # Write zones
         for zone in codeplug.zones:
-            zone_data = CodeplugSerializer.serialize_zone(zone)
+            zone_data = CodeplugSerializer.serialize_zone(zone, channel_idx_map)
             offset = OFFSET_ZONES + (zone.index * ZONE_SIZE)
             data[offset:offset + ZONE_SIZE] = zone_data
 
@@ -52,7 +70,7 @@ class CodeplugSerializer:
         group_list_size = GROUP_LIST_SIZE_NEW if use_beta_layout else GROUP_LIST_SIZE
         max_contacts = MAX_GROUP_LIST_IDS_NEW if use_beta_layout else MAX_GROUP_LIST_IDS
         for group_list in codeplug.group_lists:
-            gl_data = CodeplugSerializer.serialize_group_list(group_list, group_list_size, max_contacts)
+            gl_data = CodeplugSerializer.serialize_group_list(group_list, contact_idx_map, group_list_size, max_contacts)
             # Group list index is 1-based, convert to 0-based slot for file offset
             offset = OFFSET_GROUPLISTS + ((group_list.index - 1) * group_list_size)
             data[offset:offset + group_list_size] = gl_data
@@ -69,7 +87,7 @@ class CodeplugSerializer:
         return bytes(data)
 
     @staticmethod
-    def serialize_channel(channel: Channel) -> bytes:
+    def serialize_channel(channel: Channel, contact_idx_map: dict, group_list_idx_map: dict, encrypt_idx_map: dict) -> bytes:
         """Serialize a single channel to 48 bytes"""
         data = bytearray(b'\xff' * CHANNEL_SIZE)
 
@@ -114,14 +132,18 @@ class CodeplugSerializer:
             data[0x11] = channel.tx_priority
             data[0x14] = channel.tot
             data[0x15] = channel.alarm
-            struct.pack_into('<H', data, 0x16, channel.group_list_index)
-            # Contact index: convert from 1-based contact.index to 0-based slot number for file
-            if channel.contact_index == 0:
+            # Convert UUID references to indices
+            group_list_index = group_list_idx_map.get(channel.group_list_uuid, 0)
+            struct.pack_into('<H', data, 0x16, group_list_index)
+            # Contact: convert UUID to index, then to 0-based slot number for file
+            contact_index = contact_idx_map.get(channel.contact_uuid, 0)
+            if contact_index == 0:
                 contact_slot = 0xFFFF  # No contact selected
             else:
-                contact_slot = channel.contact_index - 1  # Convert index to slot
+                contact_slot = contact_index - 1  # Convert index to slot
             struct.pack_into('<H', data, 0x18, contact_slot)
-            struct.pack_into('<H', data, 0x1A, channel.encrypt_index)
+            encrypt_index = encrypt_idx_map.get(channel.encrypt_uuid, 0)
+            struct.pack_into('<H', data, 0x1A, encrypt_index)
             # DMR ID: write 0 if using radio ID, otherwise write channel DMR ID
             if channel.use_radio_id:
                 bcd_bytes = CodeplugSerializer._to_bcd(0)
@@ -161,7 +183,7 @@ class CodeplugSerializer:
         return bytes(data)
 
     @staticmethod
-    def serialize_channel_new(channel: Channel) -> bytes:
+    def serialize_channel_new(channel: Channel, contact_idx_map: dict, group_list_idx_map: dict, encrypt_idx_map: dict) -> bytes:
         """Serialize a single beta41+ channel to 48 bytes"""
         data = bytearray(b'\xff' * CHANNEL_SIZE)
 
@@ -206,11 +228,15 @@ class CodeplugSerializer:
         data[0x0D:0x0F] = encode_subaudio_bytes(channel.rx_ctcss)
         data[0x0F:0x11] = encode_subaudio_bytes(channel.tx_ctcss)
 
-        contact_slot = 0xFFFF if channel.contact_index == 0 else max(channel.contact_index - 1, 0)
+        # Convert UUID references to indices
+        contact_index = contact_idx_map.get(channel.contact_uuid, 0)
+        contact_slot = 0xFFFF if contact_index == 0 else max(contact_index - 1, 0)
         struct.pack_into('<H', data, 0x11, contact_slot)
 
-        data[0x13] = channel.group_list_index & 0xFF
-        struct.pack_into('<H', data, 0x14, channel.encrypt_index & 0xFFFF)
+        group_list_index = group_list_idx_map.get(channel.group_list_uuid, 0)
+        data[0x13] = group_list_index & 0xFF
+        encrypt_index = encrypt_idx_map.get(channel.encrypt_uuid, 0)
+        struct.pack_into('<H', data, 0x14, encrypt_index & 0xFFFF)
 
         if channel.use_radio_id:
             bcd_bytes = CodeplugSerializer._to_bcd(0)
@@ -261,7 +287,7 @@ class CodeplugSerializer:
         return bytes(data)
 
     @staticmethod
-    def serialize_zone(zone: Zone) -> bytes:
+    def serialize_zone(zone: Zone, channel_idx_map: dict) -> bytes:
         """Serialize a single zone to 512 bytes"""
         data = bytearray(b'\xff' * ZONE_SIZE)
 
@@ -279,15 +305,16 @@ class CodeplugSerializer:
         for i in range(len(name_bytes), 16):
             data[0x04 + i] = EMPTY_BYTE
 
-        # Channel list
+        # Channel list - convert UUIDs to indices
         # First 2 bytes: channel count (uint16_le)
-        channel_count = min(len(zone.channels), 200)  # Max 200 channels
+        valid_channels = [channel_idx_map.get(uuid) for uuid in zone.channels if uuid in channel_idx_map]
+        channel_count = min(len(valid_channels), 200)  # Max 200 channels
         data[0] = channel_count & 0xFF
         data[1] = (channel_count >> 8) & 0xFF
 
         # Channel indices start at offset 0x14 (20)
         # Each channel index is 2 bytes (uint16_le)
-        for i, channel_idx in enumerate(zone.channels[:200]):
+        for i, channel_idx in enumerate(valid_channels[:200]):
             offset = 0x14 + (i * 2)
             data[offset] = channel_idx & 0xFF
             data[offset + 1] = (channel_idx >> 8) & 0xFF
@@ -344,7 +371,7 @@ class CodeplugSerializer:
         return bytes(data)
 
     @staticmethod
-    def serialize_group_list(group_list, group_list_size: int = 272, max_contacts: int = 128) -> bytes:
+    def serialize_group_list(group_list, contact_idx_map: dict, group_list_size: int = 272, max_contacts: int = 128) -> bytes:
         """Serialize a single group list to the specified size"""
         data = bytearray(b'\xff' * group_list_size)
 
@@ -368,10 +395,11 @@ class CodeplugSerializer:
         for i in range(len(name_bytes), 14):
             data[0x02 + i] = EMPTY_BYTE
 
-        # Contact indices (max_contacts × 2 bytes starting at offset 0x10)
+        # Contact indices - convert UUIDs to indices (max_contacts × 2 bytes starting at offset 0x10)
+        valid_contacts = [contact_idx_map.get(uuid) for uuid in group_list.contacts if uuid in contact_idx_map]
         for i in range(max_contacts):
-            if i < len(group_list.contacts):
-                contact_idx = group_list.contacts[i]
+            if i < len(valid_contacts):
+                contact_idx = valid_contacts[i]
                 struct.pack_into('<H', data, 0x10 + (i * 2), contact_idx)
             else:
                 # Empty slot: 0xFFFF

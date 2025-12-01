@@ -87,7 +87,49 @@ class CodeplugParser:
                 codeplug.add_encryption_key(key)
 
         print(f"Parsed {len(codeplug.encryption_keys)} encryption keys")
+
+        # Resolve index-based references to UUIDs
+        print("Resolving UUID references...")
+        self._resolve_uuid_references(codeplug)
+
         return codeplug
+
+    def _resolve_uuid_references(self, codeplug: Codeplug):
+        """Convert index-based references to UUIDs after parsing all entities"""
+        # Build index→UUID maps
+        contact_uuid_map = {c.index: c.uuid for c in codeplug.contacts}
+        group_list_uuid_map = {gl.index: gl.uuid for gl in codeplug.group_lists}
+        encrypt_uuid_map = {ek.index: ek.uuid for ek in codeplug.encryption_keys}
+        channel_uuid_map = {ch.index: ch.uuid for ch in codeplug.channels}
+
+        # Resolve channel references (contact, group_list, encrypt)
+        for channel in codeplug.channels:
+            # _parsed_contact_index, _parsed_group_list_index, _parsed_encrypt_index
+            # were stored during parsing
+            if hasattr(channel, '_parsed_contact_index') and channel._parsed_contact_index:
+                channel.contact_uuid = contact_uuid_map.get(channel._parsed_contact_index, "")
+            if hasattr(channel, '_parsed_group_list_index') and channel._parsed_group_list_index:
+                channel.group_list_uuid = group_list_uuid_map.get(channel._parsed_group_list_index, "")
+            if hasattr(channel, '_parsed_encrypt_index') and channel._parsed_encrypt_index:
+                channel.encrypt_uuid = encrypt_uuid_map.get(channel._parsed_encrypt_index, "")
+            # Clean up temporary attributes
+            for attr in ['_parsed_contact_index', '_parsed_group_list_index', '_parsed_encrypt_index']:
+                if hasattr(channel, attr):
+                    delattr(channel, attr)
+
+        # Resolve zone channel references
+        for zone in codeplug.zones:
+            if hasattr(zone, '_parsed_channel_indices'):
+                zone.channels = [channel_uuid_map.get(idx, "") for idx in zone._parsed_channel_indices
+                                if idx in channel_uuid_map]
+                delattr(zone, '_parsed_channel_indices')
+
+        # Resolve group list contact references
+        for gl in codeplug.group_lists:
+            if hasattr(gl, '_parsed_contact_indices'):
+                gl.contacts = [contact_uuid_map.get(idx, "") for idx in gl._parsed_contact_indices
+                              if idx in contact_uuid_map]
+                delattr(gl, '_parsed_contact_indices')
 
     def parse_channel(self, index: int) -> Optional[Channel]:
         """Parse a single channel"""
@@ -146,14 +188,15 @@ class CodeplugParser:
                 channel.tx_priority = ch_data[0x11]
                 channel.tot = ch_data[0x14]
                 channel.alarm = ch_data[0x15]
-                channel.group_list_index = struct.unpack('<H', ch_data[0x16:0x18])[0]
+                # Store parsed indices temporarily for UUID resolution later
+                channel._parsed_group_list_index = struct.unpack('<H', ch_data[0x16:0x18])[0]
                 # Contact index: file stores 0-based slot numbers, convert to 1-based contact.index
                 contact_slot = struct.unpack('<H', ch_data[0x18:0x1A])[0]
                 if contact_slot == 0xFFFF:
-                    channel.contact_index = 0  # No contact selected
+                    channel._parsed_contact_index = 0  # No contact selected
                 else:
-                    channel.contact_index = contact_slot + 1  # Convert slot to index
-                channel.encrypt_index = struct.unpack('<H', ch_data[0x1A:0x1C])[0]
+                    channel._parsed_contact_index = contact_slot + 1  # Convert slot to index
+                channel._parsed_encrypt_index = struct.unpack('<H', ch_data[0x1A:0x1C])[0]
                 # DMR ID is BCD encoded at offset 0x1C-0x1F
                 dmr_id_bytes = ch_data[0x1C:0x20]
                 channel.dmr_id = self._parse_bcd(dmr_id_bytes)
@@ -270,14 +313,15 @@ class CodeplugParser:
             channel.rx_ctcss = decode_subaudio_bytes(ch_data[0x0D:0x0F])
             channel.tx_ctcss = decode_subaudio_bytes(ch_data[0x0F:0x11])
 
+            # Store parsed indices temporarily for UUID resolution later
             contact_slot = struct.unpack('<H', ch_data[0x11:0x13])[0]
             if contact_slot == 0xFFFF:
-                channel.contact_index = 0
+                channel._parsed_contact_index = 0
             else:
-                channel.contact_index = contact_slot + 1
+                channel._parsed_contact_index = contact_slot + 1
 
-            channel.group_list_index = ch_data[0x13]
-            channel.encrypt_index = struct.unpack('<H', ch_data[0x14:0x16])[0]
+            channel._parsed_group_list_index = ch_data[0x13]
+            channel._parsed_encrypt_index = struct.unpack('<H', ch_data[0x14:0x16])[0]
             channel.dmr_id = self._parse_bcd(ch_data[0x16:0x1A])
             channel.mute_code = struct.unpack('<I', ch_data[0x1A:0x1E])[0]
 
@@ -321,7 +365,7 @@ class CodeplugParser:
             dmr_id = self._parse_bcd(dmr_id_bytes)
 
             return Contact(
-                index=index,
+                index=index + 1,  # Contacts use 1-based indexing
                 name=name,
                 contact_type=contact_type,
                 dmr_id=dmr_id
@@ -353,19 +397,21 @@ class CodeplugParser:
                 return None
 
             # Parse contact indices (128 × 2 bytes starting at offset 0x10)
-            contacts = []
+            # Store as temporary attribute for UUID resolution later
+            parsed_contact_indices = []
             for i in range(listsize):
                 contact_offset = 0x10 + (i * 2)
                 contact_index = struct.unpack('<H', gl_data[contact_offset:contact_offset + 2])[0]
                 # 0xFFFF means empty slot
                 if contact_index != 0xFFFF and contact_index < MAX_CONTACTS:
-                    contacts.append(contact_index)
+                    parsed_contact_indices.append(contact_index)
 
-            return GroupList(
+            gl = GroupList(
                 index=index + 1,  # Convert 0-based slot to 1-based index
                 name=name,
-                contacts=contacts
             )
+            gl._parsed_contact_indices = parsed_contact_indices
+            return gl
 
         except Exception as e:
             print(f"Warning: Error parsing group list {index}: {e}")
@@ -395,7 +441,7 @@ class CodeplugParser:
             # Parse channel list
             # First 2 bytes contain channel count
             channel_count = zone_data[0] | (zone_data[1] << 8)
-            channels = []
+            parsed_channel_indices = []
 
             # Channel list starts at offset 0x14 (20)
             # Each channel is a 16-bit little-endian integer
@@ -404,13 +450,14 @@ class CodeplugParser:
                 if offset + 1 < len(zone_data):
                     channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)
                     if channel_idx != 0xFFFF and channel_idx < 1024:  # Valid channel index
-                        channels.append(channel_idx)
+                        parsed_channel_indices.append(channel_idx)
 
-            return Zone(
+            zone = Zone(
                 index=index,
                 name=name,
-                channels=channels
             )
+            zone._parsed_channel_indices = parsed_channel_indices
+            return zone
 
         except Exception as e:
             print(f"Warning: Error parsing zone {index}: {e}")

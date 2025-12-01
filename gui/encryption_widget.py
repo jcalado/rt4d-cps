@@ -140,7 +140,7 @@ class EncryptionWidget(QWidget):
             return
 
         self.table.setRowCount(0)
-        keys = sorted(self.codeplug.get_active_encryption_keys(), key=lambda k: k.index)
+        keys = self.codeplug.get_active_encryption_keys()
         palette = self.table.palette()
         base_brush = palette.base()
         alternate_brush = palette.alternateBase()
@@ -151,9 +151,10 @@ class EncryptionWidget(QWidget):
             # Alternate row colors using palette-friendly tones
             bg_brush = alternate_brush if row % 2 == 0 else base_brush
 
-            # No. (1-based)
-            item_index = QTableWidgetItem(str(key.index + 1))
+            # No. (1-based) - display row+1, store UUID
+            item_index = QTableWidgetItem(str(row + 1))
             item_index.setBackground(bg_brush)
+            item_index.setData(Qt.UserRole, key.uuid)
             self.table.setItem(row, 0, item_index)
 
             # Key Alias
@@ -194,10 +195,10 @@ class EncryptionWidget(QWidget):
             self.label_length.setText("")
             return
 
-        # Get selected key
+        # Get selected key by UUID
         index_item = self.table.item(current_row, 0)
-        key_index = int(index_item.text()) - 1
-        self.current_key = self.codeplug.get_encryption_key(key_index)
+        key_uuid = index_item.data(Qt.UserRole)
+        self.current_key = self.codeplug.get_encryption_key(key_uuid)
 
         if self.current_key:
             self.details_label.setText(f"<b>{self.current_key.alias}</b>")
@@ -332,10 +333,9 @@ class EncryptionWidget(QWidget):
         # Clear existing keys
         self.codeplug.encryption_keys.clear()
 
-        # Create 256 keys with default values
+        # Create 256 keys with default values (UUID auto-generated, index calculated on save)
         for i in range(256):
             key = EncryptionKey(
-                index=i,
                 alias=f"Key Alias {i + 1}",
                 enc_type=EncryptionType.ARC,
                 value=f"{i + 1:010X}"  # Hex value 0000000001 to 0000000100

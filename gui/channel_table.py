@@ -228,6 +228,33 @@ class ChannelTableWidget(QWidget):
 
         left_layout.addLayout(button_layout)
 
+        # Reorder/Sort buttons
+        reorder_layout = QHBoxLayout()
+
+        self.btn_move_up = QPushButton("Move Up")
+        self.btn_move_up.clicked.connect(self.move_channel_up)
+        reorder_layout.addWidget(self.btn_move_up)
+
+        self.btn_move_down = QPushButton("Move Down")
+        self.btn_move_down.clicked.connect(self.move_channel_down)
+        reorder_layout.addWidget(self.btn_move_down)
+
+        reorder_layout.addStretch()
+
+        self.btn_sort_name = QPushButton("Sort: Name")
+        self.btn_sort_name.clicked.connect(self.sort_by_name)
+        reorder_layout.addWidget(self.btn_sort_name)
+
+        self.btn_sort_rx = QPushButton("Sort: RX Freq")
+        self.btn_sort_rx.clicked.connect(self.sort_by_rx_freq)
+        reorder_layout.addWidget(self.btn_sort_rx)
+
+        self.btn_sort_tx = QPushButton("Sort: TX Freq")
+        self.btn_sort_tx.clicked.connect(self.sort_by_tx_freq)
+        reorder_layout.addWidget(self.btn_sort_tx)
+
+        left_layout.addLayout(reorder_layout)
+
         # Right side: Details panel
         self.details_panel = self.create_details_panel()
 
@@ -459,13 +486,13 @@ class ChannelTableWidget(QWidget):
             self.set_details_enabled(False)
             return
 
-        # Get selected channel
+        # Get selected channel by UUID
         index_item = self.table.item(current_row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if channel:
             self.load_channel_details(channel)
@@ -477,13 +504,13 @@ class ChannelTableWidget(QWidget):
         if current_row < 0 or not self.codeplug:
             return
 
-        # Get selected channel
+        # Get selected channel by UUID
         index_item = self.table.item(current_row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if channel:
             self.load_channel_details(channel)
@@ -539,28 +566,28 @@ class ChannelTableWidget(QWidget):
             if self.detail_dmr_monitor.itemData(i) == channel.dmr_monitor:
                 self.detail_dmr_monitor.setCurrentIndex(i)
                 break
-        # Contact - find dropdown index by contact_index value
+        # Contact - find dropdown index by contact_uuid value
         contact_found = False
         for i in range(self.detail_contact.count()):
-            if self.detail_contact.itemData(i) == channel.contact_index:
+            if self.detail_contact.itemData(i) == channel.contact_uuid:
                 self.detail_contact.setCurrentIndex(i)
                 contact_found = True
                 break
         if not contact_found:
             self.detail_contact.setCurrentIndex(0)  # Default to "None"
-        # Group List - find dropdown index by group_list_index value
+        # Group List - find dropdown index by group_list_uuid value
         group_list_found = False
         for i in range(self.detail_group_list.count()):
-            if self.detail_group_list.itemData(i) == channel.group_list_index:
+            if self.detail_group_list.itemData(i) == channel.group_list_uuid:
                 self.detail_group_list.setCurrentIndex(i)
                 group_list_found = True
                 break
         if not group_list_found:
             self.detail_group_list.setCurrentIndex(0)  # Default to "None"
-        # Encryption - find dropdown index by encrypt_index value
+        # Encryption - find dropdown index by encrypt_uuid value
         encrypt_found = False
         for i in range(self.detail_encrypt.count()):
-            if self.detail_encrypt.itemData(i) == channel.encrypt_index:
+            if self.detail_encrypt.itemData(i) == channel.encrypt_uuid:
                 self.detail_encrypt.setCurrentIndex(i)
                 encrypt_found = True
                 break
@@ -680,13 +707,13 @@ class ChannelTableWidget(QWidget):
         if current_row < 0 or not self.codeplug:
             return
 
-        # Get channel
+        # Get channel by UUID
         index_item = self.table.item(current_row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if not channel:
             return
@@ -704,9 +731,9 @@ class ChannelTableWidget(QWidget):
         channel.dmr_color_code = self.detail_color_code.value()
         channel.dmr_mode = self.detail_dmr_mode.currentData()
         channel.dmr_monitor = self.detail_dmr_monitor.currentData()
-        channel.contact_index = self.detail_contact.currentData() if self.detail_contact.currentData() is not None else 0
-        channel.group_list_index = self.detail_group_list.currentData() if self.detail_group_list.currentData() is not None else 0
-        channel.encrypt_index = self.detail_encrypt.currentData() if self.detail_encrypt.currentData() is not None else 0
+        channel.contact_uuid = self.detail_contact.currentData() if self.detail_contact.currentData() is not None else ""
+        channel.group_list_uuid = self.detail_group_list.currentData() if self.detail_group_list.currentData() is not None else ""
+        channel.encrypt_uuid = self.detail_encrypt.currentData() if self.detail_encrypt.currentData() is not None else ""
         channel.tx_priority = self.detail_tx_priority.currentData()
         channel.tot = self.detail_tot.currentData()
         channel.alarm = self.detail_alarm.currentData()
@@ -759,19 +786,19 @@ class ChannelTableWidget(QWidget):
         self.detail_contact.clear()
 
         if not self.codeplug:
-            self.detail_contact.addItem("None", 0)
+            self.detail_contact.addItem("None", "")
             self.detail_contact.blockSignals(False)
             return
 
-        # Add "None" option
-        self.detail_contact.addItem("None", 0)
+        # Add "None" option (empty UUID)
+        self.detail_contact.addItem("None", "")
 
-        # Add all contacts sorted by index
+        # Add all contacts sorted by index (for display order)
         contacts = sorted(self.codeplug.get_active_contacts(), key=lambda c: c.index)
         for contact in contacts:
-            # Format: "Index: Name (Type) [DMR ID]"
+            # Format: "Index: Name (Type) [DMR ID]" - display index for user, store UUID
             contact_label = f"{contact.index}: {contact.name} ({contact.contact_type.name}) [{contact.dmr_id}]"
-            self.detail_contact.addItem(contact_label, contact.index)
+            self.detail_contact.addItem(contact_label, contact.uuid)
 
         self.detail_contact.blockSignals(False)
 
@@ -781,20 +808,20 @@ class ChannelTableWidget(QWidget):
         self.detail_group_list.clear()
 
         if not self.codeplug:
-            self.detail_group_list.addItem("None", 0)
+            self.detail_group_list.addItem("None", "")
             self.detail_group_list.blockSignals(False)
             return
 
-        # Add "None" option
-        self.detail_group_list.addItem("None", 0)
+        # Add "None" option (empty UUID)
+        self.detail_group_list.addItem("None", "")
 
-        # Add all group lists sorted by index
+        # Add all group lists sorted by index (for display order)
         group_lists = sorted(self.codeplug.get_active_group_lists(), key=lambda g: g.index)
         for group_list in group_lists:
-            # Format: "Index: Name [X contacts]"
+            # Format: "Index: Name [X contacts]" - display index for user, store UUID
             contact_count = len(group_list.contacts) if group_list.contacts else 0
             group_label = f"{group_list.index}: {group_list.name} [{contact_count} contacts]"
-            self.detail_group_list.addItem(group_label, group_list.index)
+            self.detail_group_list.addItem(group_label, group_list.uuid)
 
         self.detail_group_list.blockSignals(False)
 
@@ -804,19 +831,19 @@ class ChannelTableWidget(QWidget):
         self.detail_encrypt.clear()
 
         if not self.codeplug:
-            self.detail_encrypt.addItem("None", 0)
+            self.detail_encrypt.addItem("None", "")
             self.detail_encrypt.blockSignals(False)
             return
 
-        # Add "None" option
-        self.detail_encrypt.addItem("None", 0)
+        # Add "None" option (empty UUID)
+        self.detail_encrypt.addItem("None", "")
 
-        # Add all encryption keys sorted by index
+        # Add all encryption keys sorted by index (for display order)
         keys = sorted(self.codeplug.get_active_encryption_keys(), key=lambda k: k.index)
         for key in keys:
-            # Format: "Index: Alias (Type)"
+            # Format: "Index: Alias (Type)" - display index for user, store UUID
             key_label = f"{key.index + 1}: {key.alias} ({key.enc_type.name.replace('_', '-')})"
-            self.detail_encrypt.addItem(key_label, key.index)
+            self.detail_encrypt.addItem(key_label, key.uuid)
 
         self.detail_encrypt.blockSignals(False)
 
@@ -828,7 +855,9 @@ class ChannelTableWidget(QWidget):
         self.table.blockSignals(True)  # Prevent triggering itemChanged
         self.table.setRowCount(0)
 
-        channels = sorted(self.codeplug.get_active_channels(), key=lambda c: c.index)
+        # Use list order (not sorted by index) - user can reorder via drag-and-drop
+        # Indices are recalculated from list position on save
+        channels = self.codeplug.get_active_channels()
 
         for row, channel in enumerate(channels):
             self.table.insertRow(row)
@@ -841,10 +870,11 @@ class ChannelTableWidget(QWidget):
         palette = self.table.palette()
         readonly_bg = palette.alternateBase().color()
 
-        # Index (read-only)
-        item_index = QTableWidgetItem(str(channel.index + 1))
+        # Index (read-only) - display row+1, store UUID in UserRole
+        item_index = QTableWidgetItem(str(row + 1))
         item_index.setFlags(item_index.flags() & ~Qt.ItemIsEditable)
         item_index.setBackground(readonly_bg)
+        item_index.setData(Qt.UserRole, channel.uuid)  # Store UUID for lookup
         self.table.setItem(row, 0, item_index)
 
         # Name
@@ -892,13 +922,13 @@ class ChannelTableWidget(QWidget):
         row = item.row()
         col = item.column()
 
-        # Get channel index from first column
+        # Get channel by UUID from first column
         index_item = self.table.item(row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if not channel:
             return
@@ -939,25 +969,22 @@ class ChannelTableWidget(QWidget):
         if not self.codeplug:
             return
 
-        # Get the current order of channels from the table
+        # Get the current order of channels from the table using UUIDs
         reordered_channels = []
         for row in range(self.table.rowCount()):
             index_item = self.table.item(row, 0)
             if index_item:
-                # Get the channel by its current index
-                channel_index = int(index_item.text()) - 1
-                channel = self.codeplug.get_channel(channel_index)
+                # Get the channel by its UUID (stored in UserRole)
+                channel_uuid = index_item.data(Qt.UserRole)
+                channel = self.codeplug.get_channel(channel_uuid)
                 if channel:
                     reordered_channels.append(channel)
 
-        # Update channel indices to match their new positions
-        for new_index, channel in enumerate(reordered_channels):
-            channel.index = new_index
-
         # Replace the codeplug's channel list with the reordered list
+        # DO NOT modify indices - they are recalculated on save
         self.codeplug.channels = reordered_channels
 
-        # Refresh the table to show updated indices
+        # Refresh the table to show updated display positions
         self.refresh_table()
 
         # Emit data modified signal
@@ -968,13 +995,13 @@ class ChannelTableWidget(QWidget):
         if not self.codeplug or row < 0:
             return
 
-        # Get the channel at this row
+        # Get the channel at this row by UUID
         index_item = self.table.item(row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if channel:
             # Make a deep copy of the channel
@@ -990,49 +1017,28 @@ class ChannelTableWidget(QWidget):
                 QMessageBox.information(self, "Paste", "No channel copied. Use Ctrl+C to copy a channel first.")
             return
 
-        # Find next available index
-        existing_indices = [ch.index for ch in self.codeplug.channels]
-        next_index = 0
-        while next_index in existing_indices and next_index < 1024:
-            next_index += 1
-
-        if next_index >= 1024:
+        if len(self.codeplug.channels) >= 1024:
             QMessageBox.warning(self, "Warning", "Maximum channels reached (1024)")
             return
 
-        # Create new channel from copied data
+        # Create new channel from copied data with a new UUID
+        from uuid import uuid4
         new_channel = copy.deepcopy(self.copied_channel)
-        new_channel.index = next_index
+        new_channel.uuid = str(uuid4())  # Generate new UUID for the copy
         new_channel.name = f"{self.copied_channel.name} Copy"
 
-        # Add to codeplug
-        self.codeplug.add_channel(new_channel)
-
-        # If a row is selected, reorder to insert after it
+        # If a row is selected, insert after it; otherwise append
         if row >= 0:
-            # Get all channels
+            # Get all channels and insert at the right position
             channels = list(self.codeplug.channels)
-
-            # Remove the newly added channel from its current position
-            channels.remove(new_channel)
-
-            # Insert it after the selected row
-            insert_position = row + 1
-
-            # Make sure insert position is valid
-            if insert_position > len(channels):
-                insert_position = len(channels)
-
+            insert_position = min(row + 1, len(channels))
             channels.insert(insert_position, new_channel)
-
-            # Update indices to match new order
-            for idx, channel in enumerate(channels):
-                channel.index = idx
-
-            # Replace channel list
             self.codeplug.channels = channels
+        else:
+            # Add to end
+            self.codeplug.add_channel(new_channel)
 
-        # Refresh table
+        # Refresh table (indices are NOT modified - they'll be recalculated on save)
         self.refresh_table()
 
         # Select the newly pasted channel
@@ -1048,13 +1054,13 @@ class ChannelTableWidget(QWidget):
         if not self.codeplug or row < 0:
             return
 
-        # Get the channel at this row
+        # Get the channel at this row by UUID
         index_item = self.table.item(row, 0)
         if not index_item:
             return
 
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if channel:
             reply = QMessageBox.question(
@@ -1066,11 +1072,7 @@ class ChannelTableWidget(QWidget):
 
             if reply == QMessageBox.Yes:
                 self.codeplug.channels.remove(channel)
-
-                # Update indices for remaining channels
-                for idx, ch in enumerate(sorted(self.codeplug.channels, key=lambda c: c.index)):
-                    ch.index = idx
-
+                # DO NOT modify indices - they are recalculated on save
                 self.refresh_table()
                 self.data_modified.emit()
 
@@ -1080,20 +1082,15 @@ class ChannelTableWidget(QWidget):
             QMessageBox.warning(self, "Warning", "No codeplug loaded")
             return
 
-        # Find next available index
-        existing_indices = [ch.index for ch in self.codeplug.channels]
-        next_index = 0
-        while next_index in existing_indices and next_index < 1024:
-            next_index += 1
-
-        if next_index >= 1024:
+        if len(self.codeplug.channels) >= 1024:
             QMessageBox.warning(self, "Warning", "Maximum channels reached (1024)")
             return
 
-        # Create new channel
+        # Create new channel (UUID is auto-generated via default_factory)
+        # Index is not set - it will be calculated from list position on save
+        channel_num = len(self.codeplug.channels) + 1
         new_channel = Channel(
-            index=next_index,
-            name=f"CH-{next_index + 1}",
+            name=f"CH-{channel_num}",
             rx_freq=433.500,
             tx_freq=433.500,
             mode=ChannelMode.ANALOG,
@@ -1113,8 +1110,8 @@ class ChannelTableWidget(QWidget):
             return
 
         index_item = self.table.item(current_row, 0)
-        channel_index = int(index_item.text()) - 1
-        channel = self.codeplug.get_channel(channel_index)
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
 
         if channel:
             reply = QMessageBox.question(
@@ -1126,6 +1123,7 @@ class ChannelTableWidget(QWidget):
 
             if reply == QMessageBox.Yes:
                 self.codeplug.channels.remove(channel)
+                # DO NOT modify indices - they are recalculated on save
                 self.refresh_table()
                 self.data_modified.emit()
 
@@ -1135,25 +1133,25 @@ class ChannelTableWidget(QWidget):
         pass
 
     # CSV Helper Methods
-    def _get_contact_name(self, index: int) -> str:
-        """Get contact name by index"""
-        if not self.codeplug or index <= 0:
+    def _get_contact_name_by_uuid(self, uuid: str) -> str:
+        """Get contact name by UUID"""
+        if not self.codeplug or not uuid:
             return 'None'
-        contact = self.codeplug.get_contact(index - 1)
+        contact = self.codeplug.get_contact(uuid)
         return contact.name if contact else 'None'
 
-    def _get_group_list_name(self, index: int) -> str:
-        """Get group list name by index"""
-        if not self.codeplug or index <= 0:
+    def _get_group_list_name_by_uuid(self, uuid: str) -> str:
+        """Get group list name by UUID"""
+        if not self.codeplug or not uuid:
             return 'None'
-        group_list = self.codeplug.get_group_list(index - 1)
+        group_list = self.codeplug.get_group_list(uuid)
         return group_list.name if group_list else 'None'
 
-    def _get_encryption_name(self, index: int) -> str:
-        """Get encryption key alias by index"""
-        if not self.codeplug or index <= 0:
+    def _get_encryption_name_by_uuid(self, uuid: str) -> str:
+        """Get encryption key alias by UUID"""
+        if not self.codeplug or not uuid:
             return 'None'
-        encrypt_key = self.codeplug.get_encryption_key(index - 1)
+        encrypt_key = self.codeplug.get_encryption_key(uuid)
         return encrypt_key.alias if encrypt_key else 'None'
 
     def _get_dropdown_label(self, dropdown_values, value: int) -> str:
@@ -1173,32 +1171,32 @@ class ChannelTableWidget(QWidget):
                 return label
         return f"{tot_value}s"
 
-    def _find_contact_index(self, name: str) -> int:
-        """Find contact index by name"""
+    def _find_contact_uuid(self, name: str) -> str:
+        """Find contact UUID by name"""
         if not self.codeplug or not name or name == 'None':
-            return 0
+            return ""
         for contact in self.codeplug.contacts:
             if contact.name == name:
-                return contact.index + 1
-        return 0
+                return contact.uuid
+        return ""
 
-    def _find_group_list_index(self, name: str) -> int:
-        """Find group list index by name"""
+    def _find_group_list_uuid(self, name: str) -> str:
+        """Find group list UUID by name"""
         if not self.codeplug or not name or name == 'None':
-            return 0
+            return ""
         for group_list in self.codeplug.group_lists:
             if group_list.name == name:
-                return group_list.index + 1
-        return 0
+                return group_list.uuid
+        return ""
 
-    def _find_encryption_index(self, alias: str) -> int:
-        """Find encryption key index by alias"""
+    def _find_encryption_uuid(self, alias: str) -> str:
+        """Find encryption key UUID by alias"""
         if not self.codeplug or not alias or alias == 'None':
-            return 0
+            return ""
         for encrypt_key in self.codeplug.encryption_keys:
             if encrypt_key.alias == alias:
-                return encrypt_key.index + 1
-        return 0
+                return encrypt_key.uuid
+        return ""
 
     def _find_dropdown_value(self, dropdown_values, label: str) -> int:
         """Find value from dropdown by label"""
@@ -1284,16 +1282,17 @@ class ChannelTableWidget(QWidget):
 
             for row in reader:
                 try:
-                    # Parse channel number
+                    # Parse channel number (used to check bounds and find existing channels)
                     index = int(row.get('Channel Number', 0)) - 1
                     if index < 0 or index >= 1024:
                         print(f"Warning: Invalid channel number {index + 1}, skipping")
                         continue
 
-                    # Check if channel exists
-                    channel = self.codeplug.get_channel(index)
+                    # Check if channel exists by index (for update) or create new
+                    channel = self.codeplug.get_channel_by_index(index)
                     if not channel:
-                        channel = Channel(index=index)
+                        # New channel - UUID auto-generated, index not important
+                        channel = Channel()
                         self.codeplug.add_channel(channel)
 
                     # Common fields
@@ -1314,15 +1313,15 @@ class ChannelTableWidget(QWidget):
                     channel.scan = ScanMode.ADD if scan_str == 'Add' else ScanMode.REMOVE
 
                     if channel.is_digital():
-                        # Digital-specific fields
+                        # Digital-specific fields - use UUID-based lookups
                         tg_list = row.get('TG List', 'None')
-                        channel.group_list_index = self._find_group_list_index(tg_list)
+                        channel.group_list_uuid = self._find_group_list_uuid(tg_list)
 
                         contact = row.get('Contact', 'None')
-                        channel.contact_index = self._find_contact_index(contact)
+                        channel.contact_uuid = self._find_contact_uuid(contact)
 
                         dmr_encrypt = row.get('DMR Enrcypt', 'None')  # Note: typo in original format
-                        channel.encrypt_index = self._find_encryption_index(dmr_encrypt)
+                        channel.encrypt_uuid = self._find_encryption_uuid(dmr_encrypt)
 
                         dmr_mode = row.get('DCDM', 'Off')
                         channel.dmr_mode = self._find_dropdown_value(DMR_MODE_VALUES, dmr_mode)
@@ -1395,7 +1394,8 @@ class ChannelTableWidget(QWidget):
             ANALOG_MODULATION_VALUES
         )
 
-        channels = sorted(self.codeplug.get_active_channels(), key=lambda c: c.index)
+        # Export channels in list order (this is the order shown in the UI)
+        channels = self.codeplug.get_active_channels()
 
         with open(file_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
@@ -1408,9 +1408,9 @@ class ChannelTableWidget(QWidget):
                 'DCS Type', 'ANA Mute Code 1', 'ANA Mute Code 2', 'ANA Mute Code 3', 'AM_FM RX'
             ])
 
-            for ch in channels:
-                # Common fields
-                channel_num = ch.index + 1
+            for idx, ch in enumerate(channels):
+                # Common fields - use list position as channel number
+                channel_num = idx + 1
                 rx_freq = f"{ch.rx_freq:.5f}"
                 tx_freq = f"{ch.tx_freq:.5f}"
                 channel_type = 'Digital' if ch.is_digital() else 'Analog'
@@ -1418,11 +1418,11 @@ class ChannelTableWidget(QWidget):
                 scan_add = 'Add' if ch.scan == ScanMode.ADD else 'Remove'
                 channel_name = ch.name
 
-                # Digital-specific fields
+                # Digital-specific fields - use UUID-based lookups
                 if ch.is_digital():
-                    tg_list = self._get_group_list_name(ch.group_list_index) if ch.group_list_index > 0 else 'None'
-                    contact = self._get_contact_name(ch.contact_index) if ch.contact_index > 0 else 'None'
-                    dmr_encrypt = self._get_encryption_name(ch.encrypt_index) if ch.encrypt_index > 0 else 'None'
+                    tg_list = self._get_group_list_name_by_uuid(ch.group_list_uuid) if ch.group_list_uuid else 'None'
+                    contact = self._get_contact_name_by_uuid(ch.contact_uuid) if ch.contact_uuid else 'None'
+                    dmr_encrypt = self._get_encryption_name_by_uuid(ch.encrypt_uuid) if ch.encrypt_uuid else 'None'
                     dmr_mode = self._get_dropdown_label(DMR_MODE_VALUES, ch.dmr_mode)
                     timeslot = ch.dmr_time_slot + 1
                     colour_code = ch.dmr_color_code
@@ -1472,3 +1472,57 @@ class ChannelTableWidget(QWidget):
                     rx_tone, tx_tone, bandwidth, busy_lock, ana_tot, tail_tone, scrambler,
                     dcs_type, mute_code, 0, 0, am_fm_rx
                 ])
+
+    def move_channel_up(self):
+        """Move selected channel up one position"""
+        current_row = self.table.currentRow()
+        if current_row <= 0 or not self.codeplug:
+            return
+
+        # Swap in the channels list
+        channels = self.codeplug.channels
+        channels[current_row], channels[current_row - 1] = channels[current_row - 1], channels[current_row]
+
+        self.refresh_table()
+        self.table.selectRow(current_row - 1)
+        self.data_modified.emit()
+
+    def move_channel_down(self):
+        """Move selected channel down one position"""
+        current_row = self.table.currentRow()
+        if current_row < 0 or not self.codeplug:
+            return
+        if current_row >= len(self.codeplug.channels) - 1:
+            return
+
+        # Swap in the channels list
+        channels = self.codeplug.channels
+        channels[current_row], channels[current_row + 1] = channels[current_row + 1], channels[current_row]
+
+        self.refresh_table()
+        self.table.selectRow(current_row + 1)
+        self.data_modified.emit()
+
+    def sort_by_name(self):
+        """Sort channels alphabetically by name"""
+        if not self.codeplug:
+            return
+        self.codeplug.channels.sort(key=lambda ch: ch.name.lower())
+        self.refresh_table()
+        self.data_modified.emit()
+
+    def sort_by_rx_freq(self):
+        """Sort channels by RX frequency"""
+        if not self.codeplug:
+            return
+        self.codeplug.channels.sort(key=lambda ch: ch.rx_freq)
+        self.refresh_table()
+        self.data_modified.emit()
+
+    def sort_by_tx_freq(self):
+        """Sort channels by TX frequency"""
+        if not self.codeplug:
+            return
+        self.codeplug.channels.sort(key=lambda ch: ch.tx_freq)
+        self.refresh_table()
+        self.data_modified.emit()

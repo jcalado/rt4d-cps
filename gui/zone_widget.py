@@ -148,10 +148,10 @@ class ZoneWidget(QWidget):
 
     def refresh_table(self):
         """Refresh zones table"""
-        # Save current selection
-        selected_zone_index = None
+        # Save current selection by UUID
+        selected_zone_uuid = None
         if self.current_zone:
-            selected_zone_index = self.current_zone.index
+            selected_zone_uuid = self.current_zone.uuid
 
         # Block signals to prevent selection change during rebuild
         self.table.blockSignals(True)
@@ -161,20 +161,17 @@ class ZoneWidget(QWidget):
             self.table.blockSignals(False)
             return
 
-        # Sort zones by index
-        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+        # Get active zones (non-empty) in list order
+        active_zones = [z for z in self.codeplug.zones if not z.is_empty()]
 
         row_to_select = None
-        for zone in zones:
-            if zone.is_empty():
-                continue
-
+        for row_num, zone in enumerate(active_zones):
             row = self.table.rowCount()
             self.table.insertRow(row)
 
-            # Index
-            item = QTableWidgetItem(str(zone.index + 1))
-            item.setData(Qt.UserRole, zone.index)
+            # Display row+1 as index, store UUID in UserRole
+            item = QTableWidgetItem(str(row_num + 1))
+            item.setData(Qt.UserRole, zone.uuid)
             self.table.setItem(row, 0, item)
 
             # Name
@@ -186,7 +183,7 @@ class ZoneWidget(QWidget):
             self.table.setItem(row, 2, item)
 
             # Track which row to reselect
-            if selected_zone_index is not None and zone.index == selected_zone_index:
+            if selected_zone_uuid is not None and zone.uuid == selected_zone_uuid:
                 row_to_select = row
 
         # Restore signals
@@ -215,22 +212,28 @@ class ZoneWidget(QWidget):
         self.btn_move_up.setEnabled(True)
         self.btn_move_down.setEnabled(True)
 
-        # Populate available channels (not in zone)
+        # Populate available channels (not in zone) - zone.channels now stores UUIDs
         active_channels = self.codeplug.get_active_channels()
-        zone_channel_set = set(self.current_zone.channels)
+        zone_channel_set = set(self.current_zone.channels)  # Set of channel UUIDs
 
-        for channel in sorted(active_channels, key=lambda c: c.index):
-            if channel.index not in zone_channel_set:
-                item = QListWidgetItem(f"CH{channel.index + 1:03d}: {channel.name}")
-                item.setData(Qt.UserRole, channel.index)
+        for idx, channel in enumerate(active_channels):
+            if channel.uuid not in zone_channel_set:
+                # Display position in list + 1, store UUID
+                item = QListWidgetItem(f"CH{idx + 1:03d}: {channel.name}")
+                item.setData(Qt.UserRole, channel.uuid)
                 self.available_list.addItem(item)
 
-        # Populate channels in zone (in order)
-        for channel_idx in self.current_zone.channels:
-            channel = self.codeplug.get_channel(channel_idx)
+        # Populate channels in zone (in order) - zone.channels is a list of UUIDs
+        for channel_uuid in self.current_zone.channels:
+            channel = self.codeplug.get_channel(channel_uuid)
             if channel:
-                item = QListWidgetItem(f"CH{channel.index + 1:03d}: {channel.name}")
-                item.setData(Qt.UserRole, channel.index)
+                # Find channel's position in the active channels list for display
+                try:
+                    ch_pos = list(active_channels).index(channel) + 1
+                except ValueError:
+                    ch_pos = 0
+                item = QListWidgetItem(f"CH{ch_pos:03d}: {channel.name}")
+                item.setData(Qt.UserRole, channel.uuid)
                 self.selected_list.addItem(item)
 
     def on_selection_changed(self):
@@ -244,8 +247,8 @@ class ZoneWidget(QWidget):
             self.refresh_details()
             return
 
-        zone_index = self.table.item(selected_rows[0].row(), 0).data(Qt.UserRole)
-        self.current_zone = self.codeplug.get_zone(zone_index)
+        zone_uuid = self.table.item(selected_rows[0].row(), 0).data(Qt.UserRole)
+        self.current_zone = self.codeplug.get_zone(zone_uuid)
         self.refresh_details()
 
     def on_cell_double_clicked(self, row: int, col: int):
@@ -253,8 +256,8 @@ class ZoneWidget(QWidget):
         if col != 1:  # Only allow editing name column
             return
 
-        zone_index = self.table.item(row, 0).data(Qt.UserRole)
-        zone = self.codeplug.get_zone(zone_index)
+        zone_uuid = self.table.item(row, 0).data(Qt.UserRole)
+        zone = self.codeplug.get_zone(zone_uuid)
         if not zone:
             return
 
@@ -277,33 +280,27 @@ class ZoneWidget(QWidget):
         if not self.codeplug:
             return
 
-        # Find first available zone index
-        used_indices = {z.index for z in self.codeplug.zones}
-        zone_index = None
-        for i in range(256):
-            if i not in used_indices:
-                zone_index = i
-                break
-
-        if zone_index is None:
+        # Check max zones
+        active_zones = [z for z in self.codeplug.zones if not z.is_empty()]
+        if len(active_zones) >= 256:
             QMessageBox.warning(self, "Error", "Maximum number of zones (256) reached!")
             return
 
         # Prompt for name
+        zone_num = len(active_zones) + 1
         name, ok = QInputDialog.getText(
             self,
             "New Zone",
             "Zone name:",
             QLineEdit.Normal,
-            f"Zone {zone_index + 1}"
+            f"Zone {zone_num}"
         )
 
         if not ok or not name:
             return
 
-        # Create zone
+        # Create zone (UUID is auto-generated, index is not set - calculated on save)
         zone = Zone(
-            index=zone_index,
             name=name[:16],
             channels=[]
         )
@@ -312,9 +309,9 @@ class ZoneWidget(QWidget):
         self.refresh_table()
         self.data_modified.emit()
 
-        # Select new zone
+        # Select new zone by UUID
         for row in range(self.table.rowCount()):
-            if self.table.item(row, 0).data(Qt.UserRole) == zone_index:
+            if self.table.item(row, 0).data(Qt.UserRole) == zone.uuid:
                 self.table.selectRow(row)
                 break
 
@@ -346,12 +343,20 @@ class ZoneWidget(QWidget):
         if current_row <= 0:
             return
 
-        # Get zones sorted by index
-        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+        # Get active zones in list order
+        active_zones = [z for z in self.codeplug.zones if not z.is_empty()]
 
-        # Swap zone indices
-        zones[current_row].index, zones[current_row - 1].index = \
-            zones[current_row - 1].index, zones[current_row].index
+        # Find the index in the original zones list and swap positions
+        zone_to_move = active_zones[current_row]
+        zone_above = active_zones[current_row - 1]
+
+        zones_list = list(self.codeplug.zones)
+        idx_move = zones_list.index(zone_to_move)
+        idx_above = zones_list.index(zone_above)
+
+        # Swap in the original list
+        zones_list[idx_move], zones_list[idx_above] = zones_list[idx_above], zones_list[idx_move]
+        self.codeplug.zones = zones_list
 
         # Refresh and maintain selection
         self.refresh_table()
@@ -364,14 +369,22 @@ class ZoneWidget(QWidget):
             return
 
         current_row = self.table.currentRow()
-        zones = sorted(self.codeplug.zones, key=lambda z: z.index)
+        active_zones = [z for z in self.codeplug.zones if not z.is_empty()]
 
-        if current_row < 0 or current_row >= len(zones) - 1:
+        if current_row < 0 or current_row >= len(active_zones) - 1:
             return
 
-        # Swap zone indices
-        zones[current_row].index, zones[current_row + 1].index = \
-            zones[current_row + 1].index, zones[current_row].index
+        # Find the index in the original zones list and swap positions
+        zone_to_move = active_zones[current_row]
+        zone_below = active_zones[current_row + 1]
+
+        zones_list = list(self.codeplug.zones)
+        idx_move = zones_list.index(zone_to_move)
+        idx_below = zones_list.index(zone_below)
+
+        # Swap in the original list
+        zones_list[idx_move], zones_list[idx_below] = zones_list[idx_below], zones_list[idx_move]
+        self.codeplug.zones = zones_list
 
         # Refresh and maintain selection
         self.refresh_table()
@@ -402,10 +415,10 @@ class ZoneWidget(QWidget):
         # Find the row of the last selected item to select the next one
         last_selected_row = max(self.available_list.row(item) for item in selected_items)
 
-        # Add channels
+        # Add channels by UUID
         for item in selected_items:
-            channel_idx = item.data(Qt.UserRole)
-            self.current_zone.add_channel(channel_idx)
+            channel_uuid = item.data(Qt.UserRole)
+            self.current_zone.add_channel(channel_uuid)
 
         self.refresh_details()
         self.refresh_table()
@@ -431,9 +444,10 @@ class ZoneWidget(QWidget):
         # Find the row of the last selected item
         last_selected_row = max(self.selected_list.row(item) for item in selected_items)
 
+        # Remove channels by UUID
         for item in selected_items:
-            channel_idx = item.data(Qt.UserRole)
-            self.current_zone.remove_channel(channel_idx)
+            channel_uuid = item.data(Qt.UserRole)
+            self.current_zone.remove_channel(channel_uuid)
 
         self.refresh_details()
         self.refresh_table()

@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List
 from enum import Enum
+from uuid import uuid4
 
 
 class ChannelMode(Enum):
@@ -47,7 +48,8 @@ class EncryptionType(Enum):
 @dataclass
 class Channel:
     """Radio channel configuration"""
-    index: int
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0  # Computed from list position on save, used for display
     name: str = ""
     rx_freq: float = 0.0  # MHz
     tx_freq: float = 0.0  # MHz
@@ -61,9 +63,9 @@ class Channel:
     dmr_color_code: int = 1  # 0-15
     dmr_mode: int = 0
     dmr_monitor: int = 0  # Promiscuous mode (0=Off, 1=On) (offset 0x0E)
-    group_list_index: int = 0
-    contact_index: int = 0
-    encrypt_index: int = 0
+    group_list_uuid: str = ""  # Reference by UUID
+    contact_uuid: str = ""     # Reference by UUID
+    encrypt_uuid: str = ""     # Reference by UUID
     tx_priority: int = 0
     tot: int = 0  # Transmit timeout
     alarm: int = 0
@@ -109,7 +111,8 @@ class Channel:
 @dataclass
 class Contact:
     """DMR contact/talkgroup"""
-    index: int
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0  # Computed from list position on save, used for display
     name: str = ""
     contact_type: ContactType = ContactType.GROUP
     dmr_id: int = 0
@@ -139,7 +142,8 @@ class Contact:
 @dataclass
 class EncryptionKey:
     """Encryption key configuration"""
-    index: int
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0  # Computed from list position on save, used for display
     alias: str = ""
     enc_type: EncryptionType = EncryptionType.ARC
     value: str = ""  # Hex string (10/32/64 chars depending on type)
@@ -177,9 +181,10 @@ class EncryptionKey:
 @dataclass
 class GroupList:
     """DMR Group List (RX Group)"""
-    index: int
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0  # Computed from list position on save, used for display
     name: str = ""
-    contacts: List[int] = field(default_factory=list)  # List of contact indices (max 128 old, 32 new layout)
+    contacts: List[str] = field(default_factory=list)  # List of contact UUIDs (max 128 old, 32 new layout)
 
     def __post_init__(self):
         """Validate group list data"""
@@ -192,23 +197,24 @@ class GroupList:
         """Check if group list is empty/unused"""
         return not self.name
 
-    def add_contact(self, contact_index: int, max_contacts: int = 128):
-        """Add a contact to this group list"""
-        if len(self.contacts) < max_contacts and contact_index not in self.contacts:
-            self.contacts.append(contact_index)
+    def add_contact(self, contact_uuid: str, max_contacts: int = 128):
+        """Add a contact to this group list by UUID"""
+        if len(self.contacts) < max_contacts and contact_uuid not in self.contacts:
+            self.contacts.append(contact_uuid)
 
-    def remove_contact(self, contact_index: int):
-        """Remove a contact from this group list"""
-        if contact_index in self.contacts:
-            self.contacts.remove(contact_index)
+    def remove_contact(self, contact_uuid: str):
+        """Remove a contact from this group list by UUID"""
+        if contact_uuid in self.contacts:
+            self.contacts.remove(contact_uuid)
 
 
 @dataclass
 class Zone:
     """Zone (channel group)"""
-    index: int
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0  # Computed from list position on save, used for display
     name: str = ""
-    channels: List[int] = field(default_factory=list)  # List of channel indices
+    channels: List[str] = field(default_factory=list)  # List of channel UUIDs
 
     def __post_init__(self):
         """Validate zone data"""
@@ -219,17 +225,17 @@ class Zone:
         """Check if zone is empty/unused"""
         return not self.name
 
-    def add_channel(self, channel_index: int):
-        """Add a channel to this zone (max 200 channels)"""
+    def add_channel(self, channel_uuid: str):
+        """Add a channel to this zone by UUID (max 200 channels)"""
         if len(self.channels) >= 200:
             raise ValueError("Zone can contain maximum 200 channels")
-        if channel_index not in self.channels:
-            self.channels.append(channel_index)
+        if channel_uuid not in self.channels:
+            self.channels.append(channel_uuid)
 
-    def remove_channel(self, channel_index: int):
-        """Remove a channel from this zone"""
-        if channel_index in self.channels:
-            self.channels.remove(channel_index)
+    def remove_channel(self, channel_uuid: str):
+        """Remove a channel from this zone by UUID"""
+        if channel_uuid in self.channels:
+            self.channels.remove(channel_uuid)
 
 
 @dataclass
@@ -418,72 +424,109 @@ class Codeplug:
     encrypt_data: bytes = field(default_factory=lambda: b'\xff' * 12288)
     fm_data: bytes = field(default_factory=lambda: b'\xff' * 1024)
 
-    def get_channel(self, index: int) -> Optional[Channel]:
-        """Get channel by index"""
+    # Primary lookups by UUID
+    def get_channel(self, uuid: str) -> Optional[Channel]:
+        """Get channel by UUID"""
+        for ch in self.channels:
+            if ch.uuid == uuid:
+                return ch
+        return None
+
+    def get_contact(self, uuid: str) -> Optional[Contact]:
+        """Get contact by UUID"""
+        for contact in self.contacts:
+            if contact.uuid == uuid:
+                return contact
+        return None
+
+    def get_group_list(self, uuid: str) -> Optional[GroupList]:
+        """Get group list by UUID"""
+        for gl in self.group_lists:
+            if gl.uuid == uuid:
+                return gl
+        return None
+
+    def get_zone(self, uuid: str) -> Optional[Zone]:
+        """Get zone by UUID"""
+        for zone in self.zones:
+            if zone.uuid == uuid:
+                return zone
+        return None
+
+    def get_encryption_key(self, uuid: str) -> Optional[EncryptionKey]:
+        """Get encryption key by UUID"""
+        for key in self.encryption_keys:
+            if key.uuid == uuid:
+                return key
+        return None
+
+    # Index-based lookups for parser/serializer
+    def get_channel_by_index(self, index: int) -> Optional[Channel]:
+        """Get channel by index (for parser/serializer)"""
         for ch in self.channels:
             if ch.index == index:
                 return ch
         return None
 
-    def get_contact(self, index: int) -> Optional[Contact]:
-        """Get contact by index"""
+    def get_contact_by_index(self, index: int) -> Optional[Contact]:
+        """Get contact by index (for parser/serializer)"""
         for contact in self.contacts:
             if contact.index == index:
                 return contact
         return None
 
-    def get_group_list(self, index: int) -> Optional[GroupList]:
-        """Get group list by index"""
+    def get_group_list_by_index(self, index: int) -> Optional[GroupList]:
+        """Get group list by index (for parser/serializer)"""
         for gl in self.group_lists:
             if gl.index == index:
                 return gl
         return None
 
-    def get_zone(self, index: int) -> Optional[Zone]:
-        """Get zone by index"""
+    def get_zone_by_index(self, index: int) -> Optional[Zone]:
+        """Get zone by index (for parser/serializer)"""
         for zone in self.zones:
             if zone.index == index:
                 return zone
         return None
 
-    def get_encryption_key(self, index: int) -> Optional[EncryptionKey]:
-        """Get encryption key by index"""
+    def get_encryption_key_by_index(self, index: int) -> Optional[EncryptionKey]:
+        """Get encryption key by index (for parser/serializer)"""
         for key in self.encryption_keys:
             if key.index == index:
                 return key
         return None
 
     def add_channel(self, channel: Channel):
-        """Add or update a channel"""
-        existing = self.get_channel(channel.index)
+        """Add or update a channel by UUID"""
+        existing = self.get_channel(channel.uuid)
         if existing:
             self.channels.remove(existing)
         self.channels.append(channel)
 
     def add_contact(self, contact: Contact):
-        """Add or update a contact"""
-        existing = self.get_contact(contact.index)
+        """Add or update a contact by UUID"""
+        existing = self.get_contact(contact.uuid)
         if existing:
             self.contacts.remove(existing)
         self.contacts.append(contact)
 
     def add_group_list(self, group_list: GroupList):
-        """Add or update a group list"""
-        existing = self.get_group_list(group_list.index)
+        """Add or update a group list by UUID"""
+        existing = self.get_group_list(group_list.uuid)
         if existing:
             self.group_lists.remove(existing)
         self.group_lists.append(group_list)
 
     def add_zone(self, zone: Zone):
-        """Add or update a zone"""
-        existing = self.get_zone(zone.index)
+        """Add or update a zone by UUID"""
+        existing = self.get_zone(zone.uuid)
         if existing:
             self.zones.remove(existing)
         self.zones.append(zone)
 
     def add_encryption_key(self, key: EncryptionKey):
-        """Add or update an encryption key"""
-        existing = self.get_encryption_key(key.index)
+        """Add or update an encryption key by UUID"""
+        existing = self.get_encryption_key(key.uuid)
         if existing:
             self.encryption_keys.remove(existing)
         self.encryption_keys.append(key)

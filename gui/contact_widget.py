@@ -127,19 +127,20 @@ class ContactWidget(QWidget):
             return
 
         self.table.setRowCount(0)
-        contacts = sorted(self.codeplug.get_active_contacts(), key=lambda c: c.index)
+        contacts = self.codeplug.get_active_contacts()
         palette = self.table.palette()
         readonly_bg = palette.alternateBase().color()
 
         for row, contact in enumerate(contacts):
             self.table.insertRow(row)
 
-            # Check if this is the protected first contact
-            is_protected = (contact.index == 1)
+            # Check if this is the protected first contact (position 0 = index 1 on save)
+            is_protected = (row == 0)
 
-            # Index
-            item_index = QTableWidgetItem(str(contact.index))
+            # Index - display row+1 (which will match index on save), store UUID
+            item_index = QTableWidgetItem(str(row + 1))
             item_index.setBackground(readonly_bg)
+            item_index.setData(Qt.UserRole, contact.uuid)
             self.table.setItem(row, 0, item_index)
 
             # Name
@@ -172,16 +173,16 @@ class ContactWidget(QWidget):
             self.spin_dmr_id.setEnabled(False)
             return
 
-        # Get selected contact
+        # Get selected contact by UUID
         index_item = self.table.item(current_row, 0)
-        contact_index = int(index_item.text())
-        self.current_contact = self.codeplug.get_contact(contact_index)
+        contact_uuid = index_item.data(Qt.UserRole)
+        self.current_contact = self.codeplug.get_contact(contact_uuid)
 
         if self.current_contact:
             self.details_label.setText(f"<b>{self.current_contact.name}</b>")
             self.load_contact_details()
-            # Protect the first contact (All call) from editing
-            is_protected = (contact_index == 1)
+            # Protect the first contact (position 0 = All call) from editing
+            is_protected = (current_row == 0)
             self.edit_name.setEnabled(not is_protected)
             self.combo_type.setEnabled(not is_protected)
             self.spin_dmr_id.setEnabled(not is_protected)
@@ -254,21 +255,17 @@ class ContactWidget(QWidget):
             QMessageBox.warning(self, "Warning", "No codeplug loaded")
             return
 
-        # Find next available index
+        # Check max contacts
         from rt4d_codeplug.constants import MAX_CONTACTS
-        existing_indices = [c.index for c in self.codeplug.contacts]
-        next_index = max(existing_indices, default=-1) + 1
-        while next_index in existing_indices and next_index < MAX_CONTACTS:
-            next_index += 1
-
-        if next_index >= MAX_CONTACTS:
+        active_contacts = self.codeplug.get_active_contacts()
+        if len(active_contacts) >= MAX_CONTACTS:
             QMessageBox.warning(self, "Warning", f"Maximum contacts reached ({MAX_CONTACTS})")
             return
 
-        # Create new contact
+        # Create new contact (UUID auto-generated, index calculated on save)
+        contact_num = len(active_contacts) + 1
         new_contact = Contact(
-            index=next_index,
-            name=f"Contact {next_index}",
+            name=f"Contact {contact_num}",
             contact_type=ContactType.GROUP,
             dmr_id=1
         )
@@ -284,11 +281,8 @@ class ContactWidget(QWidget):
             QMessageBox.warning(self, "Warning", "No contact selected")
             return
 
-        index_item = self.table.item(current_row, 0)
-        contact_index = int(index_item.text())
-
-        # Protect the first contact (All call) from deletion
-        if contact_index == 1:
+        # Protect the first contact (position 0 = All call) from deletion
+        if current_row == 0:
             QMessageBox.warning(
                 self,
                 "Cannot Delete",
@@ -296,7 +290,9 @@ class ContactWidget(QWidget):
             )
             return
 
-        contact = self.codeplug.get_contact(contact_index)
+        index_item = self.table.item(current_row, 0)
+        contact_uuid = index_item.data(Qt.UserRole)
+        contact = self.codeplug.get_contact(contact_uuid)
 
         if contact:
             reply = QMessageBox.question(

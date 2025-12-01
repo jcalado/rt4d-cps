@@ -133,17 +133,18 @@ class GroupListWidget(QWidget):
         # Block signals while refreshing to avoid triggering itemChanged
         self.table.blockSignals(True)
         self.table.setRowCount(0)
-        group_lists = sorted(self.codeplug.get_active_group_lists(), key=lambda g: g.index)
+        group_lists = self.codeplug.get_active_group_lists()
         palette = self.table.palette()
         readonly_bg = palette.alternateBase().color()
 
         for row, gl in enumerate(group_lists):
             self.table.insertRow(row)
 
-            # Index (read-only)
-            item_index = QTableWidgetItem(str(gl.index))
+            # Index (read-only) - display row+1, store UUID in UserRole
+            item_index = QTableWidgetItem(str(row + 1))
             item_index.setBackground(readonly_bg)
             item_index.setFlags(item_index.flags() & ~Qt.ItemIsEditable)
+            item_index.setData(Qt.UserRole, gl.uuid)
             self.table.setItem(row, 0, item_index)
 
             # Name (editable)
@@ -163,13 +164,18 @@ class GroupListWidget(QWidget):
             return
 
         self.available_list.clear()
-        contacts = sorted(self.codeplug.get_active_contacts(), key=lambda c: c.index)
+        contacts = self.codeplug.get_active_contacts()
+
+        # Get UUIDs of contacts already in the current group
+        contacts_in_group = set()
+        if self.current_group_list:
+            contacts_in_group = set(self.current_group_list.contacts)  # Now stores UUIDs
 
         for contact in contacts:
-            # Only show GROUP contacts
-            if contact.contact_type.name == "GROUP":
+            # Only show GROUP contacts that aren't already in the selected group
+            if contact.contact_type.name == "GROUP" and contact.uuid not in contacts_in_group:
                 item = QListWidgetItem(f"{contact.name} (ID: {contact.dmr_id})")
-                item.setData(Qt.UserRole, contact.index)
+                item.setData(Qt.UserRole, contact.uuid)
                 self.available_list.addItem(item)
 
     def on_selection_changed(self):
@@ -183,14 +189,15 @@ class GroupListWidget(QWidget):
             self.btn_remove_contact.setEnabled(False)
             return
 
-        # Get selected group list
+        # Get selected group list by UUID
         index_item = self.table.item(current_row, 0)
-        gl_index = int(index_item.text())
-        self.current_group_list = self.codeplug.get_group_list(gl_index)
+        gl_uuid = index_item.data(Qt.UserRole)
+        self.current_group_list = self.codeplug.get_group_list(gl_uuid)
 
         if self.current_group_list:
             self.details_label.setText(f"<b>{self.current_group_list.name}</b>")
             self.refresh_selected_contacts()
+            self.refresh_available_contacts()
             self.btn_add_contact.setEnabled(True)
             self.btn_remove_contact.setEnabled(True)
 
@@ -199,21 +206,21 @@ class GroupListWidget(QWidget):
         if not self.codeplug or item.column() != 1:  # Only handle Name column
             return
 
-        # Get the group list
+        # Get the group list by UUID
         row = item.row()
         index_item = self.table.item(row, 0)
         if not index_item:
             return
 
-        gl_index = int(index_item.text())
-        group_list = self.codeplug.get_group_list(gl_index)
+        gl_uuid = index_item.data(Qt.UserRole)
+        group_list = self.codeplug.get_group_list(gl_uuid)
 
         if group_list:
             new_name = item.text().strip()
             if new_name and new_name != group_list.name:
                 group_list.name = new_name
                 # Update details label if this is the currently selected group list
-                if self.current_group_list and self.current_group_list.index == gl_index:
+                if self.current_group_list and self.current_group_list.uuid == gl_uuid:
                     self.details_label.setText(f"<b>{group_list.name}</b>")
                 self.data_modified.emit()
 
@@ -224,11 +231,12 @@ class GroupListWidget(QWidget):
         if not self.current_group_list:
             return
 
-        for contact_idx in self.current_group_list.contacts:
-            contact = self.codeplug.get_contact(contact_idx)
+        # contacts is now a list of UUIDs
+        for contact_uuid in self.current_group_list.contacts:
+            contact = self.codeplug.get_contact(contact_uuid)
             if contact:
                 item = QListWidgetItem(f"{contact.name} (ID: {contact.dmr_id})")
-                item.setData(Qt.UserRole, contact.index)
+                item.setData(Qt.UserRole, contact.uuid)
                 self.selected_list.addItem(item)
 
     def add_contact_to_group(self):
@@ -242,15 +250,16 @@ class GroupListWidget(QWidget):
             return
 
         for item in selected_items:
-            contact_idx = item.data(Qt.UserRole)
-            if contact_idx not in self.current_group_list.contacts:
+            contact_uuid = item.data(Qt.UserRole)
+            if contact_uuid not in self.current_group_list.contacts:
                 if len(self.current_group_list.contacts) < 128:
-                    self.current_group_list.add_contact(contact_idx)
+                    self.current_group_list.add_contact(contact_uuid)
                 else:
                     QMessageBox.warning(self, "Warning", "Maximum 128 contacts per group list")
                     break
 
         self.refresh_selected_contacts()
+        self.refresh_available_contacts()
         self.refresh_table()
         self.data_modified.emit()
 
@@ -265,10 +274,11 @@ class GroupListWidget(QWidget):
             return
 
         for item in selected_items:
-            contact_idx = item.data(Qt.UserRole)
-            self.current_group_list.remove_contact(contact_idx)
+            contact_uuid = item.data(Qt.UserRole)
+            self.current_group_list.remove_contact(contact_uuid)
 
         self.refresh_selected_contacts()
+        self.refresh_available_contacts()
         self.refresh_table()
         self.data_modified.emit()
 
@@ -278,20 +288,16 @@ class GroupListWidget(QWidget):
             QMessageBox.warning(self, "Warning", "No codeplug loaded")
             return
 
-        # Find next available index
-        existing_indices = [gl.index for gl in self.codeplug.group_lists]
-        next_index = max(existing_indices, default=-1) + 1
-        while next_index in existing_indices and next_index < 32:
-            next_index += 1
-
-        if next_index >= 32:
+        # Check max group lists
+        active_group_lists = self.codeplug.get_active_group_lists()
+        if len(active_group_lists) >= 32:
             QMessageBox.warning(self, "Warning", "Maximum group lists reached (32)")
             return
 
-        # Create new group list
+        # Create new group list (UUID is auto-generated, index calculated on save)
+        group_num = len(active_group_lists) + 1
         new_gl = GroupList(
-            index=next_index,
-            name=f"Group {next_index}"
+            name=f"Group {group_num}"
         )
 
         self.codeplug.add_group_list(new_gl)
@@ -306,8 +312,8 @@ class GroupListWidget(QWidget):
             return
 
         index_item = self.table.item(current_row, 0)
-        gl_index = int(index_item.text())
-        group_list = self.codeplug.get_group_list(gl_index)
+        gl_uuid = index_item.data(Qt.UserRole)
+        group_list = self.codeplug.get_group_list(gl_uuid)
 
         if group_list:
             reply = QMessageBox.question(
