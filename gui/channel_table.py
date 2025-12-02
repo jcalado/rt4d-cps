@@ -14,9 +14,9 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QComboBox, QMessageBox, QSplitter, QGroupBox, QFormLayout,
     QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QLabel, QScrollArea,
-    QFileDialog
+    QFileDialog, QCompleter
 )
-from PySide6.QtCore import Qt, Signal, QRegularExpression
+from PySide6.QtCore import Qt, Signal, QRegularExpression, QStringListModel
 from PySide6.QtGui import QColor, QDropEvent, QKeyEvent, QKeySequence, QRegularExpressionValidator
 
 from rt4d_codeplug import Codeplug, Channel, ChannelMode, PowerLevel, ScanMode
@@ -405,16 +405,28 @@ class ChannelTableWidget(QWidget):
         analog_layout = QFormLayout()
 
         self.detail_rx_ctcss = QComboBox()
-        self.detail_rx_ctcss.setEditable(False)
+        self.detail_rx_ctcss.setEditable(True)
+        self.detail_rx_ctcss.setInsertPolicy(QComboBox.NoInsert)  # Don't allow custom values
         for value in CTCSS_DCS_VALUES:
             self.detail_rx_ctcss.addItem(value)
+        # Add completer for type-to-filter
+        rx_completer = QCompleter(CTCSS_DCS_VALUES)
+        rx_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        rx_completer.setFilterMode(Qt.MatchContains)
+        self.detail_rx_ctcss.setCompleter(rx_completer)
         self.detail_rx_ctcss.currentIndexChanged.connect(self.on_detail_changed)
         analog_layout.addRow("RX CTCSS/DCS:", self.detail_rx_ctcss)
 
         self.detail_tx_ctcss = QComboBox()
-        self.detail_tx_ctcss.setEditable(False)
+        self.detail_tx_ctcss.setEditable(True)
+        self.detail_tx_ctcss.setInsertPolicy(QComboBox.NoInsert)  # Don't allow custom values
         for value in CTCSS_DCS_VALUES:
             self.detail_tx_ctcss.addItem(value)
+        # Add completer for type-to-filter
+        tx_completer = QCompleter(CTCSS_DCS_VALUES)
+        tx_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        tx_completer.setFilterMode(Qt.MatchContains)
+        self.detail_tx_ctcss.setCompleter(tx_completer)
         self.detail_tx_ctcss.currentIndexChanged.connect(self.on_detail_changed)
         analog_layout.addRow("TX CTCSS/DCS:", self.detail_tx_ctcss)
 
