@@ -377,8 +377,16 @@ class ChannelTableWidget(QWidget):
         dmr_layout.addRow("TX Priority:", self.detail_tx_priority)
 
         self.detail_tot = QComboBox()
+        self.detail_tot.setEditable(True)
+        self.detail_tot.setInsertPolicy(QComboBox.NoInsert)
         for label, value in TOT_VALUES:
             self.detail_tot.addItem(label, value)
+        # Add completer for type-to-filter
+        tot_labels = [label for label, _ in TOT_VALUES]
+        tot_completer = QCompleter(tot_labels)
+        tot_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        tot_completer.setFilterMode(Qt.MatchContains)
+        self.detail_tot.setCompleter(tot_completer)
         self.detail_tot.currentIndexChanged.connect(self.on_detail_changed)
         dmr_layout.addRow("Timeout (TOT):", self.detail_tot)
 
