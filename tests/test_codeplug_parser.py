@@ -63,7 +63,7 @@ def snapshot_channels(codeplug):
     Uses resolved contact/group names instead of UUIDs since UUIDs are regenerated on parse.
     """
     snap = []
-    for ch in sorted(codeplug.channels, key=lambda c: c.index):
+    for ch in sorted(codeplug.channels, key=lambda c: c.position):
         # Resolve contact name instead of using UUID
         contact_name = ""
         if ch.contact_uuid:

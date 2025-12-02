@@ -25,7 +25,7 @@ from rt4d_codeplug.dropdowns import (
 class DraggableTableWidget(QTableWidget):
     """Table widget that supports drag-and-drop reordering"""
 
-    rows_reordered = Signal()
+    rows_reordered = Signal(int, int)  # source_row, target_row
     copy_requested = Signal(int)  # row index
     paste_requested = Signal(int)  # row index to paste after (-1 for end)
     delete_requested = Signal(int)  # row index
@@ -102,22 +102,9 @@ class DraggableTableWidget(QTableWidget):
         # Accept the event
         event.accept()
 
-        # Temporarily disconnect itemChanged to prevent it firing during manual move
-        if self._item_changed_handler:
-            try:
-                self.itemChanged.disconnect(self._item_changed_handler)
-            except:
-                pass
-
-        # Manually move the row
-        self._move_row(source_row, target_row)
-
-        # Reconnect itemChanged
-        if self._item_changed_handler:
-            self.itemChanged.connect(self._item_changed_handler)
-
-        # Emit signal so parent can update the underlying data
-        self.rows_reordered.emit()
+        # Emit signal with source and target rows BEFORE moving
+        # The handler will update positions, which triggers refresh
+        self.rows_reordered.emit(source_row, target_row)
 
     def _move_row(self, source_row: int, target_row: int):
         """Manually move a row from source to target position"""
@@ -178,7 +165,7 @@ class ChannelTableWidget(QWidget):
         self.table = DraggableTableWidget()
         self.table.setColumnCount(9)
         self.table.setHorizontalHeaderLabels([
-            "#", "Name", "RX Freq", "TX Freq", "Mode", "Power",
+            "Pos", "Name", "RX Freq", "TX Freq", "Mode", "Power",
             "Scan", "Color Code", "Time Slot"
         ])
 
@@ -855,9 +842,8 @@ class ChannelTableWidget(QWidget):
         self.table.blockSignals(True)  # Prevent triggering itemChanged
         self.table.setRowCount(0)
 
-        # Use list order (not sorted by index) - user can reorder via drag-and-drop
-        # Indices are recalculated from list position on save
-        channels = self.codeplug.get_active_channels()
+        # Always display channels sorted by position
+        channels = self.codeplug.get_channels_sorted_by_position()
 
         for row, channel in enumerate(channels):
             self.table.insertRow(row)
@@ -870,12 +856,10 @@ class ChannelTableWidget(QWidget):
         palette = self.table.palette()
         readonly_bg = palette.alternateBase().color()
 
-        # Index (read-only) - display row+1, store UUID in UserRole
-        item_index = QTableWidgetItem(str(row + 1))
-        item_index.setFlags(item_index.flags() & ~Qt.ItemIsEditable)
-        item_index.setBackground(readonly_bg)
-        item_index.setData(Qt.UserRole, channel.uuid)  # Store UUID for lookup
-        self.table.setItem(row, 0, item_index)
+        # Position (editable) - display the channel's memory position, store UUID
+        item_position = QTableWidgetItem(str(channel.position))
+        item_position.setData(Qt.UserRole, channel.uuid)  # Store UUID for lookup
+        self.table.setItem(row, 0, item_position)
 
         # Name
         self.table.setItem(row, 1, QTableWidgetItem(channel.name))
@@ -935,7 +919,18 @@ class ChannelTableWidget(QWidget):
 
         try:
             # Update channel based on column
-            if col == 1:  # Name
+            if col == 0:  # Position
+                new_position = int(item.text())
+                if new_position < 1 or new_position > 1024:
+                    raise ValueError("Position must be 1-1024")
+                # Check for duplicate positions
+                for ch in self.codeplug.channels:
+                    if ch.uuid != channel.uuid and ch.position == new_position:
+                        raise ValueError(f"Position {new_position} already used by '{ch.name}'")
+                channel.position = new_position
+                # Re-sort and refresh table since position changed
+                self.refresh_table()
+            elif col == 1:  # Name
                 channel.name = item.text()[:16]  # Max 16 chars
             elif col == 2:  # RX Freq
                 channel.rx_freq = float(item.text())
@@ -964,27 +959,49 @@ class ChannelTableWidget(QWidget):
             QMessageBox.warning(self, "Invalid Value", f"Invalid value entered: {e}")
             self.refresh_table()  # Restore original value
 
-    def on_rows_reordered(self):
-        """Handle rows reordered via drag and drop"""
+    def on_rows_reordered(self, source_row: int, target_row: int):
+        """Handle rows reordered via drag and drop - insert before target position"""
         if not self.codeplug:
             return
 
-        # Get the current order of channels from the table using UUIDs
-        reordered_channels = []
-        for row in range(self.table.rowCount()):
-            index_item = self.table.item(row, 0)
-            if index_item:
-                # Get the channel by its UUID (stored in UserRole)
-                channel_uuid = index_item.data(Qt.UserRole)
-                channel = self.codeplug.get_channel(channel_uuid)
-                if channel:
-                    reordered_channels.append(channel)
+        # Get channels sorted by position (matches table display)
+        channels = self.codeplug.get_channels_sorted_by_position()
 
-        # Replace the codeplug's channel list with the reordered list
-        # DO NOT modify indices - they are recalculated on save
-        self.codeplug.channels = reordered_channels
+        if source_row >= len(channels) or target_row > len(channels):
+            return
 
-        # Refresh the table to show updated display positions
+        # Get the dragged channel
+        dragged = channels[source_row]
+
+        # Get the target channel (the one we're inserting before)
+        if target_row < len(channels):
+            target = channels[target_row]
+            # Find position just before target
+            new_pos = target.position - 1
+        else:
+            # Dropped at end - use highest position + 1
+            max_pos = max(ch.position for ch in channels)
+            new_pos = max_pos + 1
+
+        if new_pos < 1:
+            new_pos = 1
+
+        # Find nearest free position at or before new_pos
+        used = self.codeplug.get_used_positions() - {dragged.position}
+        while new_pos in used and new_pos > 0:
+            new_pos -= 1
+
+        if new_pos < 1:
+            QMessageBox.warning(self, "No Space", "No free position before target")
+            return
+
+        if new_pos > 1024:
+            QMessageBox.warning(self, "No Space", "No free position available")
+            return
+
+        dragged.position = new_pos
+
+        # Refresh the table to show updated positions
         self.refresh_table()
 
         # Emit data modified signal
@@ -1021,31 +1038,45 @@ class ChannelTableWidget(QWidget):
             QMessageBox.warning(self, "Warning", "Maximum channels reached (1024)")
             return
 
-        # Create new channel from copied data with a new UUID
+        # Get selected channel's position (or 0 if none)
+        selected_pos = 0
+        if row >= 0:
+            index_item = self.table.item(row, 0)
+            if index_item:
+                channel_uuid = index_item.data(Qt.UserRole)
+                selected_channel = self.codeplug.get_channel(channel_uuid)
+                if selected_channel:
+                    selected_pos = selected_channel.position
+
+        # Find next free position after selection
+        used = self.codeplug.get_used_positions()
+        new_pos = selected_pos + 1 if selected_pos > 0 else 1
+
+        while new_pos in used and new_pos <= 1024:
+            new_pos += 1
+
+        if new_pos > 1024:
+            QMessageBox.warning(self, "Error", "No free channel positions")
+            return
+
+        # Create new channel from copied data with a new UUID and position
         from uuid import uuid4
         new_channel = copy.deepcopy(self.copied_channel)
         new_channel.uuid = str(uuid4())  # Generate new UUID for the copy
+        new_channel.position = new_pos
         new_channel.name = f"{self.copied_channel.name} Copy"
 
-        # If a row is selected, insert after it; otherwise append
-        if row >= 0:
-            # Get all channels and insert at the right position
-            channels = list(self.codeplug.channels)
-            insert_position = min(row + 1, len(channels))
-            channels.insert(insert_position, new_channel)
-            self.codeplug.channels = channels
-        else:
-            # Add to end
-            self.codeplug.add_channel(new_channel)
+        self.codeplug.add_channel(new_channel)
 
-        # Refresh table (indices are NOT modified - they'll be recalculated on save)
+        # Refresh table
         self.refresh_table()
 
-        # Select the newly pasted channel
-        if row >= 0:
-            self.table.selectRow(row + 1)
-        else:
-            self.table.selectRow(self.table.rowCount() - 1)
+        # Select the newly pasted channel (find its row in the sorted table)
+        for i in range(self.table.rowCount()):
+            item = self.table.item(i, 0)
+            if item and item.data(Qt.UserRole) == new_channel.uuid:
+                self.table.selectRow(i)
+                break
 
         self.data_modified.emit()
 
@@ -1077,7 +1108,7 @@ class ChannelTableWidget(QWidget):
                 self.data_modified.emit()
 
     def add_channel(self):
-        """Add a new channel"""
+        """Add a new channel after the selected position"""
         if not self.codeplug:
             QMessageBox.warning(self, "Warning", "No codeplug loaded")
             return
@@ -1086,11 +1117,32 @@ class ChannelTableWidget(QWidget):
             QMessageBox.warning(self, "Warning", "Maximum channels reached (1024)")
             return
 
-        # Create new channel (UUID is auto-generated via default_factory)
-        # Index is not set - it will be calculated from list position on save
-        channel_num = len(self.codeplug.channels) + 1
+        # Get selected channel's position (or 0 if none)
+        selected_pos = 0
+        current_row = self.table.currentRow()
+        if current_row >= 0:
+            index_item = self.table.item(current_row, 0)
+            if index_item:
+                channel_uuid = index_item.data(Qt.UserRole)
+                selected_channel = self.codeplug.get_channel(channel_uuid)
+                if selected_channel:
+                    selected_pos = selected_channel.position
+
+        # Find next free position after selection
+        used = self.codeplug.get_used_positions()
+        new_pos = selected_pos + 1 if selected_pos > 0 else 1
+
+        while new_pos in used and new_pos <= 1024:
+            new_pos += 1
+
+        if new_pos > 1024:
+            QMessageBox.warning(self, "Error", "No free channel positions")
+            return
+
+        # Create new channel with assigned position
         new_channel = Channel(
-            name=f"CH-{channel_num}",
+            position=new_pos,
+            name=f"CH-{new_pos}",
             rx_freq=433.500,
             tx_freq=433.500,
             mode=ChannelMode.ANALOG,
@@ -1282,18 +1334,21 @@ class ChannelTableWidget(QWidget):
 
             for row in reader:
                 try:
-                    # Parse channel number (used to check bounds and find existing channels)
-                    index = int(row.get('Channel Number', 0)) - 1
-                    if index < 0 or index >= 1024:
-                        print(f"Warning: Invalid channel number {index + 1}, skipping")
+                    # Parse channel number as position
+                    position = int(row.get('Channel Number', 0))
+                    if position < 1 or position > 1024:
+                        print(f"Warning: Invalid channel position {position}, skipping")
                         continue
 
-                    # Check if channel exists by index (for update) or create new
-                    channel = self.codeplug.get_channel_by_index(index)
+                    # Check if channel exists at this position (for update) or create new
+                    channel = self.codeplug.get_channel_by_position(position)
                     if not channel:
-                        # New channel - UUID auto-generated, index not important
-                        channel = Channel()
+                        # New channel with specified position
+                        channel = Channel(position=position)
                         self.codeplug.add_channel(channel)
+                    else:
+                        # Update existing channel at this position
+                        pass
 
                     # Common fields
                     channel.name = row.get('Channel Name', '')[:16]
@@ -1408,9 +1463,9 @@ class ChannelTableWidget(QWidget):
                 'DCS Type', 'ANA Mute Code 1', 'ANA Mute Code 2', 'ANA Mute Code 3', 'AM_FM RX'
             ])
 
-            for idx, ch in enumerate(channels):
-                # Common fields - use list position as channel number
-                channel_num = idx + 1
+            for ch in channels:
+                # Common fields - use channel position as channel number
+                channel_num = ch.position
                 rx_freq = f"{ch.rx_freq:.5f}"
                 tx_freq = f"{ch.tx_freq:.5f}"
                 channel_type = 'Digital' if ch.is_digital() else 'Analog'
@@ -1474,55 +1529,76 @@ class ChannelTableWidget(QWidget):
                 ])
 
     def move_channel_up(self):
-        """Move selected channel up one position"""
+        """Move selected channel up (swap positions with previous)"""
         current_row = self.table.currentRow()
         if current_row <= 0 or not self.codeplug:
             return
 
-        # Swap in the channels list
-        channels = self.codeplug.channels
-        channels[current_row], channels[current_row - 1] = channels[current_row - 1], channels[current_row]
+        # Get channels sorted by position (matches table display)
+        channels = self.codeplug.get_channels_sorted_by_position()
+        if current_row >= len(channels):
+            return
+
+        current_channel = channels[current_row]
+        prev_channel = channels[current_row - 1]
+
+        # Swap positions
+        current_channel.position, prev_channel.position = prev_channel.position, current_channel.position
 
         self.refresh_table()
         self.table.selectRow(current_row - 1)
         self.data_modified.emit()
 
     def move_channel_down(self):
-        """Move selected channel down one position"""
+        """Move selected channel down (swap positions with next)"""
         current_row = self.table.currentRow()
         if current_row < 0 or not self.codeplug:
             return
-        if current_row >= len(self.codeplug.channels) - 1:
+
+        # Get channels sorted by position (matches table display)
+        channels = self.codeplug.get_channels_sorted_by_position()
+        if current_row >= len(channels) - 1:
             return
 
-        # Swap in the channels list
-        channels = self.codeplug.channels
-        channels[current_row], channels[current_row + 1] = channels[current_row + 1], channels[current_row]
+        current_channel = channels[current_row]
+        next_channel = channels[current_row + 1]
+
+        # Swap positions
+        current_channel.position, next_channel.position = next_channel.position, current_channel.position
 
         self.refresh_table()
         self.table.selectRow(current_row + 1)
         self.data_modified.emit()
 
     def sort_by_name(self):
-        """Sort channels alphabetically by name"""
+        """Sort channels alphabetically by name - reassigns positions"""
         if not self.codeplug:
             return
-        self.codeplug.channels.sort(key=lambda ch: ch.name.lower())
+        # Sort and reassign consecutive positions starting from 1
+        channels = sorted(self.codeplug.get_active_channels(), key=lambda ch: ch.name.lower())
+        for i, ch in enumerate(channels):
+            ch.position = i + 1
         self.refresh_table()
         self.data_modified.emit()
 
     def sort_by_rx_freq(self):
-        """Sort channels by RX frequency"""
+        """Sort channels by RX frequency - reassigns positions"""
         if not self.codeplug:
             return
-        self.codeplug.channels.sort(key=lambda ch: ch.rx_freq)
+        # Sort and reassign consecutive positions starting from 1
+        channels = sorted(self.codeplug.get_active_channels(), key=lambda ch: ch.rx_freq)
+        for i, ch in enumerate(channels):
+            ch.position = i + 1
         self.refresh_table()
         self.data_modified.emit()
 
     def sort_by_tx_freq(self):
-        """Sort channels by TX frequency"""
+        """Sort channels by TX frequency - reassigns positions"""
         if not self.codeplug:
             return
-        self.codeplug.channels.sort(key=lambda ch: ch.tx_freq)
+        # Sort and reassign consecutive positions starting from 1
+        channels = sorted(self.codeplug.get_active_channels(), key=lambda ch: ch.tx_freq)
+        for i, ch in enumerate(channels):
+            ch.position = i + 1
         self.refresh_table()
         self.data_modified.emit()

@@ -17,9 +17,25 @@ class CodeplugSerializer:
         # Initialize with empty data (all 0xFF)
         data = bytearray(b'\xff' * TOTAL_SIZE)
 
-        # Recalculate indices from list positions before serialization
-        for i, ch in enumerate(codeplug.channels):
-            ch.index = i
+        # Validate channel positions
+        errors = codeplug.validate_channel_positions()
+        if errors:
+            raise ValueError(f"Channel position errors: {'; '.join(errors)}")
+
+        # Auto-assign positions for any channels with position=0
+        used_positions = codeplug.get_used_positions()
+        next_pos = 1
+        for ch in codeplug.channels:
+            if ch.position == 0 and not ch.is_empty():
+                while next_pos in used_positions:
+                    next_pos += 1
+                if next_pos > 1024:
+                    raise ValueError("No available channel positions")
+                ch.position = next_pos
+                used_positions.add(next_pos)
+                next_pos += 1
+
+        # Recalculate indices for contacts, group lists, zones, encryption keys
         for i, c in enumerate(codeplug.contacts):
             c.index = i + 1  # Contacts are 1-based
         for i, gl in enumerate(codeplug.group_lists):
@@ -33,7 +49,8 @@ class CodeplugSerializer:
         contact_idx_map = {c.uuid: c.index for c in codeplug.contacts}
         group_list_idx_map = {gl.uuid: gl.index for gl in codeplug.group_lists}
         encrypt_idx_map = {ek.uuid: ek.index for ek in codeplug.encryption_keys}
-        channel_idx_map = {ch.uuid: ch.index for ch in codeplug.channels}
+        # Channels use position-1 (convert 1-based position to 0-based slot)
+        channel_idx_map = {ch.uuid: ch.position - 1 for ch in codeplug.channels}
 
         # Serialize settings to cfg_data if settings exist
         if codeplug.settings:
@@ -44,13 +61,15 @@ class CodeplugSerializer:
 
         use_beta_layout = bool(codeplug.settings and codeplug.settings.beta41)
 
-        # Write channels
+        # Write channels at their designated positions
         for channel in codeplug.channels:
             if use_beta_layout:
                 ch_data = CodeplugSerializer.serialize_channel_new(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
             else:
                 ch_data = CodeplugSerializer.serialize_channel(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
-            offset = OFFSET_CHANNELS + (channel.index * CHANNEL_SIZE)
+            # Position is 1-based, convert to 0-based slot for offset calculation
+            slot = channel.position - 1
+            offset = OFFSET_CHANNELS + (slot * CHANNEL_SIZE)
             data[offset:offset + CHANNEL_SIZE] = ch_data
 
         # Write contacts

@@ -24,20 +24,20 @@ def list_channels(codeplug: Codeplug, verbose: bool = False):
     channels = codeplug.get_active_channels()
     print(f"\nFound {len(channels)} channels:")
     print("-" * 100)
-    print(f"{'#':<5} {'Name':<17} {'RX Freq':<12} {'TX Freq':<12} {'Mode':<8} {'Power':<6} {'Scan':<6}")
+    print(f"{'Pos':<5} {'Name':<17} {'RX Freq':<12} {'TX Freq':<12} {'Mode':<8} {'Power':<6} {'Scan':<6}")
     print("-" * 100)
 
-    for ch in sorted(channels, key=lambda c: c.index):
+    for ch in sorted(channels, key=lambda c: c.position):
         mode_str = "Digital" if ch.is_digital() else "Analog"
         power_str = "High" if ch.power == PowerLevel.HIGH else "Low"
         scan_str = "Yes" if ch.scan == ScanMode.ADD else "No"
 
-        print(f"{ch.index + 1:<5} {ch.name:<17} {ch.rx_freq:<12.5f} {ch.tx_freq:<12.5f} "
+        print(f"{ch.position:<5} {ch.name:<17} {ch.rx_freq:<12.5f} {ch.tx_freq:<12.5f} "
               f"{mode_str:<8} {power_str:<6} {scan_str:<6}")
 
         if verbose and ch.is_digital():
             print(f"      DMR: Slot={ch.dmr_time_slot + 1}, CC={ch.dmr_color_code}, "
-                  f"Contact={ch.contact_index}, Group={ch.group_list_index}")
+                  f"Contact UUID={ch.contact_uuid[:8] if ch.contact_uuid else 'None'}...")
 
 
 def list_contacts(codeplug: Codeplug):
@@ -133,20 +133,20 @@ def export_csv(codeplug: Codeplug, output_file: str):
 
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['Index', 'Name', 'RX Freq', 'TX Freq', 'Mode', 'Power',
-                         'Scan', 'Color Code', 'Time Slot', 'Contact', 'Group List'])
+        writer.writerow(['Position', 'Name', 'RX Freq', 'TX Freq', 'Mode', 'Power',
+                         'Scan', 'Color Code', 'Time Slot', 'Contact UUID', 'Group List UUID'])
 
-        for ch in sorted(channels, key=lambda c: c.index):
+        for ch in sorted(channels, key=lambda c: c.position):
             mode = 'Digital' if ch.is_digital() else 'Analog'
             power = 'High' if ch.power == PowerLevel.HIGH else 'Low'
             scan = 'Add' if ch.scan == ScanMode.ADD else 'Remove'
 
             writer.writerow([
-                ch.index + 1, ch.name, ch.rx_freq, ch.tx_freq, mode, power, scan,
+                ch.position, ch.name, ch.rx_freq, ch.tx_freq, mode, power, scan,
                 ch.dmr_color_code if ch.is_digital() else '',
                 ch.dmr_time_slot + 1 if ch.is_digital() else '',
-                ch.contact_index if ch.is_digital() else '',
-                ch.group_list_index if ch.is_digital() else ''
+                ch.contact_uuid if ch.is_digital() else '',
+                ch.group_list_uuid if ch.is_digital() else ''
             ])
 
     print(f"Exported {len(channels)} channels to {output_file}")

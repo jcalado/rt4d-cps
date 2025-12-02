@@ -49,7 +49,7 @@ class EncryptionType(Enum):
 class Channel:
     """Radio channel configuration"""
     uuid: str = field(default_factory=lambda: str(uuid4()))
-    index: int = 0  # Computed from list position on save, used for display
+    position: int = 0  # User-controllable memory slot (1-1024), 0 = auto-assign
     name: str = ""
     rx_freq: float = 0.0  # MHz
     tx_freq: float = 0.0  # MHz
@@ -86,6 +86,8 @@ class Channel:
 
     def __post_init__(self):
         """Validate channel data"""
+        if self.position < 0 or self.position > 1024:
+            raise ValueError(f"Invalid position: {self.position} (must be 0-1024)")
         if self.rx_freq < 0 or self.rx_freq > 1000:
             raise ValueError(f"Invalid RX frequency: {self.rx_freq}")
         if self.tx_freq < 0 or self.tx_freq > 1000:
@@ -460,11 +462,11 @@ class Codeplug:
                 return key
         return None
 
-    # Index-based lookups for parser/serializer
-    def get_channel_by_index(self, index: int) -> Optional[Channel]:
-        """Get channel by index (for parser/serializer)"""
+    # Position-based lookups for parser/serializer
+    def get_channel_by_position(self, position: int) -> Optional[Channel]:
+        """Get channel by position (for parser/serializer)"""
         for ch in self.channels:
-            if ch.index == index:
+            if ch.position == position:
                 return ch
         return None
 
@@ -550,3 +552,28 @@ class Codeplug:
     def get_active_encryption_keys(self) -> List[EncryptionKey]:
         """Get all non-empty encryption keys"""
         return [k for k in self.encryption_keys if not k.is_empty()]
+
+    # Channel position helpers
+    def get_used_positions(self) -> set:
+        """Get set of all used channel positions"""
+        return {ch.position for ch in self.channels if ch.position > 0}
+
+    def validate_channel_positions(self) -> list:
+        """Validate all channel positions, return list of errors"""
+        errors = []
+        positions = {}
+        for ch in self.channels:
+            if ch.is_empty():
+                continue
+            if ch.position < 1 or ch.position > 1024:
+                errors.append(f"Channel '{ch.name}' has invalid position {ch.position}")
+            elif ch.position in positions:
+                errors.append(f"Duplicate position {ch.position}: '{positions[ch.position]}' and '{ch.name}'")
+            else:
+                positions[ch.position] = ch.name
+        return errors
+
+    def get_channels_sorted_by_position(self) -> List[Channel]:
+        """Get channels sorted by position for display"""
+        return sorted([ch for ch in self.channels if not ch.is_empty()],
+                      key=lambda ch: ch.position)

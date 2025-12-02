@@ -100,7 +100,8 @@ class CodeplugParser:
         contact_uuid_map = {c.index: c.uuid for c in codeplug.contacts}
         group_list_uuid_map = {gl.index: gl.uuid for gl in codeplug.group_lists}
         encrypt_uuid_map = {ek.index: ek.uuid for ek in codeplug.encryption_keys}
-        channel_uuid_map = {ch.index: ch.uuid for ch in codeplug.channels}
+        # Channels use position (1-based) for mapping
+        channel_uuid_map = {ch.position: ch.uuid for ch in codeplug.channels}
 
         # Resolve channel references (contact, group_list, encrypt)
         for channel in codeplug.channels:
@@ -118,10 +119,11 @@ class CodeplugParser:
                     delattr(channel, attr)
 
         # Resolve zone channel references
+        # Binary stores 0-based slot indices, but channels use 1-based positions
         for zone in codeplug.zones:
             if hasattr(zone, '_parsed_channel_indices'):
-                zone.channels = [channel_uuid_map.get(idx, "") for idx in zone._parsed_channel_indices
-                                if idx in channel_uuid_map]
+                zone.channels = [channel_uuid_map.get(idx + 1, "") for idx in zone._parsed_channel_indices
+                                if (idx + 1) in channel_uuid_map]
                 delattr(zone, '_parsed_channel_indices')
 
         # Resolve group list contact references
@@ -166,7 +168,7 @@ class CodeplugParser:
 
             # Create channel object
             channel = Channel(
-                index=index,
+                position=index + 1,  # Convert 0-based slot to 1-based position
                 name=name,
                 rx_freq=rx_freq,
                 tx_freq=tx_freq,
@@ -278,7 +280,7 @@ class CodeplugParser:
             scan = ScanMode.REMOVE if (ch_data[0x03] & 0x80) else ScanMode.ADD
 
             channel = Channel(
-                index=index,
+                position=index + 1,  # Convert 0-based slot to 1-based position
                 name=name,
                 rx_freq=rx_freq,
                 tx_freq=tx_freq,
