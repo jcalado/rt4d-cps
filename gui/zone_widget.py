@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QMessageBox, QSplitter, QLabel, QListWidget, QListWidgetItem,
+    QMessageBox, QSplitter, QLabel,
     QGroupBox, QInputDialog, QLineEdit
 )
 from PySide6.QtCore import Qt, Signal
@@ -93,8 +93,19 @@ class ZoneWidget(QWidget):
         available_group = QGroupBox("Available Channels")
         available_layout = QVBoxLayout()
 
-        self.available_list = QListWidget()
+        self.available_list = QTableWidget()
+        self.available_list.setColumnCount(3)
+        self.available_list.setHorizontalHeaderLabels(["Pos", "Name", "TS"])
+        self.available_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.available_list.verticalHeader().setVisible(False)
+        self.available_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.available_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        # Configure column widths
+        available_header = self.available_list.horizontalHeader()
+        available_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Pos
+        available_header.setSectionResizeMode(1, QHeaderView.Stretch)           # Name
+        available_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # TS
         available_layout.addWidget(self.available_list)
 
         self.btn_add_channel = QPushButton("Add to Zone →")
@@ -109,8 +120,19 @@ class ZoneWidget(QWidget):
         selected_group = QGroupBox("Channels in Zone")
         selected_layout = QVBoxLayout()
 
-        self.selected_list = QListWidget()
+        self.selected_list = QTableWidget()
+        self.selected_list.setColumnCount(3)
+        self.selected_list.setHorizontalHeaderLabels(["Pos", "Name", "TS"])
+        self.selected_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.selected_list.verticalHeader().setVisible(False)
+        self.selected_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.selected_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        # Configure column widths
+        selected_header = self.selected_list.horizontalHeader()
+        selected_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Pos
+        selected_header.setSectionResizeMode(1, QHeaderView.Stretch)           # Name
+        selected_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # TS
         selected_layout.addWidget(self.selected_list)
 
         btn_layout = QHBoxLayout()
@@ -195,8 +217,8 @@ class ZoneWidget(QWidget):
 
     def refresh_details(self):
         """Refresh right panel details"""
-        self.available_list.clear()
-        self.selected_list.clear()
+        self.available_list.setRowCount(0)
+        self.selected_list.setRowCount(0)
 
         if not self.current_zone or not self.codeplug:
             self.details_label.setText("<b>Select a zone</b>")
@@ -216,25 +238,49 @@ class ZoneWidget(QWidget):
         active_channels = self.codeplug.get_active_channels()
         zone_channel_set = set(self.current_zone.channels)  # Set of channel UUIDs
 
-        for idx, channel in enumerate(active_channels):
+        for channel in active_channels:
             if channel.uuid not in zone_channel_set:
-                # Display position in list + 1, store UUID
-                item = QListWidgetItem(f"CH{idx + 1:03d}: {channel.name}")
-                item.setData(Qt.UserRole, channel.uuid)
-                self.available_list.addItem(item)
+                row = self.available_list.rowCount()
+                self.available_list.insertRow(row)
+
+                # Position column - store UUID in first column's UserRole
+                pos_item = QTableWidgetItem(str(channel.position))
+                pos_item.setData(Qt.UserRole, channel.uuid)
+                self.available_list.setItem(row, 0, pos_item)
+
+                # Name column
+                name_item = QTableWidgetItem(channel.name)
+                self.available_list.setItem(row, 1, name_item)
+
+                # Timeslot column (only for DMR)
+                if channel.is_digital():
+                    ts_item = QTableWidgetItem(str(channel.dmr_time_slot + 1))
+                else:
+                    ts_item = QTableWidgetItem("")
+                self.available_list.setItem(row, 2, ts_item)
 
         # Populate channels in zone (in order) - zone.channels is a list of UUIDs
         for channel_uuid in self.current_zone.channels:
             channel = self.codeplug.get_channel(channel_uuid)
             if channel:
-                # Find channel's position in the active channels list for display
-                try:
-                    ch_pos = list(active_channels).index(channel) + 1
-                except ValueError:
-                    ch_pos = 0
-                item = QListWidgetItem(f"CH{ch_pos:03d}: {channel.name}")
-                item.setData(Qt.UserRole, channel.uuid)
-                self.selected_list.addItem(item)
+                row = self.selected_list.rowCount()
+                self.selected_list.insertRow(row)
+
+                # Position column - store UUID in first column's UserRole
+                pos_item = QTableWidgetItem(str(channel.position))
+                pos_item.setData(Qt.UserRole, channel.uuid)
+                self.selected_list.setItem(row, 0, pos_item)
+
+                # Name column
+                name_item = QTableWidgetItem(channel.name)
+                self.selected_list.setItem(row, 1, name_item)
+
+                # Timeslot column (only for DMR)
+                if channel.is_digital():
+                    ts_item = QTableWidgetItem(str(channel.dmr_time_slot + 1))
+                else:
+                    ts_item = QTableWidgetItem("")
+                self.selected_list.setItem(row, 2, ts_item)
 
     def on_selection_changed(self):
         """Handle zone selection change"""
@@ -396,29 +442,31 @@ class ZoneWidget(QWidget):
         if not self.current_zone:
             return
 
-        selected_items = self.available_list.selectedItems()
-        if not selected_items:
+        selected_rows = self.available_list.selectionModel().selectedRows()
+        if not selected_rows:
             return
 
         # Check if we'll exceed 200 channels
         current_count = len(self.current_zone.channels)
-        new_count = current_count + len(selected_items)
+        new_count = current_count + len(selected_rows)
         if new_count > 200:
             QMessageBox.warning(
                 self,
                 "Too Many Channels",
-                f"Cannot add {len(selected_items)} channels.\n"
+                f"Cannot add {len(selected_rows)} channels.\n"
                 f"Zone has {current_count} channels, maximum is 200."
             )
             return
 
         # Find the row of the last selected item to select the next one
-        last_selected_row = max(self.available_list.row(item) for item in selected_items)
+        last_selected_row = max(row.row() for row in selected_rows)
 
-        # Add channels by UUID
-        for item in selected_items:
-            channel_uuid = item.data(Qt.UserRole)
-            self.current_zone.add_channel(channel_uuid)
+        # Add channels by UUID (get from column 0)
+        for row in selected_rows:
+            pos_item = self.available_list.item(row.row(), 0)
+            if pos_item:
+                channel_uuid = pos_item.data(Qt.UserRole)
+                self.current_zone.add_channel(channel_uuid)
 
         self.refresh_details()
         self.refresh_table()
@@ -426,41 +474,43 @@ class ZoneWidget(QWidget):
 
         # Select the next available channel (if any)
         next_row = last_selected_row
-        if next_row < self.available_list.count():
-            self.available_list.setCurrentRow(next_row)
-        elif self.available_list.count() > 0:
+        if next_row < self.available_list.rowCount():
+            self.available_list.selectRow(next_row)
+        elif self.available_list.rowCount() > 0:
             # If we were at the end, select the last remaining item
-            self.available_list.setCurrentRow(self.available_list.count() - 1)
+            self.available_list.selectRow(self.available_list.rowCount() - 1)
 
     def remove_channels_from_zone(self):
         """Remove selected channels from zone"""
         if not self.current_zone:
             return
 
-        selected_items = self.selected_list.selectedItems()
-        if not selected_items:
+        selected_rows = self.selected_list.selectionModel().selectedRows()
+        if not selected_rows:
             return
 
         # Find the row of the last selected item
-        last_selected_row = max(self.selected_list.row(item) for item in selected_items)
+        last_selected_row = max(row.row() for row in selected_rows)
 
-        # Remove channels by UUID
-        for item in selected_items:
-            channel_uuid = item.data(Qt.UserRole)
-            self.current_zone.remove_channel(channel_uuid)
+        # Remove channels by UUID (get from column 0)
+        for row in selected_rows:
+            pos_item = self.selected_list.item(row.row(), 0)
+            if pos_item:
+                channel_uuid = pos_item.data(Qt.UserRole)
+                self.current_zone.remove_channel(channel_uuid)
 
         self.refresh_details()
         self.refresh_table()
         self.data_modified.emit()
 
         # Select the next channel in the zone list, or previous if we removed the last one
-        if self.selected_list.count() > 0:
-            if last_selected_row < self.selected_list.count():
+        if self.selected_list.rowCount() > 0:
+            if last_selected_row < self.selected_list.rowCount():
                 # Select the item now at the same position
-                self.selected_list.setCurrentRow(last_selected_row)
+                self.selected_list.selectRow(last_selected_row)
             else:
                 # We removed the last item(s), select the new last item
-                self.selected_list.setCurrentRow(self.selected_list.count() - 1)
+                self.selected_list.selectRow(self.selected_list.rowCount() - 1)
 
     def move_channel_up(self):
         """Move selected channel up in order"""
@@ -477,7 +527,7 @@ class ZoneWidget(QWidget):
             channels[current_row - 1], channels[current_row]
 
         self.refresh_details()
-        self.selected_list.setCurrentRow(current_row - 1)
+        self.selected_list.selectRow(current_row - 1)
         self.data_modified.emit()
 
     def move_channel_down(self):
@@ -495,5 +545,5 @@ class ZoneWidget(QWidget):
             channels[current_row + 1], channels[current_row]
 
         self.refresh_details()
-        self.selected_list.setCurrentRow(current_row + 1)
+        self.selected_list.selectRow(current_row + 1)
         self.data_modified.emit()
