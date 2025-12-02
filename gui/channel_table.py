@@ -457,8 +457,16 @@ class ChannelTableWidget(QWidget):
         analog_layout.addRow("TX Priority:", self.detail_tx_priority_analog)
 
         self.detail_tot_analog = QComboBox()
+        self.detail_tot_analog.setEditable(True)
+        self.detail_tot_analog.setInsertPolicy(QComboBox.NoInsert)
         for label, value in TOT_VALUES:
             self.detail_tot_analog.addItem(label, value)
+        # Add completer for type-to-filter
+        tot_analog_labels = [label for label, _ in TOT_VALUES]
+        tot_analog_completer = QCompleter(tot_analog_labels)
+        tot_analog_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        tot_analog_completer.setFilterMode(Qt.MatchContains)
+        self.detail_tot_analog.setCompleter(tot_analog_completer)
         self.detail_tot_analog.currentIndexChanged.connect(self.on_detail_changed)
         analog_layout.addRow("TOT:", self.detail_tot_analog)
 
