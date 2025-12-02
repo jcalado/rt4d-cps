@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QMessageBox, QSplitter, QLabel, QListWidget, QListWidgetItem,
+    QMessageBox, QSplitter, QLabel,
     QGroupBox
 )
 from PySide6.QtCore import Qt, Signal
@@ -85,8 +85,18 @@ class GroupListWidget(QWidget):
         available_group = QGroupBox("Available Contacts")
         available_layout = QVBoxLayout()
 
-        self.available_list = QListWidget()
+        self.available_list = QTableWidget()
+        self.available_list.setColumnCount(2)
+        self.available_list.setHorizontalHeaderLabels(["Name", "DMR ID"])
+        self.available_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.available_list.verticalHeader().setVisible(False)
+        self.available_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.available_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        # Configure column widths
+        available_header = self.available_list.horizontalHeader()
+        available_header.setSectionResizeMode(0, QHeaderView.Stretch)       # Name
+        available_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # DMR ID
         available_layout.addWidget(self.available_list)
 
         self.btn_add_contact = QPushButton("Add to Group →")
@@ -101,8 +111,18 @@ class GroupListWidget(QWidget):
         selected_group = QGroupBox("Contacts in Group")
         selected_layout = QVBoxLayout()
 
-        self.selected_list = QListWidget()
+        self.selected_list = QTableWidget()
+        self.selected_list.setColumnCount(2)
+        self.selected_list.setHorizontalHeaderLabels(["Name", "DMR ID"])
+        self.selected_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.selected_list.verticalHeader().setVisible(False)
+        self.selected_list.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.selected_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        # Configure column widths
+        selected_header = self.selected_list.horizontalHeader()
+        selected_header.setSectionResizeMode(0, QHeaderView.Stretch)       # Name
+        selected_header.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # DMR ID
         selected_layout.addWidget(self.selected_list)
 
         self.btn_remove_contact = QPushButton("← Remove from Group")
@@ -163,7 +183,7 @@ class GroupListWidget(QWidget):
         if not self.codeplug:
             return
 
-        self.available_list.clear()
+        self.available_list.setRowCount(0)
         contacts = self.codeplug.get_active_contacts()
 
         # Get UUIDs of contacts already in the current group
@@ -174,9 +194,17 @@ class GroupListWidget(QWidget):
         for contact in contacts:
             # Only show GROUP contacts that aren't already in the selected group
             if contact.contact_type.name == "GROUP" and contact.uuid not in contacts_in_group:
-                item = QListWidgetItem(f"{contact.name} (ID: {contact.dmr_id})")
-                item.setData(Qt.UserRole, contact.uuid)
-                self.available_list.addItem(item)
+                row = self.available_list.rowCount()
+                self.available_list.insertRow(row)
+
+                # Name column - store UUID in first column's UserRole
+                name_item = QTableWidgetItem(contact.name)
+                name_item.setData(Qt.UserRole, contact.uuid)
+                self.available_list.setItem(row, 0, name_item)
+
+                # DMR ID column
+                dmr_id_item = QTableWidgetItem(str(contact.dmr_id))
+                self.available_list.setItem(row, 1, dmr_id_item)
 
     def on_selection_changed(self):
         """Handle group list selection"""
@@ -184,7 +212,7 @@ class GroupListWidget(QWidget):
         if current_row < 0:
             self.current_group_list = None
             self.details_label.setText("<b>Select a group list</b>")
-            self.selected_list.clear()
+            self.selected_list.setRowCount(0)
             self.btn_add_contact.setEnabled(False)
             self.btn_remove_contact.setEnabled(False)
             return
@@ -226,7 +254,7 @@ class GroupListWidget(QWidget):
 
     def refresh_selected_contacts(self):
         """Refresh selected contacts list"""
-        self.selected_list.clear()
+        self.selected_list.setRowCount(0)
 
         if not self.current_group_list:
             return
@@ -235,28 +263,38 @@ class GroupListWidget(QWidget):
         for contact_uuid in self.current_group_list.contacts:
             contact = self.codeplug.get_contact(contact_uuid)
             if contact:
-                item = QListWidgetItem(f"{contact.name} (ID: {contact.dmr_id})")
-                item.setData(Qt.UserRole, contact.uuid)
-                self.selected_list.addItem(item)
+                row = self.selected_list.rowCount()
+                self.selected_list.insertRow(row)
+
+                # Name column - store UUID in first column's UserRole
+                name_item = QTableWidgetItem(contact.name)
+                name_item.setData(Qt.UserRole, contact.uuid)
+                self.selected_list.setItem(row, 0, name_item)
+
+                # DMR ID column
+                dmr_id_item = QTableWidgetItem(str(contact.dmr_id))
+                self.selected_list.setItem(row, 1, dmr_id_item)
 
     def add_contact_to_group(self):
         """Add selected contacts to current group list"""
         if not self.current_group_list:
             return
 
-        selected_items = self.available_list.selectedItems()
-        if not selected_items:
+        selected_rows = self.available_list.selectionModel().selectedRows()
+        if not selected_rows:
             QMessageBox.warning(self, "Warning", "Please select contacts to add")
             return
 
-        for item in selected_items:
-            contact_uuid = item.data(Qt.UserRole)
-            if contact_uuid not in self.current_group_list.contacts:
-                if len(self.current_group_list.contacts) < 128:
-                    self.current_group_list.add_contact(contact_uuid)
-                else:
-                    QMessageBox.warning(self, "Warning", "Maximum 128 contacts per group list")
-                    break
+        for row in selected_rows:
+            name_item = self.available_list.item(row.row(), 0)
+            if name_item:
+                contact_uuid = name_item.data(Qt.UserRole)
+                if contact_uuid not in self.current_group_list.contacts:
+                    if len(self.current_group_list.contacts) < 128:
+                        self.current_group_list.add_contact(contact_uuid)
+                    else:
+                        QMessageBox.warning(self, "Warning", "Maximum 128 contacts per group list")
+                        break
 
         self.refresh_selected_contacts()
         self.refresh_available_contacts()
@@ -268,14 +306,16 @@ class GroupListWidget(QWidget):
         if not self.current_group_list:
             return
 
-        selected_items = self.selected_list.selectedItems()
-        if not selected_items:
+        selected_rows = self.selected_list.selectionModel().selectedRows()
+        if not selected_rows:
             QMessageBox.warning(self, "Warning", "Please select contacts to remove")
             return
 
-        for item in selected_items:
-            contact_uuid = item.data(Qt.UserRole)
-            self.current_group_list.remove_contact(contact_uuid)
+        for row in selected_rows:
+            name_item = self.selected_list.item(row.row(), 0)
+            if name_item:
+                contact_uuid = name_item.data(Qt.UserRole)
+                self.current_group_list.remove_contact(contact_uuid)
 
         self.refresh_selected_contacts()
         self.refresh_available_contacts()
@@ -326,6 +366,6 @@ class GroupListWidget(QWidget):
             if reply == QMessageBox.Yes:
                 self.codeplug.group_lists.remove(group_list)
                 self.refresh_table()
-                self.selected_list.clear()
+                self.selected_list.setRowCount(0)
                 self.current_group_list = None
                 self.data_modified.emit()
