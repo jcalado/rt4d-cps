@@ -168,10 +168,10 @@ class ChannelTableWidget(QWidget):
 
         # Create table
         self.table = DraggableTableWidget()
-        self.table.setColumnCount(9)
+        self.table.setColumnCount(10)
         self.table.setHorizontalHeaderLabels([
             "Pos", "Name", "RX Freq", "TX Freq", "Mode", "Power",
-            "Scan", "Color Code", "Time Slot"
+            "Scan", "Color Code", "Time Slot", "TX Tone"
         ])
 
         # Configure table
@@ -181,7 +181,7 @@ class ChannelTableWidget(QWidget):
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Index
         header.setSectionResizeMode(1, QHeaderView.Stretch)  # Name
-        for i in range(2, 9):
+        for i in range(2, 10):
             header.setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
         # Connect signals
@@ -992,6 +992,12 @@ class ChannelTableWidget(QWidget):
         if channel.is_digital():
             self.table.setItem(row, 7, QTableWidgetItem(str(channel.dmr_color_code)))
             self.table.setItem(row, 8, QTableWidgetItem(str(channel.dmr_time_slot + 1)))
+
+            # TX Tone - empty for digital
+            item_tone = QTableWidgetItem("")
+            item_tone.setFlags(item_tone.flags() & ~Qt.ItemIsEditable)
+            item_tone.setBackground(readonly_bg)
+            self.table.setItem(row, 9, item_tone)
         else:
             item_cc = QTableWidgetItem("")
             item_cc.setFlags(item_cc.flags() & ~Qt.ItemIsEditable)
@@ -1002,6 +1008,12 @@ class ChannelTableWidget(QWidget):
             item_slot.setFlags(item_slot.flags() & ~Qt.ItemIsEditable)
             item_slot.setBackground(readonly_bg)
             self.table.setItem(row, 8, item_slot)
+
+            # TX Tone - show CTCSS/DCS for analog
+            tx_tone_str = channel.tx_ctcss if channel.tx_ctcss else "None"
+            item_tone = QTableWidgetItem(tx_tone_str)
+            item_tone.setFlags(item_tone.flags() & ~Qt.ItemIsEditable)  # Read-only in table
+            self.table.setItem(row, 9, item_tone)
 
     def on_item_changed(self, item: QTableWidgetItem):
         """Handle cell editing"""
