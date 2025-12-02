@@ -233,6 +233,22 @@ class ChannelTableWidget(QWidget):
 
         reorder_layout.addStretch()
 
+        # Filter input
+        filter_label = QLabel("Filter:")
+        reorder_layout.addWidget(filter_label)
+
+        self.filter_input = QLineEdit()
+        self.filter_input.setPlaceholderText("Search by name...")
+        self.filter_input.setMaximumWidth(150)
+        self.filter_input.textChanged.connect(self.on_filter_changed)
+        reorder_layout.addWidget(self.filter_input)
+
+        self.btn_clear_filter = QPushButton("Clear")
+        self.btn_clear_filter.clicked.connect(self.clear_filter)
+        reorder_layout.addWidget(self.btn_clear_filter)
+
+        reorder_layout.addStretch()
+
         self.btn_sort_name = QPushButton("Sort: Name")
         self.btn_sort_name.clicked.connect(self.sort_by_name)
         reorder_layout.addWidget(self.btn_sort_name)
@@ -921,11 +937,24 @@ class ChannelTableWidget(QWidget):
         # Always display channels sorted by position
         channels = self.codeplug.get_channels_sorted_by_position()
 
+        # Apply filter if set
+        filter_text = self.filter_input.text().strip().lower()
+        if filter_text:
+            channels = [ch for ch in channels if filter_text in ch.name.lower()]
+
         for row, channel in enumerate(channels):
             self.table.insertRow(row)
             self.populate_row(row, channel)
 
         self.table.blockSignals(False)
+
+    def on_filter_changed(self):
+        """Handle filter input text change"""
+        self.refresh_table()
+
+    def clear_filter(self):
+        """Clear the filter input"""
+        self.filter_input.clear()
 
     def populate_row(self, row: int, channel: Channel):
         """Populate a table row with channel data"""
@@ -1028,6 +1057,11 @@ class ChannelTableWidget(QWidget):
                 channel.dmr_color_code = int(item.text())
             elif col == 8 and channel.is_digital():  # Time Slot
                 channel.dmr_time_slot = int(item.text()) - 1  # 0-indexed
+
+            # Sync the details panel with the updated channel data
+            # This ensures the details panel reflects table cell edits
+            if row == self.table.currentRow():
+                self.load_channel_details(channel)
 
             self.data_modified.emit()
 
