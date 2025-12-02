@@ -51,6 +51,7 @@ class MainWindow(QMainWindow):
         # Channel tab
         self.channel_widget = ChannelTableWidget()
         self.channel_widget.data_modified.connect(self.on_data_modified)
+        self.channel_widget.data_modified.connect(self.on_channels_modified)
         self.tabs.addTab(self.channel_widget, "Channels")
 
         # Contacts tab
@@ -399,6 +400,10 @@ class MainWindow(QMainWindow):
         self.channel_widget.populate_encryption_dropdown()
         # Reload currently displayed channel to sync dropdown selection
         self.channel_widget.reload_current_channel_details()
+
+    def on_channels_modified(self):
+        """Handle channels modification - refresh zone widget channel lists"""
+        self.zone_widget.refresh_details()
 
     def update_title(self):
         """Update window title"""
