@@ -2,7 +2,12 @@
 
 import csv
 import copy
+import logging
 from typing import Optional
+
+# Debug logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -469,6 +474,7 @@ class ChannelTableWidget(QWidget):
     def on_selection_changed(self):
         """Handle table selection change"""
         current_row = self.table.currentRow()
+        logger.debug(f"on_selection_changed: current_row={current_row}")
         if current_row < 0:
             self.set_details_enabled(False)
             return
@@ -476,12 +482,15 @@ class ChannelTableWidget(QWidget):
         # Get selected channel by UUID
         index_item = self.table.item(current_row, 0)
         if not index_item:
+            logger.debug("on_selection_changed: no index_item, returning")
             return
 
         channel_uuid = index_item.data(Qt.UserRole)
         channel = self.codeplug.get_channel(channel_uuid)
+        logger.debug(f"on_selection_changed: uuid={channel_uuid[:8]}..., channel found={channel is not None}")
 
         if channel:
+            logger.debug(f"on_selection_changed: loading details - name={channel.name}, rx={channel.rx_freq}, tx={channel.tx_freq}")
             self.load_channel_details(channel)
             self.set_details_enabled(True)
 
@@ -504,6 +513,7 @@ class ChannelTableWidget(QWidget):
 
     def load_channel_details(self, channel: Channel):
         """Load channel data into details panel"""
+        logger.debug(f"load_channel_details: CALLED with name={channel.name}, rx={channel.rx_freq}, tx={channel.tx_freq}")
         # Block signals while loading
         self.detail_name.blockSignals(True)
         self.detail_rx_freq.blockSignals(True)
@@ -681,34 +691,100 @@ class ChannelTableWidget(QWidget):
         self.detail_mute_code.blockSignals(False)
 
     def on_mode_changed(self):
-        """Handle mode change"""
+        """Handle mode change - preserve all basic settings during mode switch"""
+        logger.debug("on_mode_changed: STARTING")
+
+        # Get current channel - read values from channel object (not UI) since
+        # table cell edits update the channel but not the details panel
+        current_row = self.table.currentRow()
+        if current_row < 0 or not self.codeplug:
+            logger.debug("on_mode_changed: no row or codeplug, returning")
+            return
+
+        index_item = self.table.item(current_row, 0)
+        if not index_item:
+            logger.debug("on_mode_changed: no index_item, returning")
+            return
+
+        channel_uuid = index_item.data(Qt.UserRole)
+        channel = self.codeplug.get_channel(channel_uuid)
+        if not channel:
+            logger.debug("on_mode_changed: channel not found, returning")
+            return
+
+        # Capture values from CHANNEL OBJECT (authoritative source)
+        # This ensures we preserve table cell edits that didn't update the details panel
+        name = channel.name
+        rx_freq = channel.rx_freq
+        tx_freq = channel.tx_freq
+        power = channel.power
+        scan = channel.scan
+        logger.debug(f"on_mode_changed: captured from channel - name={name}, rx={rx_freq}, tx={tx_freq}")
+
         # Show/hide groups based on mode
         is_digital = self.detail_mode.currentIndex() == 1
+        logger.debug(f"on_mode_changed: switching to {'Digital' if is_digital else 'Analog'}")
         self.dmr_group.setVisible(is_digital)
         self.analog_group.setVisible(not is_digital)
+
+        # Restore all basic settings to the UI from the channel object
+        self.detail_name.blockSignals(True)
+        self.detail_rx_freq.blockSignals(True)
+        self.detail_tx_freq.blockSignals(True)
+        self.detail_power.blockSignals(True)
+        self.detail_scan.blockSignals(True)
+
+        self.detail_name.setText(name)
+        self.detail_rx_freq.setValue(rx_freq)
+        self.detail_tx_freq.setValue(tx_freq)
+        self.detail_power.setCurrentIndex(0 if power == PowerLevel.HIGH else 1)
+        self.detail_scan.setCurrentIndex(0 if scan == ScanMode.ADD else 1)
+
+        self.detail_name.blockSignals(False)
+        self.detail_rx_freq.blockSignals(False)
+        self.detail_tx_freq.blockSignals(False)
+        self.detail_power.blockSignals(False)
+        self.detail_scan.blockSignals(False)
+
+        logger.debug(f"on_mode_changed: after restore - name={self.detail_name.text()}, rx={self.detail_rx_freq.value()}, tx={self.detail_tx_freq.value()}")
+        logger.debug("on_mode_changed: calling on_detail_changed")
         self.on_detail_changed()
+        logger.debug("on_mode_changed: FINISHED")
 
     def on_detail_changed(self):
         """Handle detail field changes"""
         current_row = self.table.currentRow()
+        logger.debug(f"on_detail_changed: current_row={current_row}, codeplug={self.codeplug is not None}")
         if current_row < 0 or not self.codeplug:
+            logger.debug("on_detail_changed: early return (no row or codeplug)")
             return
 
         # Get channel by UUID
         index_item = self.table.item(current_row, 0)
         if not index_item:
+            logger.debug("on_detail_changed: no index_item, returning")
             return
 
         channel_uuid = index_item.data(Qt.UserRole)
         channel = self.codeplug.get_channel(channel_uuid)
+        logger.debug(f"on_detail_changed: uuid={channel_uuid[:8]}..., channel found={channel is not None}")
 
         if not channel:
+            logger.debug("on_detail_changed: channel not found, returning")
             return
+
+        # Log UI values before saving
+        ui_name = self.detail_name.text()[:16]
+        ui_rx = self.detail_rx_freq.value()
+        ui_tx = self.detail_tx_freq.value()
+        logger.debug(f"on_detail_changed: UI values - name={ui_name}, rx={ui_rx}, tx={ui_tx}")
+        logger.debug(f"on_detail_changed: channel BEFORE - name={channel.name}, rx={channel.rx_freq}, tx={channel.tx_freq}")
 
         # Update channel from details
         channel.name = self.detail_name.text()[:16]
         channel.rx_freq = self.detail_rx_freq.value()
         channel.tx_freq = self.detail_tx_freq.value()
+        logger.debug(f"on_detail_changed: channel AFTER - name={channel.name}, rx={channel.rx_freq}, tx={channel.tx_freq}")
         channel.mode = ChannelMode.DIGITAL if self.detail_mode.currentIndex() == 1 else ChannelMode.ANALOG
         channel.power = PowerLevel.HIGH if self.detail_power.currentIndex() == 0 else PowerLevel.LOW
         channel.scan = ScanMode.ADD if self.detail_scan.currentIndex() == 0 else ScanMode.REMOVE
@@ -1152,6 +1228,14 @@ class ChannelTableWidget(QWidget):
 
         self.codeplug.add_channel(new_channel)
         self.refresh_table()
+
+        # Select the newly added channel
+        for i in range(self.table.rowCount()):
+            item = self.table.item(i, 0)
+            if item and item.data(Qt.UserRole) == new_channel.uuid:
+                self.table.selectRow(i)
+                break
+
         self.data_modified.emit()
 
     def delete_channel(self):
