@@ -93,6 +93,18 @@ class ZoneWidget(QWidget):
         available_group = QGroupBox("Available Channels")
         available_layout = QVBoxLayout()
 
+        # Filter for available channels
+        available_filter_layout = QHBoxLayout()
+        available_filter_layout.addWidget(QLabel("Filter:"))
+        self.available_filter = QLineEdit()
+        self.available_filter.setPlaceholderText("Search by name or position...")
+        self.available_filter.textChanged.connect(self.refresh_details)
+        available_filter_layout.addWidget(self.available_filter)
+        self.btn_clear_available_filter = QPushButton("Clear")
+        self.btn_clear_available_filter.clicked.connect(lambda: self.available_filter.clear())
+        available_filter_layout.addWidget(self.btn_clear_available_filter)
+        available_layout.addLayout(available_filter_layout)
+
         self.available_list = QTableWidget()
         self.available_list.setColumnCount(3)
         self.available_list.setHorizontalHeaderLabels(["Pos", "Name", "TS"])
@@ -119,6 +131,18 @@ class ZoneWidget(QWidget):
         # Selected channels group
         selected_group = QGroupBox("Channels in Zone")
         selected_layout = QVBoxLayout()
+
+        # Filter for selected channels
+        selected_filter_layout = QHBoxLayout()
+        selected_filter_layout.addWidget(QLabel("Filter:"))
+        self.selected_filter = QLineEdit()
+        self.selected_filter.setPlaceholderText("Search by name or position...")
+        self.selected_filter.textChanged.connect(self.refresh_details)
+        selected_filter_layout.addWidget(self.selected_filter)
+        self.btn_clear_selected_filter = QPushButton("Clear")
+        self.btn_clear_selected_filter.clicked.connect(lambda: self.selected_filter.clear())
+        selected_filter_layout.addWidget(self.btn_clear_selected_filter)
+        selected_layout.addLayout(selected_filter_layout)
 
         self.selected_list = QTableWidget()
         self.selected_list.setColumnCount(3)
@@ -234,12 +258,21 @@ class ZoneWidget(QWidget):
         self.btn_move_up.setEnabled(True)
         self.btn_move_down.setEnabled(True)
 
+        # Get filter texts
+        available_filter_text = self.available_filter.text().strip().lower()
+        selected_filter_text = self.selected_filter.text().strip().lower()
+
         # Populate available channels (not in zone) - zone.channels now stores UUIDs
         active_channels = self.codeplug.get_active_channels()
         zone_channel_set = set(self.current_zone.channels)  # Set of channel UUIDs
 
         for channel in active_channels:
             if channel.uuid not in zone_channel_set:
+                # Apply filter - match name or position
+                if available_filter_text:
+                    if available_filter_text not in channel.name.lower() and available_filter_text not in str(channel.position):
+                        continue
+
                 row = self.available_list.rowCount()
                 self.available_list.insertRow(row)
 
@@ -263,6 +296,11 @@ class ZoneWidget(QWidget):
         for channel_uuid in self.current_zone.channels:
             channel = self.codeplug.get_channel(channel_uuid)
             if channel:
+                # Apply filter - match name or position
+                if selected_filter_text:
+                    if selected_filter_text not in channel.name.lower() and selected_filter_text not in str(channel.position):
+                        continue
+
                 row = self.selected_list.rowCount()
                 self.selected_list.insertRow(row)
 
