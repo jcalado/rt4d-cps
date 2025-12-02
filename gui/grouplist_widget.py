@@ -5,7 +5,7 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QMessageBox, QSplitter, QLabel,
+    QMessageBox, QSplitter, QLabel, QLineEdit,
     QGroupBox
 )
 from PySide6.QtCore import Qt, Signal
@@ -85,6 +85,18 @@ class GroupListWidget(QWidget):
         available_group = QGroupBox("Available Contacts")
         available_layout = QVBoxLayout()
 
+        # Filter for available contacts
+        available_filter_layout = QHBoxLayout()
+        available_filter_layout.addWidget(QLabel("Filter:"))
+        self.available_filter = QLineEdit()
+        self.available_filter.setPlaceholderText("Search by name or DMR ID...")
+        self.available_filter.textChanged.connect(self.refresh_available_contacts)
+        available_filter_layout.addWidget(self.available_filter)
+        self.btn_clear_available_filter = QPushButton("Clear")
+        self.btn_clear_available_filter.clicked.connect(lambda: self.available_filter.clear())
+        available_filter_layout.addWidget(self.btn_clear_available_filter)
+        available_layout.addLayout(available_filter_layout)
+
         self.available_list = QTableWidget()
         self.available_list.setColumnCount(2)
         self.available_list.setHorizontalHeaderLabels(["Name", "DMR ID"])
@@ -110,6 +122,18 @@ class GroupListWidget(QWidget):
         # Selected contacts group
         selected_group = QGroupBox("Contacts in Group")
         selected_layout = QVBoxLayout()
+
+        # Filter for selected contacts
+        selected_filter_layout = QHBoxLayout()
+        selected_filter_layout.addWidget(QLabel("Filter:"))
+        self.selected_filter = QLineEdit()
+        self.selected_filter.setPlaceholderText("Search by name or DMR ID...")
+        self.selected_filter.textChanged.connect(self.refresh_selected_contacts)
+        selected_filter_layout.addWidget(self.selected_filter)
+        self.btn_clear_selected_filter = QPushButton("Clear")
+        self.btn_clear_selected_filter.clicked.connect(lambda: self.selected_filter.clear())
+        selected_filter_layout.addWidget(self.btn_clear_selected_filter)
+        selected_layout.addLayout(selected_filter_layout)
 
         self.selected_list = QTableWidget()
         self.selected_list.setColumnCount(2)
@@ -191,9 +215,17 @@ class GroupListWidget(QWidget):
         if self.current_group_list:
             contacts_in_group = set(self.current_group_list.contacts)  # Now stores UUIDs
 
+        # Get filter text
+        filter_text = self.available_filter.text().strip().lower()
+
         for contact in contacts:
             # Only show GROUP contacts that aren't already in the selected group
             if contact.contact_type.name == "GROUP" and contact.uuid not in contacts_in_group:
+                # Apply filter - match name or DMR ID
+                if filter_text:
+                    if filter_text not in contact.name.lower() and filter_text not in str(contact.dmr_id):
+                        continue
+
                 row = self.available_list.rowCount()
                 self.available_list.insertRow(row)
 
@@ -259,10 +291,18 @@ class GroupListWidget(QWidget):
         if not self.current_group_list:
             return
 
+        # Get filter text
+        filter_text = self.selected_filter.text().strip().lower()
+
         # contacts is now a list of UUIDs
         for contact_uuid in self.current_group_list.contacts:
             contact = self.codeplug.get_contact(contact_uuid)
             if contact:
+                # Apply filter - match name or DMR ID
+                if filter_text:
+                    if filter_text not in contact.name.lower() and filter_text not in str(contact.dmr_id):
+                        continue
+
                 row = self.selected_list.rowCount()
                 self.selected_list.insertRow(row)
 
