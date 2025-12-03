@@ -100,7 +100,7 @@ class DraggableTableWidget(QTableWidget):
             target_row = self.rowCount()
 
         # Don't do anything if dropping on itself
-        if source_row == target_row or source_row == target_row - 1:
+        if source_row == target_row:
             event.ignore()
             return
 
@@ -1110,51 +1110,78 @@ class ChannelTableWidget(QWidget):
             self.refresh_table()  # Restore original value
 
     def on_rows_reordered(self, source_row: int, target_row: int):
-        """Handle rows reordered via drag and drop - insert before target position"""
+        """Handle rows reordered via drag and drop - swap positions"""
         if not self.codeplug:
             return
 
-        # Get channels sorted by position (matches table display)
         channels = self.codeplug.get_channels_sorted_by_position()
 
         if source_row >= len(channels) or target_row > len(channels):
             return
 
-        # Get the dragged channel
         dragged = channels[source_row]
+        old_pos = dragged.position
 
-        # Get the target channel (the one we're inserting before)
+        # Determine target position
         if target_row < len(channels):
             target = channels[target_row]
-            # Find position just before target
-            new_pos = target.position - 1
+            new_pos = target.position
         else:
-            # Dropped at end - use highest position + 1
+            # Dropped at end
             max_pos = max(ch.position for ch in channels)
             new_pos = max_pos + 1
 
-        if new_pos < 1:
-            new_pos = 1
+        if new_pos == old_pos:
+            return  # No change needed
 
-        # Find nearest free position at or before new_pos
-        used = self.codeplug.get_used_positions() - {dragged.position}
-        while new_pos in used and new_pos > 0:
-            new_pos -= 1
-
-        if new_pos < 1:
-            QMessageBox.warning(self, "No Space", "No free position before target")
+        # For adjacent positions (diff of 1), do a simple swap
+        # This ensures symmetric behavior for both directions
+        if abs(new_pos - old_pos) == 1:
+            # Find the channel at the target position and swap
+            for ch in channels:
+                if ch.position == new_pos and ch.uuid != dragged.uuid:
+                    ch.position = old_pos
+                    break
+            dragged.position = new_pos
+            self.refresh_table()
+            self.data_modified.emit()
             return
 
-        if new_pos > 1024:
-            QMessageBox.warning(self, "No Space", "No free position available")
-            return
+        # Get all used positions excluding the dragged channel
+        used = self.codeplug.get_used_positions() - {old_pos}
 
+        # If target position is occupied, shift channels to make room
+        if new_pos in used:
+            # Find channels that need to shift (from new_pos onwards)
+            # Shift until we find a gap or reach max position
+            channels_to_shift = [
+                ch for ch in channels
+                if ch.position >= new_pos and ch.uuid != dragged.uuid
+            ]
+            channels_to_shift.sort(key=lambda c: c.position)
+
+            # Find the first gap after new_pos, or use max+1
+            shift_end = new_pos
+            for ch in channels_to_shift:
+                if ch.position == shift_end:
+                    shift_end += 1
+                else:
+                    break  # Found a gap
+
+            # Check if we'd exceed max position
+            if shift_end > 1024:
+                QMessageBox.warning(self, "No Space", "Cannot shift - would exceed max position")
+                return
+
+            # Shift channels (work backwards to avoid collisions)
+            for ch in reversed(channels_to_shift):
+                if ch.position >= new_pos and ch.position < shift_end:
+                    ch.position += 1
+
+        # Set dragged channel to target position
         dragged.position = new_pos
 
-        # Refresh the table to show updated positions
         self.refresh_table()
-
-        # Emit data modified signal
         self.data_modified.emit()
 
     def on_copy_channel(self, row: int):
