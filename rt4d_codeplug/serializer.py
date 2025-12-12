@@ -48,7 +48,7 @@ class CodeplugSerializer:
         # Build UUID→index maps for cross-reference resolution
         contact_idx_map = {c.uuid: c.index for c in codeplug.contacts}
         group_list_idx_map = {gl.uuid: gl.index for gl in codeplug.group_lists}
-        encrypt_idx_map = {ek.uuid: ek.index for ek in codeplug.encryption_keys}
+        encrypt_idx_map = {ek.uuid: ek.index + 1 for ek in codeplug.encryption_keys}
         # Channels use position-1 (convert 1-based position to 0-based slot)
         channel_idx_map = {ch.uuid: ch.position - 1 for ch in codeplug.channels}
 

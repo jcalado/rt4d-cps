@@ -99,7 +99,7 @@ class CodeplugParser:
         # Build index→UUID maps
         contact_uuid_map = {c.index: c.uuid for c in codeplug.contacts}
         group_list_uuid_map = {gl.index: gl.uuid for gl in codeplug.group_lists}
-        encrypt_uuid_map = {ek.index: ek.uuid for ek in codeplug.encryption_keys}
+        encrypt_uuid_map = {ek.index + 1: ek.uuid for ek in codeplug.encryption_keys}
         # Channels use position (1-based) for mapping
         channel_uuid_map = {ch.position: ch.uuid for ch in codeplug.channels}
 

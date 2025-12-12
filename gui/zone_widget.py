@@ -556,16 +556,38 @@ class ZoneWidget(QWidget):
             return
 
         current_row = self.selected_list.currentRow()
-        if current_row <= 0:
+        if current_row < 0:
             return
 
-        # Swap channels
+        # Get UUID of selected channel from UI
+        pos_item = self.selected_list.item(current_row, 0)
+        if not pos_item:
+            return
+        channel_uuid = pos_item.data(Qt.UserRole)
+
+        # Find actual index in zone.channels
+        try:
+            actual_index = self.current_zone.channels.index(channel_uuid)
+        except ValueError:
+            return
+
+        if actual_index <= 0:
+            return  # Already at top
+
+        # Swap in the actual list
         channels = self.current_zone.channels
-        channels[current_row], channels[current_row - 1] = \
-            channels[current_row - 1], channels[current_row]
+        channels[actual_index], channels[actual_index - 1] = \
+            channels[actual_index - 1], channels[actual_index]
 
         self.refresh_details()
-        self.selected_list.selectRow(current_row - 1)
+
+        # Re-select the moved channel by finding its new row
+        for row in range(self.selected_list.rowCount()):
+            item = self.selected_list.item(row, 0)
+            if item and item.data(Qt.UserRole) == channel_uuid:
+                self.selected_list.selectRow(row)
+                break
+
         self.data_modified.emit()
 
     def move_channel_down(self):
@@ -574,14 +596,36 @@ class ZoneWidget(QWidget):
             return
 
         current_row = self.selected_list.currentRow()
-        if current_row < 0 or current_row >= len(self.current_zone.channels) - 1:
+        if current_row < 0:
             return
 
-        # Swap channels
+        # Get UUID of selected channel from UI
+        pos_item = self.selected_list.item(current_row, 0)
+        if not pos_item:
+            return
+        channel_uuid = pos_item.data(Qt.UserRole)
+
+        # Find actual index in zone.channels
+        try:
+            actual_index = self.current_zone.channels.index(channel_uuid)
+        except ValueError:
+            return
+
+        if actual_index >= len(self.current_zone.channels) - 1:
+            return  # Already at bottom
+
+        # Swap in the actual list
         channels = self.current_zone.channels
-        channels[current_row], channels[current_row + 1] = \
-            channels[current_row + 1], channels[current_row]
+        channels[actual_index], channels[actual_index + 1] = \
+            channels[actual_index + 1], channels[actual_index]
 
         self.refresh_details()
-        self.selected_list.selectRow(current_row + 1)
+
+        # Re-select the moved channel by finding its new row
+        for row in range(self.selected_list.rowCount()):
+            item = self.selected_list.item(row, 0)
+            if item and item.data(Qt.UserRole) == channel_uuid:
+                self.selected_list.selectRow(row)
+                break
+
         self.data_modified.emit()
