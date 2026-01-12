@@ -355,7 +355,8 @@ class AddressBookWidget(QWidget):
 
         self.write_radio_btn = QPushButton("Write to Radio...")
         self.write_radio_btn.clicked.connect(self.on_write_to_radio)
-        self.write_radio_btn.setEnabled(False)
+        # Always enabled to allow clearing radio address book when empty
+        self.write_radio_btn.setEnabled(True)
         self.write_radio_btn.setStyleSheet("font-weight: bold;")
         button_layout.addWidget(self.write_radio_btn)
 
@@ -579,7 +580,8 @@ class AddressBookWidget(QWidget):
         has_contacts = total > 0
         self.export_btn.setEnabled(has_contacts)
         self.clear_btn.setEnabled(has_contacts)
-        self.write_radio_btn.setEnabled(has_contacts)
+        # Always enable write button to allow clearing radio address book
+        self.write_radio_btn.setEnabled(True)
 
     def on_load_more(self):
         """Load more contacts for pagination"""
@@ -615,8 +617,15 @@ class AddressBookWidget(QWidget):
     def on_write_to_radio(self):
         """Write address book to radio via UART"""
         if len(self.database) == 0:
-            QMessageBox.warning(self, "Write to Radio", "No contacts to write.")
-            return
+            reply = QMessageBox.question(
+                self,
+                "Clear Radio Address Book",
+                "No contacts loaded. Do you want to clear the address book on the radio?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
 
         # Import here to avoid circular dependencies
         from .radio_addressbook_dialog import RadioAddressBookDialog
