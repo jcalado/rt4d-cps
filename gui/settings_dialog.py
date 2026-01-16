@@ -108,7 +108,7 @@ class SettingsDialog(QDialog):
         scroll_layout.addWidget(startup_group)
 
         # Radio Clock section
-        clock_group = QGroupBox("Radio Clock")
+        self.clock_group = QGroupBox("Radio Clock")
         clock_layout = QFormLayout()
 
         time_layout = QHBoxLayout()
@@ -129,8 +129,8 @@ class SettingsDialog(QDialog):
 
         clock_layout.addRow("Current Time:", time_layout)
 
-        clock_group.setLayout(clock_layout)
-        scroll_layout.addWidget(clock_group)
+        self.clock_group.setLayout(clock_layout)
+        scroll_layout.addWidget(self.clock_group)
 
         # Frequency Lock Ranges section
         freq_lock_group = QGroupBox("Frequency Lock Ranges")
@@ -384,74 +384,88 @@ class SettingsDialog(QDialog):
         # FS1 button
         self.combo_key_fs1_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_fs1_short.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_fs1_short.addItem(display_label, value)
         funckeys_layout.addRow("FS1 (Short Press):", self.combo_key_fs1_short)
 
         self.combo_key_fs1_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_fs1_long.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_fs1_long.addItem(display_label, value)
         funckeys_layout.addRow("FS1 (Long Press):", self.combo_key_fs1_long)
 
         # FS2 button
         self.combo_key_fs2_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_fs2_short.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_fs2_short.addItem(display_label, value)
         funckeys_layout.addRow("FS2 (Short Press):", self.combo_key_fs2_short)
 
         self.combo_key_fs2_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_fs2_long.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_fs2_long.addItem(display_label, value)
         funckeys_layout.addRow("FS2 (Long Press):", self.combo_key_fs2_long)
 
         # Numeric keys 0-9
         self.combo_key_0 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_0.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_0.addItem(display_label, value)
         funckeys_layout.addRow("Key 0:", self.combo_key_0)
 
         self.combo_key_1 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_1.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_1.addItem(display_label, value)
         funckeys_layout.addRow("Key 1:", self.combo_key_1)
 
         self.combo_key_2 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_2.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_2.addItem(display_label, value)
         funckeys_layout.addRow("Key 2:", self.combo_key_2)
 
         self.combo_key_3 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_3.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_3.addItem(display_label, value)
         funckeys_layout.addRow("Key 3:", self.combo_key_3)
 
         self.combo_key_4 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_4.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_4.addItem(display_label, value)
         funckeys_layout.addRow("Key 4:", self.combo_key_4)
 
         self.combo_key_5 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_5.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_5.addItem(display_label, value)
         funckeys_layout.addRow("Key 5:", self.combo_key_5)
 
         self.combo_key_6 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_6.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_6.addItem(display_label, value)
         funckeys_layout.addRow("Key 6:", self.combo_key_6)
 
         self.combo_key_7 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_7.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_7.addItem(display_label, value)
         funckeys_layout.addRow("Key 7:", self.combo_key_7)
 
         self.combo_key_8 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_8.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_8.addItem(display_label, value)
         funckeys_layout.addRow("Key 8:", self.combo_key_8)
 
         self.combo_key_9 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            self.combo_key_9.addItem(label, value)
+            display_label = self._get_function_key_label(label, value)
+            self.combo_key_9.addItem(display_label, value)
         funckeys_layout.addRow("Key 9:", self.combo_key_9)
 
         funckeys_group.setLayout(funckeys_layout)
@@ -473,12 +487,27 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
+        self._apply_beta41_visibility()
+
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
             if combo.itemData(i) == value:
                 combo.setCurrentIndex(i)
                 break
+
+    def _get_function_key_label(self, label, value):
+        """Return beta41-aware label for function key."""
+        if value == 21 and self.settings and self.settings.beta41:
+            return "Talker Alias"
+        return label
+
+    def _apply_beta41_visibility(self):
+        """Apply visibility based on beta41 flag."""
+        if self.settings and self.settings.beta41:
+            self.clock_group.setVisible(False)
+        else:
+            self.clock_group.setVisible(True)
 
     def load_settings(self):
         """Load settings into form"""
@@ -822,7 +851,8 @@ class CustomFirmwareDialog(QDialog):
         self.combo_dmr_gid_name = QComboBox()
         for label, value in DMR_GID_NAME_VALUES:
             self.combo_dmr_gid_name.addItem(label, value)
-        dmr_layout.addRow("Show DMR Group Name:", self.combo_dmr_gid_name)
+        self.label_dmr_gid_name = QLabel("Show DMR Group Name:")
+        dmr_layout.addRow(self.label_dmr_gid_name, self.combo_dmr_gid_name)
 
         self.combo_callsign_lookup = QComboBox()
         for label, value in CALLSIGN_LOOKUP_VALUES:
@@ -871,12 +901,23 @@ class CustomFirmwareDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
+        self._apply_beta41_visibility()
+
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
             if combo.itemData(i) == value:
                 combo.setCurrentIndex(i)
                 break
+
+    def _apply_beta41_visibility(self):
+        """Apply visibility based on beta41 flag."""
+        if self.settings and self.settings.beta41:
+            self.combo_dmr_gid_name.setVisible(False)
+            self.label_dmr_gid_name.setVisible(False)
+        else:
+            self.combo_dmr_gid_name.setVisible(True)
+            self.label_dmr_gid_name.setVisible(True)
 
     def load_settings(self):
         """Load settings into form"""
@@ -1238,7 +1279,7 @@ class SettingsWidget(QWidget):
         layout.addWidget(operation_group)
 
         # Clocks/Timers section
-        clock_group = QGroupBox("Programmable Clocks/Timers")
+        self.clock_group = QGroupBox("Programmable Clocks/Timers")
         clock_layout = QFormLayout()
 
         # Clock 1
@@ -1317,8 +1358,8 @@ class SettingsWidget(QWidget):
         clock4_layout.addWidget(self.spin_clock_4_minute)
         clock_layout.addRow("Clock 4:", clock4_layout)
 
-        clock_group.setLayout(clock_layout)
-        layout.addWidget(clock_group)
+        self.clock_group.setLayout(clock_layout)
+        layout.addWidget(self.clock_group)
 
         # Startup/Boot Options section
         startup_group = QGroupBox("Startup/Boot Options")
@@ -1727,6 +1768,16 @@ class SettingsWidget(QWidget):
         self.combo_tx_protection_widget.blockSignals(False)
 
         self.set_enabled(True)
+        self._apply_beta41_visibility()
+
+    def _apply_beta41_visibility(self):
+        """Apply visibility based on beta41 flag."""
+        if self.settings and self.settings.beta41:
+            self.check_apo.setVisible(False)
+            self.clock_group.setVisible(False)
+        else:
+            self.check_apo.setVisible(True)
+            self.clock_group.setVisible(True)
 
     def on_settings_changed(self):
         """Handle settings changes"""
