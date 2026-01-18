@@ -36,3 +36,7 @@ Run `python3 rt4d_gui.py` to launch the PySide6 editor for interactive channel/c
 - 
 ## Fixtures
 - `tests.4rdmf`should be a golden dump from a live radio used for parser/serializer regressions.
+
+## Support
+
+If you like my work, you can support me at [ko-fi.com/jcalado](https://ko-fi.com/jcalado)
