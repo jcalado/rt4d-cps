@@ -4,14 +4,16 @@ from rt4d_codeplug.models import Channel, GroupList, Zone
 
 
 def test_channel_validation_truncates_and_validates():
-    ch = Channel(index=1, name="A" * 40, rx_freq=145.5, tx_freq=145.5)
+    # 145.5 MHz = 14550000 in 10 Hz units
+    ch = Channel(position=1, name="A" * 40, rx_freq=14550000, tx_freq=14550000)
     assert len(ch.name) == 16
     assert not ch.is_empty()
 
+    # 1200 MHz = 120000000 in 10 Hz units, exceeds 1000 MHz limit
     with pytest.raises(ValueError):
-        Channel(index=2, rx_freq=1200.0, tx_freq=1200.0)
+        Channel(position=2, rx_freq=120000000, tx_freq=120000000)
 
-    empty = Channel(index=3, rx_freq=0.0, tx_freq=0.0)
+    empty = Channel(position=3, rx_freq=0, tx_freq=0)
     assert empty.is_empty()
 
 

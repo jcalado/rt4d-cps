@@ -147,11 +147,11 @@ class CodeplugParser:
             mode_byte = ch_data[0x02]
             mode = ChannelMode.DIGITAL if mode_byte == CHANNEL_MODE_DIGITAL else ChannelMode.ANALOG
 
-            # Frequencies (32-bit little-endian, freq × 100000)
+            # Frequencies (32-bit little-endian, stored as 10 Hz units)
             rx_freq_int = struct.unpack('<I', ch_data[0x06:0x0A])[0]
             tx_freq_int = struct.unpack('<I', ch_data[0x0A:0x0E])[0]
-            rx_freq = rx_freq_int / FREQ_MULTIPLIER if rx_freq_int != 0xFFFFFFFF else 0.0
-            tx_freq = tx_freq_int / FREQ_MULTIPLIER if tx_freq_int != 0xFFFFFFFF else 0.0
+            rx_freq = 0 if rx_freq_int == 0xFFFFFFFF else rx_freq_int
+            tx_freq = 0 if tx_freq_int == 0xFFFFFFFF else tx_freq_int
 
             # Power and scan
             power = PowerLevel.HIGH if ch_data[0x10] == POWER_HIGH else PowerLevel.LOW
@@ -267,8 +267,8 @@ class CodeplugParser:
             if not name_bytes and rx_freq_int in (0, 0xFFFFFFFF) and tx_freq_int in (0, 0xFFFFFFFF):
                 return None
 
-            rx_freq = 0.0 if rx_freq_int in (0, 0xFFFFFFFF) else rx_freq_int / FREQ_MULTIPLIER
-            tx_freq = 0.0 if tx_freq_int in (0, 0xFFFFFFFF) else tx_freq_int / FREQ_MULTIPLIER
+            rx_freq = 0 if rx_freq_int in (0, 0xFFFFFFFF) else rx_freq_int
+            tx_freq = 0 if tx_freq_int in (0, 0xFFFFFFFF) else tx_freq_int
 
             try:
                 name = name_bytes.decode('gbk', errors='ignore').strip()

@@ -32,7 +32,9 @@ def list_channels(codeplug: Codeplug, verbose: bool = False):
         power_str = "High" if ch.power == PowerLevel.HIGH else "Low"
         scan_str = "Yes" if ch.scan == ScanMode.ADD else "No"
 
-        print(f"{ch.position:<5} {ch.name:<17} {ch.rx_freq:<12.5f} {ch.tx_freq:<12.5f} "
+        rx_mhz = ch.rx_freq / 100000
+        tx_mhz = ch.tx_freq / 100000
+        print(f"{ch.position:<5} {ch.name:<17} {rx_mhz:<12.5f} {tx_mhz:<12.5f} "
               f"{mode_str:<8} {power_str:<6} {scan_str:<6}")
 
         if verbose and ch.is_digital():
@@ -141,8 +143,10 @@ def export_csv(codeplug: Codeplug, output_file: str):
             power = 'High' if ch.power == PowerLevel.HIGH else 'Low'
             scan = 'Add' if ch.scan == ScanMode.ADD else 'Remove'
 
+            rx_mhz = f"{ch.rx_freq / 100000:.5f}"
+            tx_mhz = f"{ch.tx_freq / 100000:.5f}"
             writer.writerow([
-                ch.position, ch.name, ch.rx_freq, ch.tx_freq, mode, power, scan,
+                ch.position, ch.name, rx_mhz, tx_mhz, mode, power, scan,
                 ch.dmr_color_code if ch.is_digital() else '',
                 ch.dmr_time_slot + 1 if ch.is_digital() else '',
                 ch.contact_uuid if ch.is_digital() else '',

@@ -146,6 +146,19 @@ class ChannelTableWidget(QWidget):
 
     data_modified = Signal()
 
+    # Frequency conversion constants
+    FREQ_MULTIPLIER = 100000  # 10 Hz units
+
+    @staticmethod
+    def _freq_to_mhz(freq_int: int) -> float:
+        """Convert internal frequency (10 Hz units) to MHz for display."""
+        return freq_int / ChannelTableWidget.FREQ_MULTIPLIER
+
+    @staticmethod
+    def _mhz_to_freq(freq_mhz: float) -> int:
+        """Convert MHz to internal frequency (10 Hz units)."""
+        return int(freq_mhz * ChannelTableWidget.FREQ_MULTIPLIER)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.codeplug: Optional[Codeplug] = None
@@ -588,8 +601,8 @@ class ChannelTableWidget(QWidget):
 
         # Load basic settings
         self.detail_name.setText(channel.name)
-        self.detail_rx_freq.setValue(channel.rx_freq)
-        self.detail_tx_freq.setValue(channel.tx_freq)
+        self.detail_rx_freq.setValue(self._freq_to_mhz(channel.rx_freq))
+        self.detail_tx_freq.setValue(self._freq_to_mhz(channel.tx_freq))
         self.detail_mode.setCurrentIndex(1 if channel.is_digital() else 0)
         self.detail_power.setCurrentIndex(0 if channel.power == PowerLevel.HIGH else 1)
         self.detail_scan.setCurrentIndex(0 if channel.scan == ScanMode.ADD else 1)
@@ -779,8 +792,8 @@ class ChannelTableWidget(QWidget):
         self.detail_scan.blockSignals(True)
 
         self.detail_name.setText(name)
-        self.detail_rx_freq.setValue(rx_freq)
-        self.detail_tx_freq.setValue(tx_freq)
+        self.detail_rx_freq.setValue(self._freq_to_mhz(rx_freq))
+        self.detail_tx_freq.setValue(self._freq_to_mhz(tx_freq))
         self.detail_power.setCurrentIndex(0 if power == PowerLevel.HIGH else 1)
         self.detail_scan.setCurrentIndex(0 if scan == ScanMode.ADD else 1)
 
@@ -826,8 +839,8 @@ class ChannelTableWidget(QWidget):
 
         # Update channel from details
         channel.name = self.detail_name.text()[:16]
-        channel.rx_freq = self.detail_rx_freq.value()
-        channel.tx_freq = self.detail_tx_freq.value()
+        channel.rx_freq = self._mhz_to_freq(self.detail_rx_freq.value())
+        channel.tx_freq = self._mhz_to_freq(self.detail_tx_freq.value())
         logger.debug(f"on_detail_changed: channel AFTER - name={channel.name}, rx={channel.rx_freq}, tx={channel.tx_freq}")
         channel.mode = ChannelMode.DIGITAL if self.detail_mode.currentIndex() == 1 else ChannelMode.ANALOG
         channel.power = PowerLevel.HIGH if self.detail_power.currentIndex() == 0 else PowerLevel.LOW
@@ -998,10 +1011,10 @@ class ChannelTableWidget(QWidget):
         self.table.setItem(row, 1, QTableWidgetItem(channel.name))
 
         # RX Frequency
-        self.table.setItem(row, 2, QTableWidgetItem(f"{channel.rx_freq:.5f}"))
+        self.table.setItem(row, 2, QTableWidgetItem(f"{self._freq_to_mhz(channel.rx_freq):.5f}"))
 
         # TX Frequency
-        self.table.setItem(row, 3, QTableWidgetItem(f"{channel.tx_freq:.5f}"))
+        self.table.setItem(row, 3, QTableWidgetItem(f"{self._freq_to_mhz(channel.tx_freq):.5f}"))
 
         # Mode
         mode_str = "Digital" if channel.is_digital() else "Analog"
@@ -1078,9 +1091,9 @@ class ChannelTableWidget(QWidget):
             elif col == 1:  # Name
                 channel.name = item.text()[:16]  # Max 16 chars
             elif col == 2:  # RX Freq
-                channel.rx_freq = float(item.text())
+                channel.rx_freq = self._mhz_to_freq(float(item.text()))
             elif col == 3:  # TX Freq
-                channel.tx_freq = float(item.text())
+                channel.tx_freq = self._mhz_to_freq(float(item.text()))
             elif col == 4:  # Mode
                 mode_str = item.text().lower()
                 if "digital" in mode_str or "dmr" in mode_str:
@@ -1320,8 +1333,8 @@ class ChannelTableWidget(QWidget):
         new_channel = Channel(
             position=new_pos,
             name=f"CH-{new_pos}",
-            rx_freq=433.500,
-            tx_freq=433.500,
+            rx_freq=self._mhz_to_freq(433.500),
+            tx_freq=self._mhz_to_freq(433.500),
             mode=ChannelMode.ANALOG,
             power=PowerLevel.HIGH,
             scan=ScanMode.ADD,
@@ -1537,8 +1550,8 @@ class ChannelTableWidget(QWidget):
 
                     # Common fields
                     channel.name = row.get('Channel Name', '')[:16]
-                    channel.rx_freq = float(row.get('Rx Frequency', 0))
-                    channel.tx_freq = float(row.get('Tx Frequency', 0))
+                    channel.rx_freq = self._mhz_to_freq(float(row.get('Rx Frequency', 0)))
+                    channel.tx_freq = self._mhz_to_freq(float(row.get('Tx Frequency', 0)))
 
                     # Channel type
                     channel_type = row.get('Channel Type', 'Analog')
@@ -1651,8 +1664,8 @@ class ChannelTableWidget(QWidget):
             for ch in channels:
                 # Common fields - use channel position as channel number
                 channel_num = ch.position
-                rx_freq = f"{ch.rx_freq:.5f}"
-                tx_freq = f"{ch.tx_freq:.5f}"
+                rx_freq = f"{self._freq_to_mhz(ch.rx_freq):.5f}"
+                tx_freq = f"{self._freq_to_mhz(ch.tx_freq):.5f}"
                 channel_type = 'Digital' if ch.is_digital() else 'Analog'
                 power = 'High' if ch.power == PowerLevel.HIGH else 'Low'
                 scan_add = 'Add' if ch.scan == ScanMode.ADD else 'Remove'

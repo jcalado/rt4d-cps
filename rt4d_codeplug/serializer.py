@@ -117,11 +117,9 @@ class CodeplugSerializer:
         data[0x01] = 0x01
         data[0x02] = channel.mode.value
 
-        # Frequencies (32-bit little-endian)
-        rx_freq_int = int(channel.rx_freq * FREQ_MULTIPLIER)
-        tx_freq_int = int(channel.tx_freq * FREQ_MULTIPLIER)
-        struct.pack_into('<I', data, 0x06, rx_freq_int)
-        struct.pack_into('<I', data, 0x0A, tx_freq_int)
+        # Frequencies (32-bit little-endian, stored as 10 Hz units)
+        struct.pack_into('<I', data, 0x06, channel.rx_freq)
+        struct.pack_into('<I', data, 0x0A, channel.tx_freq)
 
         # Power and scan
         data[0x10] = channel.power.value
@@ -237,11 +235,9 @@ class CodeplugSerializer:
         data[0x04] |= (modulation & 0x03) << 4
         data[0x04] |= (channel.bandwidth & 0x01) << 6
 
-        # Frequencies (32-bit little-endian)
-        rx_freq_int = int(channel.rx_freq * FREQ_MULTIPLIER) if channel.rx_freq else 0
-        tx_freq_int = int(channel.tx_freq * FREQ_MULTIPLIER) if channel.tx_freq else 0
-        struct.pack_into('<I', data, 0x05, rx_freq_int)
-        struct.pack_into('<I', data, 0x09, tx_freq_int)
+        # Frequencies (32-bit little-endian, stored as 10 Hz units)
+        struct.pack_into('<I', data, 0x05, channel.rx_freq if channel.rx_freq else 0)
+        struct.pack_into('<I', data, 0x09, channel.tx_freq if channel.tx_freq else 0)
 
         # RX/TX tones
         data[0x0D:0x0F] = encode_subaudio_bytes(channel.rx_ctcss)

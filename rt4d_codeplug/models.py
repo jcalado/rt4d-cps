@@ -51,8 +51,8 @@ class Channel:
     uuid: str = field(default_factory=lambda: str(uuid4()))
     position: int = 0  # User-controllable memory slot (1-1024), 0 = auto-assign
     name: str = ""
-    rx_freq: float = 0.0  # MHz
-    tx_freq: float = 0.0  # MHz
+    rx_freq: int = 0  # 10 Hz units (MHz × 100,000), e.g., 433.12345 MHz = 43312345
+    tx_freq: int = 0  # 10 Hz units (MHz × 100,000), e.g., 433.12345 MHz = 43312345
     mode: ChannelMode = ChannelMode.ANALOG
     power: PowerLevel = PowerLevel.HIGH
     scan: ScanMode = ScanMode.ADD
@@ -88,9 +88,9 @@ class Channel:
         """Validate channel data"""
         if self.position < 0 or self.position > 1024:
             raise ValueError(f"Invalid position: {self.position} (must be 0-1024)")
-        if self.rx_freq < 0 or self.rx_freq > 1000:
+        if self.rx_freq < 0 or self.rx_freq > 100000000:  # 1000 MHz = 1000 × 100,000
             raise ValueError(f"Invalid RX frequency: {self.rx_freq}")
-        if self.tx_freq < 0 or self.tx_freq > 1000:
+        if self.tx_freq < 0 or self.tx_freq > 100000000:  # 1000 MHz = 1000 × 100,000
             raise ValueError(f"Invalid TX frequency: {self.tx_freq}")
         if self.dmr_color_code < 0 or self.dmr_color_code > 15:
             raise ValueError(f"Invalid color code: {self.dmr_color_code}")
@@ -99,7 +99,7 @@ class Channel:
 
     def is_empty(self) -> bool:
         """Check if channel is empty/unused"""
-        return self.rx_freq == 0.0
+        return self.rx_freq == 0
 
     def is_digital(self) -> bool:
         """Check if channel is digital/DMR"""
