@@ -19,6 +19,7 @@ from .encryption_widget import EncryptionWidget
 from .dtmf_widget import DTMFWidget
 from .settings_dialog import SettingsWidget
 from .addressbook_widget import AddressBookWidget
+from .options_dialog import OptionsDialog
 
 
 class MainWindow(QMainWindow):
@@ -175,6 +176,15 @@ class MainWindow(QMainWindow):
         self.action_flash.setEnabled(False)
         self.action_flash.triggered.connect(self.flash_to_radio)
         radio_menu.addAction(self.action_flash)
+
+        # Options menu
+        options_menu = menubar.addMenu("&Options")
+
+        self.action_preferences = QAction("&Preferences...", self)
+        self.action_preferences.setToolTip("Configure application options")
+        self.action_preferences.setStatusTip("Configure repeater frequency shifts and other options")
+        self.action_preferences.triggered.connect(self.show_options)
+        options_menu.addAction(self.action_preferences)
 
         # Help menu
         help_menu = menubar.addMenu("&Help")
@@ -377,6 +387,11 @@ class MainWindow(QMainWindow):
             "Brought to you by: CS7BLE / Joel Calado\n"
             "https://www.jcalado.com"
         )
+
+    def show_options(self):
+        """Show options dialog"""
+        dialog = OptionsDialog(self)
+        dialog.exec()
 
     def on_data_modified(self):
         """Handle data modification"""

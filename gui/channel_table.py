@@ -25,6 +25,7 @@ from rt4d_codeplug.dropdowns import (
     CTCSS_DCS_VALUES, BANDWIDTH_VALUES, CTDCS_SELECT_VALUES, TAIL_TONE_VALUES,
     DMR_MONITOR_VALUES, DMR_MODE_VALUES
 )
+from .options_dialog import OptionsDialog
 
 
 class DraggableTableWidget(QTableWidget):
@@ -146,8 +147,9 @@ class ChannelTableWidget(QWidget):
 
     data_modified = Signal()
 
-    # Frequency conversion constants
+    # Frequency constants
     FREQ_MULTIPLIER = 100000  # 10 Hz units
+    DEFAULT_RX_FREQ_MHZ = 433.500  # Default UHF frequency for new channels
 
     @staticmethod
     def _freq_to_mhz(freq_int: int) -> float:
@@ -163,6 +165,7 @@ class ChannelTableWidget(QWidget):
         super().__init__(parent)
         self.codeplug: Optional[Codeplug] = None
         self.copied_channel: Optional[Channel] = None
+        self._tx_manually_edited: bool = False  # Track if TX was manually edited
         self.init_ui()
 
     def init_ui(self):
@@ -314,14 +317,14 @@ class ChannelTableWidget(QWidget):
         self.detail_rx_freq.setRange(0, 1000)
         self.detail_rx_freq.setDecimals(5)
         self.detail_rx_freq.setSuffix(" MHz")
-        self.detail_rx_freq.valueChanged.connect(self.on_detail_changed)
+        self.detail_rx_freq.valueChanged.connect(self.on_rx_freq_changed)
         basic_layout.addRow("RX Frequency:", self.detail_rx_freq)
 
         self.detail_tx_freq = QDoubleSpinBox()
         self.detail_tx_freq.setRange(0, 1000)
         self.detail_tx_freq.setDecimals(5)
         self.detail_tx_freq.setSuffix(" MHz")
-        self.detail_tx_freq.valueChanged.connect(self.on_detail_changed)
+        self.detail_tx_freq.valueChanged.connect(self.on_tx_freq_changed)
         basic_layout.addRow("TX Frequency:", self.detail_tx_freq)
 
         self.detail_mode = QComboBox()
@@ -719,6 +722,9 @@ class ChannelTableWidget(QWidget):
         self.dmr_group.setVisible(channel.is_digital())
         self.analog_group.setVisible(channel.is_analog())
 
+        # Reset auto-shift tracking for newly loaded channel
+        self._tx_manually_edited = False
+
         # Unblock signals
         self.detail_name.blockSignals(False)
         self.detail_rx_freq.blockSignals(False)
@@ -807,6 +813,26 @@ class ChannelTableWidget(QWidget):
         logger.debug("on_mode_changed: calling on_detail_changed")
         self.on_detail_changed()
         logger.debug("on_mode_changed: FINISHED")
+
+    def on_rx_freq_changed(self):
+        """Handle RX frequency change - auto-update TX if not manually edited"""
+        # Check if auto-shift should update TX
+        if not self._tx_manually_edited:
+            new_rx = self.detail_rx_freq.value()
+            new_tx = OptionsDialog.calculate_tx_freq(new_rx)
+
+            # Only update if TX would actually change (auto-shift is enabled and in range)
+            if abs(new_tx - new_rx) > 0.0001:  # Shift was applied
+                self.detail_tx_freq.blockSignals(True)
+                self.detail_tx_freq.setValue(new_tx)
+                self.detail_tx_freq.blockSignals(False)
+
+        self.on_detail_changed()
+
+    def on_tx_freq_changed(self):
+        """Handle TX frequency change - mark as manually edited"""
+        self._tx_manually_edited = True
+        self.on_detail_changed()
 
     def on_detail_changed(self):
         """Handle detail field changes"""
@@ -1329,12 +1355,16 @@ class ChannelTableWidget(QWidget):
             QMessageBox.warning(self, "Error", "No free channel positions")
             return
 
+        # Default frequencies - calculate TX using auto-shift if enabled
+        rx_freq_mhz = self.DEFAULT_RX_FREQ_MHZ
+        tx_freq_mhz = OptionsDialog.calculate_tx_freq(rx_freq_mhz)
+
         # Create new channel with assigned position
         new_channel = Channel(
             position=new_pos,
             name=f"CH-{new_pos}",
-            rx_freq=self._mhz_to_freq(433.500),
-            tx_freq=self._mhz_to_freq(433.500),
+            rx_freq=self._mhz_to_freq(rx_freq_mhz),
+            tx_freq=self._mhz_to_freq(tx_freq_mhz),
             mode=ChannelMode.ANALOG,
             power=PowerLevel.HIGH,
             scan=ScanMode.ADD,
