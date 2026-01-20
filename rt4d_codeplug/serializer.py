@@ -281,7 +281,7 @@ class CodeplugSerializer:
         if contact.is_empty():
             return bytes(data)
 
-        data[0x00] = contact.index if contact.index > 0 else 1
+        data[0x00] = 0x00
         data[0x01] = contact.contact_type.value
 
         # DMR ID as BCD (4 bytes at offset 0x02)
