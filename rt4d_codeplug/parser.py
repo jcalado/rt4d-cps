@@ -687,7 +687,8 @@ class CodeplugParser:
         for i in range(20):
             offset = 522 + (i * 16)
             code_bytes = cfg_data[offset:offset+16]
-            code = decode_gbk(code_bytes)
+            # DTMF codes are ASCII (0-9, A-D, *, #) with 0xFF padding
+            code = bytes(b for b in code_bytes if b != 0xFF).decode('ascii')
             settings.dtmf_codes.append(code)
 
         # DT Custom Firmware Settings (offset 0x380 = 896)
