@@ -410,16 +410,24 @@ class RadioFlashDialog(QDialog):
             "Only enable if your radio has REFW Beta41 or newer custom firmware installed.\n"
             "WARNING: Stock firmware does NOT support this layout!"
         )
-        # Initialize from codeplug settings
-        if self.codeplug and self.codeplug.settings:
-            self.check_beta41.setChecked(self.codeplug.settings.beta41)
+        # Initialize from codeplug settings - if beta41+, lock the checkbox
+        is_beta41 = self.codeplug and self.codeplug.settings and self.codeplug.settings.beta41
+        if is_beta41:
+            self.check_beta41.setChecked(True)
+            self.check_beta41.setEnabled(False)
         region_layout.addWidget(self.check_beta41)
 
         # Info label for Beta41+ warning
-        self.label_beta41_info = QLabel(
-            "ℹ️  REFW Beta41+ layout is incompatible with stock firmware."
-        )
-        self.label_beta41_info.setStyleSheet("color: #0066cc; font-size: 10px;")
+        if is_beta41:
+            self.label_beta41_info = QLabel(
+                "Beta41+ codeplug detected - layout option locked."
+            )
+            self.label_beta41_info.setStyleSheet("color: #008800; font-size: 10px;")
+        else:
+            self.label_beta41_info = QLabel(
+                "ℹ️  REFW Beta41+ layout is incompatible with stock firmware."
+            )
+            self.label_beta41_info.setStyleSheet("color: #0066cc; font-size: 10px;")
         self.label_beta41_info.setWordWrap(True)
         region_layout.addWidget(self.label_beta41_info)
 
