@@ -406,7 +406,7 @@ class CodeplugParser:
                 contact_index = struct.unpack('<H', gl_data[contact_offset:contact_offset + 2])[0]
                 # 0xFFFF means empty slot
                 if contact_index != 0xFFFF and contact_index < MAX_CONTACTS:
-                    parsed_contact_indices.append(contact_index)
+                    parsed_contact_indices.append(contact_index + 1)
 
             gl = GroupList(
                 index=index + 1,  # Convert 0-based slot to 1-based index

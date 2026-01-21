@@ -415,7 +415,7 @@ class CodeplugSerializer:
         for i in range(max_contacts):
             if i < len(valid_contacts):
                 contact_idx = valid_contacts[i]
-                struct.pack_into('<H', data, 0x10 + (i * 2), contact_idx)
+                struct.pack_into('<H', data, 0x10 + (i * 2), contact_idx - 1)
             else:
                 # Empty slot: 0xFFFF
                 struct.pack_into('<H', data, 0x10 + (i * 2), 0xFFFF)
