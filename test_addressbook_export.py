@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 """Test address book radio export format"""
 
+import os
+import pytest
 from rt4d_codeplug.global_contacts import GlobalContactCSVParser
 
+TEST_ADDRESSBOOK_CSV = 'test_addressbook.csv'
+LARGE_DMR_CSV = '08_01_2025_COMPLETE_DMR_ID_CONTACT_LIST_287191_RECORDS_RT4D_KD1MU.csv'
+
+@pytest.mark.skipif(
+    not os.path.exists(TEST_ADDRESSBOOK_CSV),
+    reason=f"Test data file {TEST_ADDRESSBOOK_CSV} not found"
+)
 def test_export_format():
     """Test export for radio format"""
     print("Testing Address Book Radio Export Format")

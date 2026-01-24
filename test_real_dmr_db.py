@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """Test script for real DMR database file"""
 
+import os
+import pytest
 from rt4d_codeplug.global_contacts import GlobalContactCSVParser
 
+LARGE_DMR_CSV = '08_01_2025_COMPLETE_DMR_ID_CONTACT_LIST_287191_RECORDS_RT4D_KD1MU.csv'
+
+@pytest.mark.skipif(
+    not os.path.exists(LARGE_DMR_CSV),
+    reason=f"Test data file {LARGE_DMR_CSV} not found"
+)
 def test_real_dmr_db():
     """Test with real KD1MU DMR database"""
     print("Testing with Real DMR Database (KD1MU)")

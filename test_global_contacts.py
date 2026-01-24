@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 """Test script for global contacts / address book functionality"""
 
+import os
+import pytest
 from rt4d_codeplug.global_contacts import GlobalContactCSVParser
 
+TEST_ADDRESSBOOK_CSV = 'test_addressbook.csv'
+
+@pytest.mark.skipif(
+    not os.path.exists(TEST_ADDRESSBOOK_CSV),
+    reason=f"Test data file {TEST_ADDRESSBOOK_CSV} not found"
+)
 def test_csv_parser():
     """Test CSV parsing"""
     print("Testing Global Contacts CSV Parser...")
