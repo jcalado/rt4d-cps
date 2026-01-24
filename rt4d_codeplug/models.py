@@ -255,36 +255,54 @@ class RadioSettings:
     key_lock: int = 0
     lock_timer: int = 0  # Lock timer in seconds (0=off, 5-600)
 
-    # Audio Settings
-    tone_frequency: int = 0  # Tone frequency in Hz (offset 256-257, 16-bit LE)
-    squelch_level: int = 5  # Analog squelch level 0-9 (offset 258)
-    tx_mic_gain: int = 5  # TX microphone gain 1-10 (offset 261)
-    rx_speaker_volume: int = 5  # RX speaker volume 1-10 (offset 262)
-    tx_start_beep: int = 0  # TX start beep on/off (offset 267)
-    roger_beep: int = 0  # Roger beep on/off (offset 268)
-    call_mic_gain: int = 5  # Call mic gain 1-10 (offset 391)
-    call_speaker_volume: int = 5  # Called speaker volume 1-10 (offset 392)
-    call_start_beep: int = 0  # Call start beep on/off (offset 397)
-    call_end_beep: int = 0  # Call end beep on/off (offset 398)
-    digital_squelch: int = 5  # Digital squelch level 0-9 (offset 403)
+    # Audio Settings (offsets 0x100-0x11A)
+    tone_frequency: int = 0  # Tone frequency in Hz (offset 0x100-0x101/256-257, u16 LE)
+    squelch_level: int = 5  # Analog squelch level 0-9 (offset 0x102/258)
+    tx_mic_gain: int = 5  # TX microphone gain 1-10 (offset 0x105/261)
+    rx_speaker_volume: int = 5  # RX speaker volume 1-10 (offset 0x106/262)
+    tx_start_beep: int = 0  # TX start beep on/off (offset 0x10B/267)
+    roger_beep: int = 0  # Roger beep on/off (offset 0x10C/268)
+    analog_vox: int = 0  # Analog VOX enable (offset 0x10D/269)
+    vox_threshold: int = 0  # VOX threshold (offset 0x10E/270)
+    vox_delay: int = 0  # VOX delay (offset 0x10F/271)
+    short_tail: int = 0  # Short tail elimination (offset 0x117/279)
+    tone_timer: int = 0  # Tone timer (offset 0x118/280)
+    single_tone_timer: int = 0  # Single tone timer (offset 0x119-0x11A/281-282, u16 LE)
+
+    # DMR Audio Settings (offsets 0x185-0x192)
+    tx_denoise: int = 0  # TX denoise level (offset 0x185/389)
+    rx_denoise: int = 0  # RX denoise level (offset 0x186/390)
+    call_mic_gain: int = 5  # Call mic gain 1-10 (offset 0x187/391)
+    call_speaker_volume: int = 5  # Called speaker volume 1-10 (offset 0x188/392)
+    call_start_beep: int = 0  # Call start beep on/off (offset 0x18D/397)
+    call_end_beep: int = 0  # Call end beep on/off (offset 0x18E/398)
+    digital_squelch: int = 5  # Digital squelch level 0-9 (offset 0x193/403)
 
     # Display
-    led_timer: int = 0
-    led_on_off: int = 1  # LED on/off (0=off, 1=on)
-    backlight_brightness: int = 2  # Backlight brightness (0-4)
-    menu_timer: int = 0
-    display_mode_a: int = 0  # Display mode for band A (0=channel, 1=freq, 2=name)
-    display_mode_b: int = 0  # Display mode for band B (0=channel, 1=freq, 2=name)
-    lcd_contrast: int = 7  # LCD contrast 0-15 (offset 233)
-    display_lines: int = 0  # 6-line or 8-line display mode (offset 234)
-    dual_display_mode: int = 0  # Dual display mode (offset 235)
+    led_timer: int = 0  # LED timer (offset 0x62/98)
+    led_on_off: int = 1  # LED on/off (0=off, 1=on) (offset 0x60/96)
+    backlight_brightness: int = 2  # Backlight brightness (0-4) (offset 0x61/97)
+    menu_timer: int = 0  # Menu timer (offset 0x65/101)
+    display_mode_a: int = 0  # Display mode for band A (0=channel, 1=freq, 2=name) (offset 0x85/133)
+    display_mode_b: int = 0  # Display mode for band B (0=channel, 1=freq, 2=name) (offset 0x8A/138)
+    rssi_refresh: int = 0  # RSSI refresh rate (offset 0x0A8-0x0A9/168-169, u16 LE)
+    slaver_ptt: int = 0  # Side 1 as secondary PTT (offset 0x0E8/232)
+    lcd_contrast: int = 7  # LCD contrast 0-15 (offset 0x0E9/233)
+    display_lines: int = 0  # 6-line or 8-line display mode (offset 0x0EA/234)
+    dual_display_mode: int = 0  # Dual display mode (offset 0x0EB/235)
 
-    # DMR Enhancements
-    remote_control: int = 0  # Remote control enable (offset 388)
-    group_call_hang_time: int = 3000  # Group call hang time in ms (offset 389-390, 16-bit LE)
-    private_call_hang_time: int = 3000  # Private call hang time in ms (offset 395-396, 16-bit LE)
-    group_id_display: int = 0  # Show group ID during calls (offset 400)
-    call_group_display: int = 0  # Show call group during calls (offset 404)
+    # DMR Enhancements (offsets 0x184-0x19A)
+    remote_control: int = 0  # Remote control enable (offset 0x184/388)
+    group_call_hang_time: int = 3000  # Group call hang time in ms (offset 0x18F-0x190/399-400, u16 LE)
+    private_call_hang_time: int = 3000  # Private call hang time in ms (offset 0x191-0x192/401-402, u16 LE)
+    call_group_display: int = 0  # Show call group during calls (offset 0x194/404)
+
+    # DMR SMS Fields (offsets 0x195-0x19A)
+    dmr_send_dtmf: int = 0  # Send DTMF via DMR (offset 0x195/405)
+    sms_format: int = 0  # DMR SMS format (offset 0x196/406)
+    sms_font: int = 0  # DMR SMS font (offset 0x197/407)
+    caller_keep: int = 0  # Keep DMR caller info (offset 0x198/408)
+    call_log_wpos: int = 0  # Call log write position (offset 0x199-0x19A/409-410, u16 LE)
 
     # Power
     power_save_mode: int = 0
@@ -346,11 +364,15 @@ class RadioSettings:
     freq_lock_4_start: int = 0
     freq_lock_4_end: int = 0
 
-    # Scan settings
-    scan_direction: int = 0  # 0=up, 1=down
-    scan_mode: int = 0  # Scan mode
-    scan_return: int = 0  # 0=original ch, 1=current ch
-    scan_dwell: int = 0  # Scan dwell time
+    # Scan settings (offsets 0x0A2-0x0A5, 0x34A-0x353)
+    scan_direction: int = 0  # 0=up, 1=down (offset 0x0A2/162)
+    scan_mode: int = 0  # Scan mode (offset 0x0A3/163)
+    scan_return: int = 0  # 0=original ch, 1=current ch (offset 0x392/914 in REFW)
+    scan_dwell: int = 0  # Scan dwell time (offset 0x0A5/165)
+    ch_direction: int = 0  # Channel direction (offset 0x34A/842)
+    sms_prompt: int = 0  # DMR SMS prompt (offset 0x34B/843)
+    scan_lower: int = 0  # Scan lower frequency limit (offset 0x34C-0x34F/844-847, u32 LE)
+    scan_upper: int = 0  # Scan upper frequency limit (offset 0x350-0x353/848-851, u32 LE)
 
     # Function keys
     key_fs1_short: int = 0  # FS1 short press action
@@ -368,12 +390,12 @@ class RadioSettings:
     key_8: int = 0  # Numeric key 8 action
     key_9: int = 0  # Numeric key 9 action
 
-    # Advanced Features
-    noaa_channel: int = 0  # NOAA weather channel index (offset 272)
-    spectrum_scan_mode: int = 0  # Spectrum scan mode (offset 273)
-    detection_range: int = 0  # Detection range (offset 274-275, 16-bit LE)
-    relay_delay: int = 0  # Relay delay (offset 276)
-    glitch_filter: int = 0  # Glitch filter (offset 842)
+    # Advanced Features (offsets 0x110-0x116)
+    detection_range: int = 0  # Detection range (offset 0x110/272, u8)
+    relay_delay: int = 0  # Relay delay (offset 0x111-0x112/273-274, u16 LE)
+    noaa_channel: int = 0  # NOAA weather channel index (offset 0x113/275)
+    glitch_filter: int = 0  # Glitch filter (offset 0x114/276)
+    spectrum_step: int = 0  # Spectrum scan step (offset 0x115-0x116/277-278, u16 LE)
 
     # DTMF System
     dtmf_send_delay: int = 0  # Send delay 0-20: 0=0ms, 1=100ms...20=2000ms (offset 512, byte)
@@ -391,25 +413,26 @@ class RadioSettings:
     dtmf_codes: List[str] = field(default_factory=lambda: [""] * 20)
 
     # DT Custom Firmware Settings (offset 0x380 = 896)
-    scan_speed_analog: int = 0  # Scan speed for analog channels (offset 896/0x380)
-    tx_backlight: int = 0  # TX backlight behavior (offset 897/0x381)
-    green_key_long: int = 0  # Long press code for green key (offset 898/0x382)
-    voltage_display: int = 0  # Display voltage on screen (offset 899/0x383)
-    live_sub_tone: int = 0  # Live sub-tone detection (offset 900/0x384)
-    spectrum_threshold: int = 0  # Spectrum scan squelch threshold (offset 901/0x385)
-    sub_tone_ptt: int = 0  # Enable PTT from DTMF list (offset 902/0x386)
-    tot_warning: int = 0  # TOT warning beep before timeout (offset 903/0x387)
-    scan_end: int = 0  # Scan end behavior (offset 904/0x388)
-    scan_continue: int = 0  # Scan continue mode (offset 905/0x389)
-    scan_return: int = 0  # Scan return behavior (offset 914/0x392)
-    vfo_a_offset: int = 0  # VFO A frequency offset in Hz (offset 915/0x393, 32-bit LE, stored as units of 10 Hz)
-    vfo_b_offset: int = 0  # VFO B frequency offset in Hz (offset 919/0x397, 32-bit LE, stored as units of 10 Hz)
-    callsign_lookup: int = 0  # Look up callsign in Call Log (offset 923/0x39B)
-    dmr_scan_speed: int = 0  # Scan speed for DMR channels (offset 924/0x39C)
-    ptt_lock: int = 0  # PTT lock feature (offset 925/0x39D)
-    zone_channel_display: int = 0  # Show Zone CH on display (offset 926/0x39E)
-    dmr_gid_name: int = 0  # Show DMR group name if available (offset 927/0x39F)
-    beta41: bool = False # Indicates the settings are Beta41+ compatible
+    scan_speed_analog: int = 0  # Scan speed for analog channels (offset 0x380/896)
+    tx_backlight: int = 0  # TX backlight behavior (offset 0x381/897)
+    green_key_long: int = 0  # Long press code for green key (offset 0x382/898)
+    voltage_display: int = 0  # Display voltage on screen (offset 0x383/899)
+    live_sub_tone: int = 0  # Live sub-tone detection (offset 0x384/900)
+    spectrum_threshold: int = 0  # Spectrum scan squelch threshold (offset 0x385/901)
+    sub_tone_ptt: int = 0  # Enable PTT from DTMF list (offset 0x386/902)
+    tot_warning: int = 0  # TOT warning beep before timeout (offset 0x387/903)
+    scan_end: int = 0  # Scan end behavior (offset 0x388/904)
+    scan_continue: int = 0  # Scan continue mode (offset 0x389/905)
+    dt_scan_return: int = 0  # Scan return behavior for DT firmware (offset 0x392/914)
+    vfo_a_offset: int = 0  # VFO A frequency offset in Hz (offset 0x393/915, 32-bit LE, stored as units of 10 Hz)
+    vfo_b_offset: int = 0  # VFO B frequency offset in Hz (offset 0x397/919, 32-bit LE, stored as units of 10 Hz)
+    callsign_lookup: int = 0  # Look up callsign in Call Log (offset 0x39B/923)
+    dmr_scan_speed: int = 0  # Scan speed for DMR channels (offset 0x39C/924)
+    ptt_lock: int = 0  # PTT lock feature (offset 0x39D/925)
+    zone_channel_display: int = 0  # Show Zone CH on display (offset 0x39E/926)
+    dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
+    tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928) - Beta41+ only
+    beta41: bool = False  # Indicates the settings are Beta41+ compatible
 
 
 @dataclass

@@ -535,11 +535,21 @@ class CodeplugSerializer:
         data[160] = settings.freq_lock_4_end & 0xFF
         data[161] = (settings.freq_lock_4_end >> 8) & 0xFF
 
-        # Scan settings
-        data[162] = settings.scan_direction
-        data[163] = settings.scan_mode
-        data[164] = settings.scan_return
-        data[165] = settings.scan_dwell
+        # Scan settings (0x0A2-0x0A5, 0x34A-0x353)
+        data[0x0A2] = settings.scan_direction
+        data[0x0A3] = settings.scan_mode
+        data[0x0A4] = settings.scan_return
+        data[0x0A5] = settings.scan_dwell
+        data[0x34A] = settings.ch_direction
+        data[0x34B] = settings.sms_prompt
+        data[0x34C] = settings.scan_lower & 0xFF
+        data[0x34D] = (settings.scan_lower >> 8) & 0xFF
+        data[0x34E] = (settings.scan_lower >> 16) & 0xFF
+        data[0x34F] = (settings.scan_lower >> 24) & 0xFF
+        data[0x350] = settings.scan_upper & 0xFF
+        data[0x351] = (settings.scan_upper >> 8) & 0xFF
+        data[0x352] = (settings.scan_upper >> 16) & 0xFF
+        data[0x353] = (settings.scan_upper >> 24) & 0xFF
 
         # Function keys
         data[170] = settings.key_fs1_short
@@ -557,41 +567,63 @@ class CodeplugSerializer:
         data[184] = settings.key_8
         data[185] = settings.key_9
 
-        # Audio Settings
-        data[256] = settings.tone_frequency & 0xFF
-        data[257] = (settings.tone_frequency >> 8) & 0xFF
-        data[258] = settings.squelch_level
-        data[261] = settings.tx_mic_gain
-        data[262] = settings.rx_speaker_volume
-        data[267] = settings.tx_start_beep
-        data[268] = settings.roger_beep
-        data[391] = settings.call_mic_gain
-        data[392] = settings.call_speaker_volume
-        data[397] = settings.call_start_beep
-        data[398] = settings.call_end_beep
-        data[403] = settings.digital_squelch
+        # Audio Settings (0x100-0x11A)
+        data[0x100] = settings.tone_frequency & 0xFF
+        data[0x101] = (settings.tone_frequency >> 8) & 0xFF
+        data[0x102] = settings.squelch_level
+        data[0x105] = settings.tx_mic_gain
+        data[0x106] = settings.rx_speaker_volume
+        data[0x10B] = settings.tx_start_beep
+        data[0x10C] = settings.roger_beep
+        data[0x10D] = settings.analog_vox
+        data[0x10E] = settings.vox_threshold
+        data[0x10F] = settings.vox_delay
+        data[0x117] = settings.short_tail
+        data[0x118] = settings.tone_timer
+        data[0x119] = settings.single_tone_timer & 0xFF
+        data[0x11A] = (settings.single_tone_timer >> 8) & 0xFF
 
         # Display Settings (additional)
-        data[233] = settings.lcd_contrast
-        data[234] = settings.display_lines
-        data[235] = settings.dual_display_mode
+        data[0x0A8] = settings.rssi_refresh & 0xFF
+        data[0x0A9] = (settings.rssi_refresh >> 8) & 0xFF
+        data[0x0E8] = settings.slaver_ptt
+        data[0x0E9] = settings.lcd_contrast
+        data[0x0EA] = settings.display_lines
+        data[0x0EB] = settings.dual_display_mode
 
-        # DMR Enhancements
-        data[388] = settings.remote_control
-        data[389] = settings.group_call_hang_time & 0xFF
-        data[390] = (settings.group_call_hang_time >> 8) & 0xFF
-        data[395] = settings.private_call_hang_time & 0xFF
-        data[396] = (settings.private_call_hang_time >> 8) & 0xFF
-        data[400] = settings.group_id_display
-        data[404] = settings.call_group_display
+        # DMR Audio Settings (0x185-0x193)
+        data[0x185] = settings.tx_denoise
+        data[0x186] = settings.rx_denoise
+        data[0x187] = settings.call_mic_gain
+        data[0x188] = settings.call_speaker_volume
+        data[0x18D] = settings.call_start_beep
+        data[0x18E] = settings.call_end_beep
+        data[0x193] = settings.digital_squelch
 
-        # Advanced Features
-        data[272] = settings.noaa_channel
-        data[273] = settings.spectrum_scan_mode
-        data[274] = settings.detection_range & 0xFF
-        data[275] = (settings.detection_range >> 8) & 0xFF
-        data[276] = max(0, min(255, int(settings.relay_delay)))  # Restore relay_delay assignment
-        data[277] = settings.glitch_filter
+        # DMR Enhancements (0x184, 0x18F-0x194)
+        data[0x184] = settings.remote_control
+        data[0x18F] = settings.group_call_hang_time & 0xFF
+        data[0x190] = (settings.group_call_hang_time >> 8) & 0xFF
+        data[0x191] = settings.private_call_hang_time & 0xFF
+        data[0x192] = (settings.private_call_hang_time >> 8) & 0xFF
+        data[0x194] = settings.call_group_display
+
+        # DMR SMS Fields (0x195-0x19A)
+        data[0x195] = settings.dmr_send_dtmf
+        data[0x196] = settings.sms_format
+        data[0x197] = settings.sms_font
+        data[0x198] = settings.caller_keep
+        data[0x199] = settings.call_log_wpos & 0xFF
+        data[0x19A] = (settings.call_log_wpos >> 8) & 0xFF
+
+        # Advanced Features (0x110-0x116)
+        data[0x110] = settings.detection_range & 0xFF
+        data[0x111] = settings.relay_delay & 0xFF
+        data[0x112] = (settings.relay_delay >> 8) & 0xFF
+        data[0x113] = settings.noaa_channel
+        data[0x114] = settings.glitch_filter
+        data[0x115] = settings.spectrum_step & 0xFF
+        data[0x116] = (settings.spectrum_step >> 8) & 0xFF
 
         # DTMF System
         data[512] = settings.dtmf_send_delay & 0xFF
@@ -611,36 +643,37 @@ class CodeplugSerializer:
             data[offset:offset+16] = encode_gbk(code, 16)
 
         # DT Custom Firmware Settings (offset 0x380 = 896)
-        data[896] = settings.scan_speed_analog & 0xFF
-        data[897] = settings.tx_backlight & 0xFF
-        data[898] = settings.green_key_long & 0xFF
-        data[899] = settings.voltage_display & 0xFF
-        data[900] = settings.live_sub_tone & 0xFF
-        data[901] = settings.spectrum_threshold & 0xFF
-        data[902] = settings.sub_tone_ptt & 0xFF
-        data[903] = settings.tot_warning & 0xFF
-        data[904] = settings.scan_end & 0xFF
-        data[905] = settings.scan_continue & 0xFF
-        data[914] = settings.scan_return & 0xFF
+        data[0x380] = settings.scan_speed_analog & 0xFF
+        data[0x381] = settings.tx_backlight & 0xFF
+        data[0x382] = settings.green_key_long & 0xFF
+        data[0x383] = settings.voltage_display & 0xFF
+        data[0x384] = settings.live_sub_tone & 0xFF
+        data[0x385] = settings.spectrum_threshold & 0xFF
+        data[0x386] = settings.sub_tone_ptt & 0xFF
+        data[0x387] = settings.tot_warning & 0xFF
+        data[0x388] = settings.scan_end & 0xFF
+        data[0x389] = settings.scan_continue & 0xFF
+        data[0x392] = settings.dt_scan_return & 0xFF
         # VFO offsets are 32-bit little-endian integers (convert signed to unsigned)
         # Stored in units of 10 Hz, so divide by 10 before storing
         vfo_a_offset = settings.vfo_a_offset // 10  # Convert Hz to storage units
         vfo_a_offset &= 0xFFFFFFFF
-        data[915] = vfo_a_offset & 0xFF
-        data[916] = (vfo_a_offset >> 8) & 0xFF
-        data[917] = (vfo_a_offset >> 16) & 0xFF
-        data[918] = (vfo_a_offset >> 24) & 0xFF
+        data[0x393] = vfo_a_offset & 0xFF
+        data[0x394] = (vfo_a_offset >> 8) & 0xFF
+        data[0x395] = (vfo_a_offset >> 16) & 0xFF
+        data[0x396] = (vfo_a_offset >> 24) & 0xFF
         vfo_b_offset = settings.vfo_b_offset // 10  # Convert Hz to storage units
         vfo_b_offset &= 0xFFFFFFFF
-        data[919] = vfo_b_offset & 0xFF
-        data[920] = (vfo_b_offset >> 8) & 0xFF
-        data[921] = (vfo_b_offset >> 16) & 0xFF
-        data[922] = (vfo_b_offset >> 24) & 0xFF
-        data[923] = settings.callsign_lookup & 0xFF
-        data[924] = settings.dmr_scan_speed & 0xFF
-        data[925] = settings.ptt_lock & 0xFF
-        data[926] = settings.zone_channel_display & 0xFF
-        data[927] = settings.dmr_gid_name & 0xFF
+        data[0x397] = vfo_b_offset & 0xFF
+        data[0x398] = (vfo_b_offset >> 8) & 0xFF
+        data[0x399] = (vfo_b_offset >> 16) & 0xFF
+        data[0x39A] = (vfo_b_offset >> 24) & 0xFF
+        data[0x39B] = settings.callsign_lookup & 0xFF
+        data[0x39C] = settings.dmr_scan_speed & 0xFF
+        data[0x39D] = settings.ptt_lock & 0xFF
+        data[0x39E] = settings.zone_channel_display & 0xFF
+        data[0x39F] = settings.dmr_gid_name & 0xFF
+        data[0x3A0] = settings.tx_alias & 0xFF
         
         if settings.beta41:
             data[4092:4096] = BETA41_MAGIC

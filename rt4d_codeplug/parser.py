@@ -617,11 +617,17 @@ class CodeplugParser:
         settings.freq_lock_4_start = cfg_data[158] | (cfg_data[159] << 8)
         settings.freq_lock_4_end = cfg_data[160] | (cfg_data[161] << 8)
 
-        # Scan settings
-        settings.scan_direction = cfg_data[162]
-        settings.scan_mode = cfg_data[163] # Unused in REFW
-        settings.scan_return = cfg_data[0x392] # Since REFW
-        settings.scan_dwell = cfg_data[165]
+        # Scan settings (0x0A2-0x0A5, 0x34A-0x353)
+        settings.scan_direction = cfg_data[0x0A2]
+        settings.scan_mode = cfg_data[0x0A3]  # Unused in REFW
+        settings.scan_return = cfg_data[0x0A4]
+        settings.scan_dwell = cfg_data[0x0A5]
+        settings.ch_direction = cfg_data[0x34A]
+        settings.sms_prompt = cfg_data[0x34B]
+        settings.scan_lower = (cfg_data[0x34C] | (cfg_data[0x34D] << 8) |
+                               (cfg_data[0x34E] << 16) | (cfg_data[0x34F] << 24))
+        settings.scan_upper = (cfg_data[0x350] | (cfg_data[0x351] << 8) |
+                               (cfg_data[0x352] << 16) | (cfg_data[0x353] << 24))
 
         # Function keys
         settings.key_fs1_short = cfg_data[170]
@@ -639,30 +645,48 @@ class CodeplugParser:
         settings.key_8 = cfg_data[184]
         settings.key_9 = cfg_data[185]
 
-        # Audio Settings
-        settings.tone_frequency = cfg_data[256] | (cfg_data[257] << 8)
-        settings.squelch_level = cfg_data[258]
-        settings.tx_mic_gain = cfg_data[261]
-        settings.rx_speaker_volume = cfg_data[262]
-        settings.tx_start_beep = cfg_data[267]
-        settings.roger_beep = cfg_data[268]
-        settings.call_mic_gain = cfg_data[391]
-        settings.call_speaker_volume = cfg_data[392]
-        settings.call_start_beep = cfg_data[397]
-        settings.call_end_beep = cfg_data[398]
-        settings.digital_squelch = cfg_data[403]
+        # Audio Settings (0x100-0x11A)
+        settings.tone_frequency = cfg_data[0x100] | (cfg_data[0x101] << 8)
+        settings.squelch_level = cfg_data[0x102]
+        settings.tx_mic_gain = cfg_data[0x105]
+        settings.rx_speaker_volume = cfg_data[0x106]
+        settings.tx_start_beep = cfg_data[0x10B]
+        settings.roger_beep = cfg_data[0x10C]
+        settings.analog_vox = cfg_data[0x10D]
+        settings.vox_threshold = cfg_data[0x10E]
+        settings.vox_delay = cfg_data[0x10F]
+        settings.short_tail = cfg_data[0x117]
+        settings.tone_timer = cfg_data[0x118]
+        settings.single_tone_timer = cfg_data[0x119] | (cfg_data[0x11A] << 8)
 
         # Display Settings (additional)
-        settings.lcd_contrast = cfg_data[233]
-        settings.display_lines = cfg_data[234]
-        settings.dual_display_mode = cfg_data[235]
+        settings.rssi_refresh = cfg_data[0x0A8] | (cfg_data[0x0A9] << 8)
+        settings.slaver_ptt = cfg_data[0x0E8]
+        settings.lcd_contrast = cfg_data[0x0E9]
+        settings.display_lines = cfg_data[0x0EA]
+        settings.dual_display_mode = cfg_data[0x0EB]
 
-        # DMR Enhancements
-        settings.remote_control = cfg_data[388]
-        settings.group_call_hang_time = cfg_data[389] | (cfg_data[390] << 8)
-        settings.private_call_hang_time = cfg_data[395] | (cfg_data[396] << 8)
-        settings.group_id_display = cfg_data[400]
-        settings.call_group_display = cfg_data[404]
+        # DMR Audio Settings (0x185-0x193)
+        settings.tx_denoise = cfg_data[0x185]
+        settings.rx_denoise = cfg_data[0x186]
+        settings.call_mic_gain = cfg_data[0x187]
+        settings.call_speaker_volume = cfg_data[0x188]
+        settings.call_start_beep = cfg_data[0x18D]
+        settings.call_end_beep = cfg_data[0x18E]
+        settings.digital_squelch = cfg_data[0x193]
+
+        # DMR Enhancements (0x184, 0x18F-0x194)
+        settings.remote_control = cfg_data[0x184]
+        settings.group_call_hang_time = cfg_data[0x18F] | (cfg_data[0x190] << 8)
+        settings.private_call_hang_time = cfg_data[0x191] | (cfg_data[0x192] << 8)
+        settings.call_group_display = cfg_data[0x194]
+
+        # DMR SMS Fields (0x195-0x19A)
+        settings.dmr_send_dtmf = cfg_data[0x195]
+        settings.sms_format = cfg_data[0x196]
+        settings.sms_font = cfg_data[0x197]
+        settings.caller_keep = cfg_data[0x198]
+        settings.call_log_wpos = cfg_data[0x199] | (cfg_data[0x19A] << 8)
 
         # Advanced Features
         settings.detection_range = cfg_data[0x110]
@@ -692,40 +716,41 @@ class CodeplugParser:
             settings.dtmf_codes.append(code)
 
         # DT Custom Firmware Settings (offset 0x380 = 896)
-        settings.scan_speed_analog = cfg_data[896]
-        settings.tx_backlight = cfg_data[897]
-        settings.green_key_long = cfg_data[898]
-        settings.voltage_display = cfg_data[899]
-        settings.live_sub_tone = cfg_data[900]
-        settings.spectrum_threshold = cfg_data[901]
-        settings.sub_tone_ptt = cfg_data[902]
-        settings.tot_warning = cfg_data[903]
-        settings.scan_end = cfg_data[904]
-        settings.scan_continue = cfg_data[905]
-        settings.scan_return = cfg_data[914]
+        settings.scan_speed_analog = cfg_data[0x380]
+        settings.tx_backlight = cfg_data[0x381]
+        settings.green_key_long = cfg_data[0x382]
+        settings.voltage_display = cfg_data[0x383]
+        settings.live_sub_tone = cfg_data[0x384]
+        settings.spectrum_threshold = cfg_data[0x385]
+        settings.sub_tone_ptt = cfg_data[0x386]
+        settings.tot_warning = cfg_data[0x387]
+        settings.scan_end = cfg_data[0x388]
+        settings.scan_continue = cfg_data[0x389]
+        settings.dt_scan_return = cfg_data[0x392]
         # VFO offsets are 32-bit little-endian integers (stored unsigned, but can be negative)
         # Stored in units of 10 Hz, so multiply by 10 to get Hz
         # Convert from unsigned to signed using two's complement
-        vfo_a_offset = (cfg_data[915] |
-                        (cfg_data[916] << 8) |
-                        (cfg_data[917] << 16) |
-                        (cfg_data[918] << 24))
+        vfo_a_offset = (cfg_data[0x393] |
+                        (cfg_data[0x394] << 8) |
+                        (cfg_data[0x395] << 16) |
+                        (cfg_data[0x396] << 24))
         if vfo_a_offset & 0x80000000:
             vfo_a_offset = -(0x100000000 - vfo_a_offset)
         settings.vfo_a_offset = vfo_a_offset * 10  # Convert to Hz
 
-        vfo_b_offset = (cfg_data[919] |
-                        (cfg_data[920] << 8) |
-                        (cfg_data[921] << 16) |
-                        (cfg_data[922] << 24))
+        vfo_b_offset = (cfg_data[0x397] |
+                        (cfg_data[0x398] << 8) |
+                        (cfg_data[0x399] << 16) |
+                        (cfg_data[0x39A] << 24))
         if vfo_b_offset & 0x80000000:
             vfo_b_offset = -(0x100000000 - vfo_b_offset)
         settings.vfo_b_offset = vfo_b_offset * 10  # Convert to Hz
-        settings.callsign_lookup = cfg_data[923]
-        settings.dmr_scan_speed = cfg_data[924]
-        settings.ptt_lock = cfg_data[925]
-        settings.zone_channel_display = cfg_data[926]
-        settings.dmr_gid_name = cfg_data[927]
+        settings.callsign_lookup = cfg_data[0x39B]
+        settings.dmr_scan_speed = cfg_data[0x39C]
+        settings.ptt_lock = cfg_data[0x39D]
+        settings.zone_channel_display = cfg_data[0x39E]
+        settings.dmr_gid_name = cfg_data[0x39F]
+        settings.tx_alias = cfg_data[0x3A0]
         settings.beta41 = cfg_data[4092:4096] == BETA41_MAGIC
 
         return settings
