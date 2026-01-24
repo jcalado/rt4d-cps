@@ -159,7 +159,7 @@ class ChannelTableWidget(QWidget):
     @staticmethod
     def _mhz_to_freq(freq_mhz: float) -> int:
         """Convert MHz to internal frequency (10 Hz units)."""
-        return int(freq_mhz * ChannelTableWidget.FREQ_MULTIPLIER)
+        return round(freq_mhz * ChannelTableWidget.FREQ_MULTIPLIER)
 
     def __init__(self, parent=None):
         super().__init__(parent)
