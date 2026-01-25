@@ -187,7 +187,7 @@ class CodeplugParser:
                 channel.dmr_color_code = ch_data[0x04]
                 channel.dmr_mode = ch_data[0x05]
                 channel.dmr_monitor = ch_data[0x0E]  # Promiscuous mode
-                channel.tx_priority = ch_data[0x11]
+                channel.dmr_busy_lock = ch_data[0x11]
                 channel.tot = ch_data[0x14]
                 channel.alarm = ch_data[0x15]
                 # Store parsed indices temporarily for UUID resolution later
@@ -227,8 +227,8 @@ class CodeplugParser:
                 # Bandwidth (offset 0x03)
                 channel.bandwidth = ch_data[0x03]
 
-                # TX Priority analog (offset 0x11)
-                channel.tx_priority_analog = ch_data[0x11]
+                # Analog busy lock (offset 0x11)
+                channel.ana_busy_lock = ch_data[0x11]
 
                 # TOT and CT/DCS Select (offset 0x12)
                 byte_0x12 = ch_data[0x12]
@@ -294,13 +294,13 @@ class CodeplugParser:
             channel.dmr_mode = (ch_data[0x00] >> 2) & 0x01
             # Bit 3: 0=use radio ID, 1=use channel ID (inverted from old layout)
             channel.use_radio_id = not bool((ch_data[0x00] >> 3) & 0x01)
+            channel.rx_tx = (ch_data[0x00] >> 4) & 0x03  # RX/TX permission (bits 4-5)
             channel.scramble = ch_data[0x01] & 0x0F
             channel.dmr_color_code = (ch_data[0x01] >> 4) & 0x0F
             channel.tot = ch_data[0x02] & 0x3F
-            # channel.tot_analog = channel.tot
             channel.tail_tone = ch_data[0x03] & 0x07
-            channel.tx_priority_analog = (ch_data[0x03] >> 3) & 0x03
-            channel.tx_priority = (ch_data[0x03] >> 5) & 0x03
+            channel.ana_busy_lock = (ch_data[0x03] >> 3) & 0x03
+            channel.dmr_busy_lock = (ch_data[0x03] >> 5) & 0x03
             channel.ctdcs_select = (ch_data[0x04] >> 1) & 0x07
 
             modulation_bits = (ch_data[0x04] >> 4) & 0x03

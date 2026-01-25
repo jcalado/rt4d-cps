@@ -146,7 +146,7 @@ class CodeplugSerializer:
             data[0x04] = channel.dmr_color_code
             data[0x05] = channel.dmr_mode
             data[0x0E] = channel.dmr_monitor  # Promiscuous mode
-            data[0x11] = channel.tx_priority
+            data[0x11] = channel.dmr_busy_lock
             data[0x14] = channel.tot
             data[0x15] = channel.alarm
             # Convert UUID references to indices
@@ -184,8 +184,8 @@ class CodeplugSerializer:
             tx_tone_bytes = encode_subaudio_bytes(channel.tx_ctcss)
             data[0x0E:0x10] = tx_tone_bytes
 
-            # TX Priority analog (offset 0x11)
-            data[0x11] = channel.tx_priority_analog
+            # Analog busy lock (offset 0x11)
+            data[0x11] = channel.ana_busy_lock
 
             # TOT and CT/DCS Select (offset 0x12)
             data[0x12] = (channel.tot_analog & 0x1F) | ((channel.ctdcs_select & 0x07) << 5)
@@ -214,6 +214,7 @@ class CodeplugSerializer:
         data[0x00] |= (channel.dmr_mode & 0x01) << 2
         # Bit 3: 0=use radio ID, 1=use channel ID (inverted from old layout)
         data[0x00] |= (0x00 if channel.use_radio_id else 0x08)
+        data[0x00] |= (channel.rx_tx & 0x03) << 4  # RX/TX permission (bits 4-5)
         if channel.mode != ChannelMode.DIGITAL:
             data[0x00] |= 0x40
 
@@ -225,8 +226,8 @@ class CodeplugSerializer:
             data[0x02] |= 0x40
 
         data[0x03] = (channel.tail_tone & 0x07)
-        data[0x03] |= (channel.tx_priority_analog & 0x03) << 3
-        data[0x03] |= (channel.tx_priority & 0x03) << 5
+        data[0x03] |= (channel.ana_busy_lock & 0x03) << 3
+        data[0x03] |= (channel.dmr_busy_lock & 0x03) << 5
         if channel.scan == ScanMode.REMOVE:
             data[0x03] |= 0x80
 

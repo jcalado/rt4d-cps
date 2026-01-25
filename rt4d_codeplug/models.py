@@ -59,6 +59,9 @@ class Channel:
     scan: ScanMode = ScanMode.ADD
     enabled: bool = False
 
+    # Common fields (byte 0x00)
+    rx_tx: int = 0  # RX/TX permission (bits 4-5): 0=RX+TX, 1=RX only, 2=TX only, etc.
+
     # Digital/DMR specific
     dmr_time_slot: int = 0  # 0=Slot1, 1=Slot2
     dmr_color_code: int = 1  # 0-15
@@ -67,7 +70,7 @@ class Channel:
     group_list_uuid: str = ""  # Reference by UUID
     contact_uuid: str = ""     # Reference by UUID
     encrypt_uuid: str = ""     # Reference by UUID
-    tx_priority: int = 0
+    dmr_busy_lock: int = 0  # DMR busy channel lockout (byte 0x03, bits 5-6)
     tot: int = 0  # Transmit timeout
     alarm: int = 0
     dmr_id: int = 0
@@ -78,8 +81,8 @@ class Channel:
     tx_ctcss: Optional[str] = None
     scramble: int = 0
     analog_modulation: AnalogModulation = AnalogModulation.FM  # FM/AM/SSB (offset 0x00)
-    bandwidth: int = 0  # Bandwidth: 0=Wide/25kHz, 1=Narrow/12.5kHz (offset 0x03)
-    tx_priority_analog: int = 0  # TX priority for analog (offset 0x11)
+    bandwidth: int = 0  # Bandwidth: 0=Wide/25kHz, 1=Narrow/12.5kHz (offset 0x04, bit 6)
+    ana_busy_lock: int = 0  # Analog busy channel lockout (byte 0x03, bits 3-4)
     tot_analog: int = 0  # Transmit timeout for analog (offset 0x12, lower 5 bits)
     ctdcs_select: int = 0  # CT/DCS select mode (offset 0x12, bits 5-7): 0=Normal, 1=Encrypt1, 2=Encrypt2, 3=Encrypt3, 4=Decode
     tail_tone: int = 0  # Tail tone elimination (offset 0x13, upper 4 bits)

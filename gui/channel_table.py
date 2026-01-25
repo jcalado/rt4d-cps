@@ -650,9 +650,9 @@ class ChannelTableWidget(QWidget):
                 break
         if not encrypt_found:
             self.detail_encrypt.setCurrentIndex(0)  # Default to "None"
-        # TX Priority - find index by value
+        # DMR Busy Lock - find index by value
         for i in range(self.detail_tx_priority.count()):
-            if self.detail_tx_priority.itemData(i) == channel.tx_priority:
+            if self.detail_tx_priority.itemData(i) == channel.dmr_busy_lock:
                 self.detail_tx_priority.setCurrentIndex(i)
                 break
         # TOT - find index by value
@@ -695,9 +695,9 @@ class ChannelTableWidget(QWidget):
             if self.detail_bandwidth.itemData(i) == channel.bandwidth:
                 self.detail_bandwidth.setCurrentIndex(i)
                 break
-        # TX Priority (analog)
+        # Analog Busy Lock
         for i in range(self.detail_tx_priority_analog.count()):
-            if self.detail_tx_priority_analog.itemData(i) == channel.tx_priority_analog:
+            if self.detail_tx_priority_analog.itemData(i) == channel.ana_busy_lock:
                 self.detail_tx_priority_analog.setCurrentIndex(i)
                 break
         # TOT (analog)
@@ -880,7 +880,7 @@ class ChannelTableWidget(QWidget):
         channel.contact_uuid = self.detail_contact.currentData() if self.detail_contact.currentData() is not None else ""
         channel.group_list_uuid = self.detail_group_list.currentData() if self.detail_group_list.currentData() is not None else ""
         channel.encrypt_uuid = self.detail_encrypt.currentData() if self.detail_encrypt.currentData() is not None else ""
-        channel.tx_priority = self.detail_tx_priority.currentData()
+        channel.dmr_busy_lock = self.detail_tx_priority.currentData()
         channel.tot = self.detail_tot.currentData()
         channel.alarm = self.detail_alarm.currentData()
         channel.dmr_id = self.detail_dmr_id.value()
@@ -893,7 +893,7 @@ class ChannelTableWidget(QWidget):
         channel.tx_ctcss = None if tx_ctcss_text == "None" else tx_ctcss_text
         channel.scramble = self.detail_scramble.currentData()
         channel.bandwidth = self.detail_bandwidth.currentData()
-        channel.tx_priority_analog = self.detail_tx_priority_analog.currentData()
+        channel.ana_busy_lock = self.detail_tx_priority_analog.currentData()
         channel.tot_analog = self.detail_tot_analog.currentData()
         channel.ctdcs_select = self.detail_ctdcs_select.currentData()
         channel.tail_tone = self.detail_tail_tone.currentData()
@@ -1616,7 +1616,7 @@ class ChannelTableWidget(QWidget):
                         channel.dmr_color_code = int(colour_code_str) if colour_code_str else 1
 
                         dmr_politely_tx = row.get('DMR Politely TX', 'No Restriction')
-                        channel.tx_priority = self._find_dropdown_value(TX_PRIORITY_VALUES, dmr_politely_tx)
+                        channel.dmr_busy_lock = self._find_dropdown_value(TX_PRIORITY_VALUES, dmr_politely_tx)
 
                         dmr_tot = row.get('DMR TOT', 'Off')
                         channel.tot = self._parse_tot_value(dmr_tot)
@@ -1639,7 +1639,7 @@ class ChannelTableWidget(QWidget):
                         channel.bandwidth = 1 if bandwidth_str == '12.5' else 0
 
                         busy_lock = row.get('Busy Lock', 'No Restriction')
-                        channel.tx_priority_analog = self._find_dropdown_value(TX_PRIORITY_VALUES, busy_lock)
+                        channel.ana_busy_lock = self._find_dropdown_value(TX_PRIORITY_VALUES, busy_lock)
 
                         ana_tot = row.get('ANA TOT', 'Off')
                         channel.tot_analog = self._parse_tot_value(ana_tot)
@@ -1709,7 +1709,7 @@ class ChannelTableWidget(QWidget):
                     dmr_mode = self._get_dropdown_label(DMR_MODE_VALUES, ch.dmr_mode)
                     timeslot = ch.dmr_time_slot + 1
                     colour_code = ch.dmr_color_code
-                    dmr_politely_tx = self._get_dropdown_label(TX_PRIORITY_VALUES, ch.tx_priority)
+                    dmr_politely_tx = self._get_dropdown_label(TX_PRIORITY_VALUES, ch.dmr_busy_lock)
                     dmr_tot = self._get_tot_label(ch.tot)
                     promiscuos_mode = self._get_dropdown_label(DMR_MONITOR_VALUES, ch.dmr_monitor)
                     channel_id = ch.dmr_id
@@ -1740,7 +1740,7 @@ class ChannelTableWidget(QWidget):
                     rx_tone = ch.rx_ctcss or ''
                     tx_tone = ch.tx_ctcss or ''
                     bandwidth = '12.5' if ch.bandwidth == 1 else '25'
-                    busy_lock = self._get_dropdown_label(TX_PRIORITY_VALUES, ch.tx_priority_analog)
+                    busy_lock = self._get_dropdown_label(TX_PRIORITY_VALUES, ch.ana_busy_lock)
                     ana_tot = self._get_tot_label(ch.tot_analog)
                     tail_tone = self._get_dropdown_label(TAIL_TONE_VALUES, ch.tail_tone)
                     scrambler = self._get_dropdown_label(SCRAMBLER_VALUES, ch.scramble)
