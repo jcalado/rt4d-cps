@@ -289,7 +289,7 @@ class RadioSettings:
     rssi_refresh: int = 0  # RSSI refresh rate (offset 0x0A8-0x0A9/168-169, u16 LE)
     slaver_ptt: int = 0  # Side 1 as secondary PTT (offset 0x0E8/232)
     lcd_contrast: int = 7  # LCD contrast 0-15 (offset 0x0E9/233)
-    display_lines: int = 0  # 6-line or 8-line display mode (offset 0x0EA/234)
+    display_lines: int = 0  # 6 digits or 8 digits frequency display mode (offset 0x0EA/234)
     dual_display_mode: int = 0  # Dual display mode (offset 0x0EB/235)
 
     # DMR Enhancements (offsets 0x184-0x19A)

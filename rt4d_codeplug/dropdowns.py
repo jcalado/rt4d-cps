@@ -329,8 +329,8 @@ LCD_CONTRAST_VALUES = [
 
 # Display lines mode
 DISPLAY_LINES_VALUES = [
-    ("6-line", 0),
-    ("8-line", 1),
+    ("6 digits", 0),
+    ("8 digits", 1),
 ]
 
 # Dual display mode
