@@ -307,7 +307,7 @@ class SettingsDialog(QDialog):
         self.combo_display_lines = QComboBox()
         for label, value in DISPLAY_LINES_VALUES:
             self.combo_display_lines.addItem(label, value)
-        display_settings_layout.addRow("Display Lines:", self.combo_display_lines)
+        display_settings_layout.addRow("Frequency digits:", self.combo_display_lines)
 
         self.combo_dual_display_mode = QComboBox()
         for label, value in DUAL_DISPLAY_VALUES:
