@@ -25,7 +25,7 @@ from rt4d_codeplug.dropdowns import (
     SQUELCH_LEVEL_VALUES, BEEP_VALUES,
     LCD_CONTRAST_VALUES, DISPLAY_LINES_VALUES, DUAL_DISPLAY_VALUES,
     REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
-    NOAA_CHANNEL_VALUES
+    NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES
 )
 # Custom firmware settings
 from rt4d_codeplug.dropdowns import (
@@ -357,9 +357,10 @@ class SettingsDialog(QDialog):
         self.spin_detection_range.setRange(0, 65535)
         advanced_layout.addRow("Detection Range:", self.spin_detection_range)
 
-        self.spin_relay_delay = QSpinBox()
-        self.spin_relay_delay.setRange(0, 255)
-        advanced_layout.addRow("Relay Delay:", self.spin_relay_delay)
+        self.combo_relay_delay = QComboBox()
+        for label, value in REPEATER_DELAY_VALUES:
+            self.combo_relay_delay.addItem(label, value)
+        advanced_layout.addRow("Repeater Delay:", self.combo_relay_delay)
 
         self.spin_glitch_filter = QSpinBox()
         self.spin_glitch_filter.setRange(0, 255)
@@ -593,11 +594,7 @@ class SettingsDialog(QDialog):
         self.spin_call_mic_gain.setValue(self.settings.call_mic_gain)
         self.spin_call_speaker_volume.setValue(self.settings.call_speaker_volume)
         self.spin_detection_range.setValue(self.settings.detection_range)
-        relay_delay = max(
-            self.spin_relay_delay.minimum(),
-            min(self.spin_relay_delay.maximum(), self.settings.relay_delay),
-        )
-        self.spin_relay_delay.setValue(relay_delay)
+        self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
     def save_settings(self) -> RadioSettings:
@@ -676,7 +673,7 @@ class SettingsDialog(QDialog):
         self.settings.call_mic_gain = self.spin_call_mic_gain.value()
         self.settings.call_speaker_volume = self.spin_call_speaker_volume.value()
         self.settings.detection_range = self.spin_detection_range.value()
-        self.settings.relay_delay = self.spin_relay_delay.value()
+        self.settings.relay_delay = self.combo_relay_delay.currentData()
         self.settings.glitch_filter = self.spin_glitch_filter.value()
 
         # Radio clock - convert hour/minute/second to total seconds

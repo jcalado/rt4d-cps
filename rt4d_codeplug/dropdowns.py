@@ -360,6 +360,31 @@ HANG_TIME_VALUES = [
     ("5000 ms", 5000),
 ]
 
+# Repeater Delay (Offset 0x111)
+REPEATER_DELAY_VALUES = [
+    ("0 ms", 0),
+    ("100 ms", 1),
+    ("200 ms", 2),
+    ("300 ms", 3),
+    ("400 ms", 4),
+    ("500 ms", 5),
+    ("600 ms", 6),
+    ("700 ms", 7),
+    ("800 ms", 8),
+    ("900 ms", 9),
+    ("1000 ms", 10),
+    ("1100 ms", 11),
+    ("1200 ms", 12),
+    ("1300 ms", 13),
+    ("1400 ms", 14),
+    ("1500 ms", 15),
+    ("1600 ms", 16),
+    ("1700 ms", 17),
+    ("1800 ms", 18),
+    ("1900 ms", 19),
+    ("2000 ms", 20),
+]
+
 # Group ID / Call timing display
 DISPLAY_ENABLE_VALUES = [
     ("Off", 0),
