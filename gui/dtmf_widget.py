@@ -120,7 +120,7 @@ class DTMFWidget(QWidget):
         codes_layout = QVBoxLayout()
 
         # Info label
-        info_label = QLabel("Valid characters: 0-9, A-D, *, # (max 16 characters per code)")
+        info_label = QLabel("Valid characters: 0-9, A-D, *, # (max 14 characters per code)")
         info_label.setStyleSheet("color: gray; font-size: 10px;")
         codes_layout.addWidget(info_label)
 
@@ -271,9 +271,9 @@ class DTMFWidget(QWidget):
             self._updating = False
             return
 
-        # Check length
-        if len(code) > 16:
-            code = code[:16]
+        # Check length (max 14 characters per DTMF struct)
+        if len(code) > 14:
+            code = code[:14]
             self._updating = True
             item.setText(code)
             self._updating = False

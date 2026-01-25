@@ -707,12 +707,19 @@ class CodeplugParser:
         settings.dtmf_remote_control = cfg_data[520]
         settings.dtmf_remote_cal_time = cfg_data[521]
         # Parse 20 DTMF codes (each 16 bytes starting at offset 522)
+        # Structure: String[14] + unused byte + Length byte
         settings.dtmf_codes = []
         for i in range(20):
             offset = 522 + (i * 16)
-            code_bytes = cfg_data[offset:offset+16]
-            # DTMF codes are ASCII (0-9, A-D, *, #) with 0xFF padding
-            code = bytes(b for b in code_bytes if b != 0xFF).decode('ascii')
+            length = cfg_data[offset + 15]  # Length field at byte 15
+            if length == 0 or length == 0xFF:
+                # Empty DTMF code
+                code = ""
+            else:
+                # Read only 'length' bytes from String field (max 14)
+                actual_len = min(length, 14)
+                code_bytes = cfg_data[offset:offset + actual_len]
+                code = bytes(b for b in code_bytes if b != 0xFF and b != 0x00).decode('ascii', errors='ignore')
             settings.dtmf_codes.append(code)
 
         # DT Custom Firmware Settings (offset 0x380 = 896)

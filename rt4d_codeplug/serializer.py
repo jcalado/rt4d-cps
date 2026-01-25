@@ -637,10 +637,20 @@ class CodeplugSerializer:
         data[520] = settings.dtmf_remote_control & 0xFF
         data[521] = settings.dtmf_remote_cal_time & 0xFF
         # Serialize 20 DTMF codes (each 16 bytes starting at offset 522)
+        # Structure: String[14] + unused byte + Length byte
         for i in range(20):
             offset = 522 + (i * 16)
             code = settings.dtmf_codes[i] if i < len(settings.dtmf_codes) else ""
-            data[offset:offset+16] = encode_gbk(code, 16)
+            code = code[:14]  # Truncate to max 14 characters
+            # Fill String field with 0xFF padding
+            data[offset:offset + 14] = b'\xFF' * 14
+            # Write the actual code (ASCII)
+            code_bytes = code.encode('ascii', errors='ignore')
+            data[offset:offset + len(code_bytes)] = code_bytes
+            # Unused byte at offset 14
+            data[offset + 14] = 0xFF
+            # Length field at offset 15
+            data[offset + 15] = len(code_bytes)
 
         # DT Custom Firmware Settings (offset 0x380 = 896)
         data[0x380] = settings.scan_speed_analog & 0xFF
