@@ -84,3 +84,23 @@ SETTINGS_BANK0_ADDR = 0x002000  # Bank 0 settings location
 SETTINGS_BANK1_ADDR = 0x003000  # Bank 1 settings location (beta41+)
 BANK0_MAGIC_OFFSET = 0x002FFC   # DTCN magic location for bank 0 (0x2000 + 0xFFC)
 BANK1_MAGIC_OFFSET = 0x003FFC   # DTCN magic location for bank 1 (0x3000 + 0xFFC)
+
+# Message SPI Flash Memory Map
+# All messages stored sequentially starting at 0x94000 (KB offset 592)
+MESSAGE_REGIONS = {
+    "presets": {"address": 0x094000, "size": 0x1000, "count": 16},      # 4KB, 16 entries
+    "drafts": {"address": 0x095000, "size": 0x10000, "count": 256},     # 64KB, 256 entries
+    "inbox": {"address": 0x0A5000, "size": 0x10000, "count": 256},      # 64KB, 256 entries
+    "outbox": {"address": 0x0B5000, "size": 0x10000, "count": 256},     # 64KB, 256 entries
+}
+
+# Message structure constants
+MESSAGE_ENTRY_SIZE = 256
+MESSAGE_TEXT_OFFSET = 56
+MESSAGE_TEXT_MAX_LENGTH = 200
+
+# Message count limits
+MAX_PRESET_MESSAGES = 16
+MAX_DRAFT_MESSAGES = 256
+MAX_INBOX_MESSAGES = 256
+MAX_OUTBOX_MESSAGES = 256

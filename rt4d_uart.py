@@ -371,3 +371,126 @@ class RT4DUART:
 
         print("\nAddress book write complete!")
         return True
+
+    def read_messages(self, region_name: str, progress_callback=None) -> Optional[bytes]:
+        """Read messages from a specific SPI region.
+
+        Args:
+            region_name: One of 'presets', 'drafts', 'inbox', 'outbox'
+            progress_callback: Optional callback(current_kb, total_kb) for progress
+
+        Returns:
+            Raw bytes from the message region, or None on error
+        """
+        from rt4d_codeplug.constants import MESSAGE_REGIONS
+
+        if region_name not in MESSAGE_REGIONS:
+            print(f"Unknown message region: {region_name}")
+            return None
+
+        region_info = MESSAGE_REGIONS[region_name]
+        address = region_info["address"]
+        size = region_info["size"]
+
+        print(f"Reading {region_name} messages from 0x{address:06X}...")
+
+        # Read using existing read_spi_region
+        kb_offset = address // 1024
+        num_blocks = (size + 1023) // 1024
+
+        data = bytearray()
+        for i in range(num_blocks):
+            if progress_callback:
+                progress_callback(i, num_blocks)
+
+            block_data = self.command_read_spi(kb_offset + i)
+            if block_data is None:
+                print(f"\nFailed to read message block at 0x{(kb_offset + i) * 1024:06X}")
+                return None
+            data.extend(block_data)
+
+        # Final progress
+        if progress_callback:
+            progress_callback(num_blocks, num_blocks)
+
+        return bytes(data[:size])
+
+    def write_messages(self, region_name: str, data: bytes, progress_callback=None) -> bool:
+        """Write messages to a specific SPI region.
+
+        Note: Message regions may require different write commands than codeplug regions.
+        Currently uses standard SPI write which may not work for all message regions.
+
+        Args:
+            region_name: One of 'presets', 'drafts', 'inbox', 'outbox'
+            data: Raw bytes to write
+            progress_callback: Optional callback(current_kb, total_kb) for progress
+
+        Returns:
+            True if successful, False otherwise
+        """
+        from rt4d_codeplug.constants import MESSAGE_REGIONS
+
+        if region_name not in MESSAGE_REGIONS:
+            print(f"Unknown message region: {region_name}")
+            return False
+
+        region_info = MESSAGE_REGIONS[region_name]
+        address = region_info["address"]
+        size = region_info["size"]
+
+        if len(data) > size:
+            print(f"Data too large for region {region_name}: {len(data)} > {size}")
+            return False
+
+        print(f"Writing {len(data)} bytes to {region_name} at 0x{address:06X}...")
+
+        # Pad data to full region size
+        padded_data = bytearray(data)
+        if len(padded_data) < size:
+            padded_data.extend([0xFF] * (size - len(padded_data)))
+
+        # Write using direct address-based SPI write
+        # Note: This uses the default_sms region ID (0x97) as a starting point
+        # The actual region IDs for message areas may need verification
+        num_blocks = (size + 1023) // 1024
+
+        for i in range(num_blocks):
+            if progress_callback:
+                progress_callback(i, num_blocks)
+
+            # Build write command packet
+            packet = bytearray(1028)
+            packet[0] = 0x97  # Use default_sms region ID (may need adjustment)
+            packet[1] = (i >> 8) & 0xFF
+            packet[2] = i & 0xFF
+
+            # Copy 1KB of data
+            start = i * 1024
+            chunk = padded_data[start:start + 1024]
+            packet[3:3 + len(chunk)] = chunk
+
+            # Calculate checksum
+            packet[1027] = self._checksum(packet)
+
+            try:
+                self.port.write(packet)
+                self.port.flush()
+
+                response = self.port.read(1)
+                if len(response) == 0:
+                    print(f"\nTimeout waiting for write ACK at block {i}")
+                    return False
+                if response[0] != 0x06:
+                    print(f"\nUnexpected write response: 0x{response[0]:02X} at block {i}")
+                    return False
+
+            except Exception as e:
+                print(f"\nError writing message block {i}: {e}")
+                return False
+
+        if progress_callback:
+            progress_callback(num_blocks, num_blocks)
+
+        print(f"\n{region_name} write complete!")
+        return True

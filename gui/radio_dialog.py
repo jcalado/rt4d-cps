@@ -146,6 +146,8 @@ class RadioWorker(QThread):
                 region_data = data[0x23000:0x43000]
             elif region_name == "main_settings":
                 region_data = data[0x0:0x1000]
+            elif region_name == "fm_settings":
+                region_data = data[0x43000:0x43400]  # FM data (1024 bytes)
             else:
                 continue
 
@@ -231,6 +233,10 @@ class RadioBackupDialog(QDialog):
         self.check_zones.setChecked(True)
         region_layout.addWidget(self.check_zones)
 
+        self.check_fm = QCheckBox("FM Radio Presets")
+        self.check_fm.setChecked(True)
+        region_layout.addWidget(self.check_fm)
+
         region_group.setLayout(region_layout)
         layout.addWidget(region_group)
 
@@ -296,6 +302,7 @@ class RadioBackupDialog(QDialog):
         self.check_groups.setEnabled(not checked)
         self.check_encryption.setEnabled(not checked)
         self.check_zones.setEnabled(not checked)
+        self.check_fm.setEnabled(not checked)
 
     def start_backup(self):
         """Start backup operation"""
@@ -325,6 +332,8 @@ class RadioBackupDialog(QDialog):
                 regions.append("dmr_keys")
             if self.check_zones.isChecked():
                 regions.append("zones")
+            if self.check_fm.isChecked():
+                regions.append("fm_settings")
 
         # Start worker thread
         self.worker = RadioWorker("backup", port, str(self.backup_file), regions)
@@ -458,6 +467,10 @@ class RadioFlashDialog(QDialog):
         self.check_zones.setChecked(True)
         region_layout.addWidget(self.check_zones)
 
+        self.check_fm = QCheckBox("FM Radio Presets")
+        self.check_fm.setChecked(True)
+        region_layout.addWidget(self.check_fm)
+
         region_group.setLayout(region_layout)
         layout.addWidget(region_group)
 
@@ -534,6 +547,8 @@ class RadioFlashDialog(QDialog):
             regions.append("dmr_keys")
         if self.check_zones.isChecked():
             regions.append("zones")
+        if self.check_fm.isChecked():
+            regions.append("fm_settings")
 
         # Start worker thread
         self.worker = RadioWorker("flash", port, None, regions, self.codeplug)

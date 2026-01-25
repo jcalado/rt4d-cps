@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List
 from enum import Enum
 from uuid import uuid4
+from datetime import datetime
 
 
 class ChannelMode(Enum):
@@ -600,3 +601,103 @@ class Codeplug:
         """Get channels sorted by position for display"""
         return sorted([ch for ch in self.channels if not ch.is_empty()],
                       key=lambda ch: ch.position)
+
+
+@dataclass
+class FMPreset:
+    """FM Radio preset zone containing 16 frequencies"""
+    index: int = 0
+    name: str = ""
+    frequencies: List[float] = field(default_factory=lambda: [0.0] * 16)
+
+    def __post_init__(self):
+        """Validate FM preset data"""
+        if len(self.name) > 16:
+            self.name = self.name[:16]
+        # Ensure we have exactly 16 frequencies
+        while len(self.frequencies) < 16:
+            self.frequencies.append(0.0)
+        self.frequencies = self.frequencies[:16]
+
+    def is_empty(self) -> bool:
+        """Check if preset is empty/unused"""
+        return not self.name or all(f == 0.0 for f in self.frequencies)
+
+
+@dataclass
+class FMSettings:
+    """FM Radio settings and presets"""
+    mode: int = 0  # 0=Channel Mode, 1=Frequency Mode
+    standby: int = 0  # Standby setting
+    selected_area: int = 0  # Selected preset index (0-15)
+    selected_channel: int = 0  # Selected channel/frequency index within preset (0-15)
+    scan_mode: int = 0  # 0=Carrier Stop, 1=Scan All
+    presets: List[FMPreset] = field(default_factory=list)
+
+    def __post_init__(self):
+        """Ensure we have 16 presets"""
+        while len(self.presets) < 16:
+            self.presets.append(FMPreset(index=len(self.presets)))
+        self.presets = self.presets[:16]
+
+
+class MessageType(Enum):
+    """Message type identifier"""
+    PRESET = 0x00
+    DRAFT = 0x01
+    INBOX = 0x02
+    OUTBOX = 0x03
+
+
+class CallType(Enum):
+    """DMR call type for messages"""
+    PRIVATE = 0x00
+    GROUP = 0x01
+    ALL_CALL = 0x02
+
+
+@dataclass
+class Message:
+    """DMR SMS message entry"""
+    uuid: str = field(default_factory=lambda: str(uuid4()))
+    index: int = 0
+    message_type: MessageType = MessageType.PRESET
+    call_type: CallType = CallType.PRIVATE
+    contact_id: int = 0
+    timestamp: Optional[datetime] = None
+    text: str = ""
+
+    def __post_init__(self):
+        """Validate message data"""
+        # Limit text to 200 characters (max GBK-encoded length)
+        if len(self.text) > 200:
+            self.text = self.text[:200]
+
+    def is_empty(self) -> bool:
+        """Check if message is empty/unused"""
+        return not self.text.strip()
+
+
+@dataclass
+class MessageStore:
+    """Container for all message types stored on radio"""
+    presets: List[Message] = field(default_factory=list)
+    drafts: List[Message] = field(default_factory=list)
+    inbox: List[Message] = field(default_factory=list)
+    outbox: List[Message] = field(default_factory=list)
+
+    def get_active_presets(self) -> List[Message]:
+        """Get all non-empty preset messages"""
+        return [m for m in self.presets if not m.is_empty()]
+
+    def get_active_drafts(self) -> List[Message]:
+        """Get all non-empty draft messages"""
+        return [m for m in self.drafts if not m.is_empty()]
+
+    def get_active_inbox(self) -> List[Message]:
+        """Get all non-empty inbox messages"""
+        return [m for m in self.inbox if not m.is_empty()]
+
+    def get_active_outbox(self) -> List[Message]:
+        """Get all non-empty outbox messages"""
+        return [m for m in self.outbox if not m.is_empty()]

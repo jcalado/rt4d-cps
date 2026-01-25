@@ -2,3 +2,6 @@
 *.csv
 *.4rdmf
 __pycache__/
+build/
+dist/
+venv/

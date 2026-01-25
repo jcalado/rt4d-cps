@@ -19,6 +19,8 @@ from .encryption_widget import EncryptionWidget
 from .dtmf_widget import DTMFWidget
 from .settings_dialog import SettingsWidget
 from .addressbook_widget import AddressBookWidget
+from .message_widget import MessageWidget
+from .fm_widget import FMWidget
 from .options_dialog import OptionsDialog
 
 
@@ -87,6 +89,15 @@ class MainWindow(QMainWindow):
         self.addressbook_widget = AddressBookWidget()
         self.addressbook_widget.modified.connect(self.on_data_modified)
         self.tabs.addTab(self.addressbook_widget, "Address Book")
+
+        # Messages tab
+        self.message_widget = MessageWidget()
+        self.tabs.addTab(self.message_widget, "Messages")
+
+        # FM Radio tab
+        self.fm_widget = FMWidget()
+        self.fm_widget.data_modified.connect(self.on_data_modified)
+        self.tabs.addTab(self.fm_widget, "FM Radio")
 
         # Settings tab
         self.settings_widget = SettingsWidget()
@@ -243,6 +254,7 @@ class MainWindow(QMainWindow):
             self.encryption_widget.load_codeplug(self.codeplug)
             self.dtmf_widget.load_settings(self.codeplug.settings)
             self.settings_widget.load_settings(self.codeplug.settings)
+            self.fm_widget.load_fm_data(self.codeplug.fm_data)
 
             self.update_title()
             self.enable_actions(True)
@@ -288,6 +300,9 @@ class MainWindow(QMainWindow):
 
         # Get updated data from UI
         self.channel_widget.save_to_codeplug(self.codeplug)
+
+        # Update FM data from widget
+        self.codeplug.fm_data = self.fm_widget.get_fm_data()
 
         # Serialize and write
         data = CodeplugSerializer.serialize(self.codeplug)
@@ -359,6 +374,7 @@ class MainWindow(QMainWindow):
                     self.encryption_widget.load_codeplug(self.codeplug)
                     self.dtmf_widget.load_settings(self.codeplug.settings)
                     self.settings_widget.load_settings(self.codeplug.settings)
+                    self.fm_widget.load_fm_data(self.codeplug.fm_data)
                     self.update_title()
                     self.enable_actions(True)
                     self.status_bar.showMessage(f"Loaded backup from radio")
@@ -371,6 +387,9 @@ class MainWindow(QMainWindow):
 
         # Save current UI state to codeplug
         self.channel_widget.save_to_codeplug(self.codeplug)
+
+        # Update FM data from widget
+        self.codeplug.fm_data = self.fm_widget.get_fm_data()
 
         from .radio_dialog import RadioFlashDialog
         dialog = RadioFlashDialog(self, self.codeplug)
