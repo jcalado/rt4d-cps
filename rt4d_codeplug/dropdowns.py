@@ -411,7 +411,7 @@ FUNCTION_KEY_VALUES = [
     ("Analog Spectrum", 23),
     ("Squelch Level", 24),
     ("Freq Step", 25),
-    ("Analog/DMR Switch (VFO)", 26),
+    ("Analog/DMR Switch", 26),
     ("NOAA Weather CH", 27),
     ("Save Channel", 28),
     ("New SMS", 29),
