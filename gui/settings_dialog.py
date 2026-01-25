@@ -353,10 +353,6 @@ class SettingsDialog(QDialog):
             self.combo_noaa_channel.addItem(label, value)
         advanced_layout.addRow("NOAA Weather Channel:", self.combo_noaa_channel)
 
-        self.spin_spectrum_scan_mode = QSpinBox()
-        self.spin_spectrum_scan_mode.setRange(0, 255)
-        advanced_layout.addRow("Spectrum Scan Mode:", self.spin_spectrum_scan_mode)
-
         self.spin_detection_range = QSpinBox()
         self.spin_detection_range.setRange(0, 65535)
         advanced_layout.addRow("Detection Range:", self.spin_detection_range)
@@ -596,7 +592,6 @@ class SettingsDialog(QDialog):
         self.spin_tone_frequency.setValue(self.settings.tone_frequency)
         self.spin_call_mic_gain.setValue(self.settings.call_mic_gain)
         self.spin_call_speaker_volume.setValue(self.settings.call_speaker_volume)
-        self.spin_spectrum_scan_mode.setValue(self.settings.spectrum_scan_mode)
         self.spin_detection_range.setValue(self.settings.detection_range)
         relay_delay = max(
             self.spin_relay_delay.minimum(),
@@ -680,7 +675,6 @@ class SettingsDialog(QDialog):
         self.settings.tone_frequency = self.spin_tone_frequency.value()
         self.settings.call_mic_gain = self.spin_call_mic_gain.value()
         self.settings.call_speaker_volume = self.spin_call_speaker_volume.value()
-        self.settings.spectrum_scan_mode = self.spin_spectrum_scan_mode.value()
         self.settings.detection_range = self.spin_detection_range.value()
         self.settings.relay_delay = self.spin_relay_delay.value()
         self.settings.glitch_filter = self.spin_glitch_filter.value()
