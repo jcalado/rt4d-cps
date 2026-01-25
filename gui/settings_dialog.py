@@ -336,11 +336,6 @@ class SettingsDialog(QDialog):
             self.combo_private_call_hang_time.addItem(label, value)
         dmr_layout.addRow("Private Call Hang Time:", self.combo_private_call_hang_time)
 
-        self.combo_group_id_display = QComboBox()
-        for label, value in DISPLAY_ENABLE_VALUES:
-            self.combo_group_id_display.addItem(label, value)
-        dmr_layout.addRow("Show Group ID:", self.combo_group_id_display)
-
         self.combo_call_group_display = QComboBox()
         for label, value in DISPLAY_ENABLE_VALUES:
             self.combo_call_group_display.addItem(label, value)
@@ -573,7 +568,6 @@ class SettingsDialog(QDialog):
             (self.combo_remote_control, self.settings.remote_control),
             (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
             (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
-            (self.combo_group_id_display, self.settings.group_id_display),
             (self.combo_call_group_display, self.settings.call_group_display),
             # Advanced features
             (self.combo_noaa_channel, self.settings.noaa_channel),
@@ -646,7 +640,6 @@ class SettingsDialog(QDialog):
             ('remote_control', self.combo_remote_control),
             ('group_call_hang_time', self.combo_group_call_hang_time),
             ('private_call_hang_time', self.combo_private_call_hang_time),
-            ('group_id_display', self.combo_group_id_display),
             ('call_group_display', self.combo_call_group_display),
             # Advanced features
             ('noaa_channel', self.combo_noaa_channel),
