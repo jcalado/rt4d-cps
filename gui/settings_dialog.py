@@ -489,7 +489,7 @@ class SettingsDialog(QDialog):
 
     def _get_function_key_label(self, label, value):
         """Return beta41-aware label for function key."""
-        if value == 21 and self.settings and self.settings.beta41:
+        if label == "Color Code Detect" and self.settings and self.settings.beta41:
             return "Talker Alias"
         return label
 
