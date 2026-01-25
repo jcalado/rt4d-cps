@@ -367,6 +367,23 @@ HANG_TIME_VALUES = [
     ("5000 ms", 5000),
 ]
 
+# Detection Range in Frequency Monitor/Detect (offset 0x110)
+DETECT_RANGE_VALUES = [
+    ("18-64 MHz", 0),
+    ("64-136 MHz", 1),
+    ("136-174 MHz", 2),
+    ("174-240 MHz", 3),
+    ("240-320 MHz", 4),
+    ("320-400 MHz", 5),
+    ("400-480 MHz", 6),
+    ("480-560 MHz", 7),
+    ("560-620 MHz", 8),
+    ("840-920 MHz", 9),
+    ("920-1000 MHz", 10),
+    ("< 240 MHz", 11),
+    ("> 240 MHz", 12),
+]
+
 # Repeater Delay (Offset 0x111)
 REPEATER_DELAY_VALUES = [
     ("0 ms", 0),

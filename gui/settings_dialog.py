@@ -25,7 +25,7 @@ from rt4d_codeplug.dropdowns import (
     SQUELCH_LEVEL_VALUES, BEEP_VALUES,
     LCD_CONTRAST_VALUES, DISPLAY_LINES_VALUES, DUAL_DISPLAY_VALUES,
     REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
-    NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES
+    NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES, DETECT_RANGE_VALUES
 )
 # Custom firmware settings
 from rt4d_codeplug.dropdowns import (
@@ -353,9 +353,10 @@ class SettingsDialog(QDialog):
             self.combo_noaa_channel.addItem(label, value)
         advanced_layout.addRow("NOAA Weather Channel:", self.combo_noaa_channel)
 
-        self.spin_detection_range = QSpinBox()
-        self.spin_detection_range.setRange(0, 65535)
-        advanced_layout.addRow("Detection Range:", self.spin_detection_range)
+        self.combo_detection_range = QComboBox()
+        for label, value in DETECT_RANGE_VALUES:
+            self.combo_detection_range.addItem(label, value)
+        advanced_layout.addRow("Detection Range:", self.combo_detection_range)
 
         self.combo_relay_delay = QComboBox()
         for label, value in REPEATER_DELAY_VALUES:
@@ -593,7 +594,7 @@ class SettingsDialog(QDialog):
         self.spin_tone_frequency.setValue(self.settings.tone_frequency)
         self.spin_call_mic_gain.setValue(self.settings.call_mic_gain)
         self.spin_call_speaker_volume.setValue(self.settings.call_speaker_volume)
-        self.spin_detection_range.setValue(self.settings.detection_range)
+        self._set_combo_value(self.combo_detection_range, self.settings.detection_range)
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
@@ -672,7 +673,7 @@ class SettingsDialog(QDialog):
         self.settings.tone_frequency = self.spin_tone_frequency.value()
         self.settings.call_mic_gain = self.spin_call_mic_gain.value()
         self.settings.call_speaker_volume = self.spin_call_speaker_volume.value()
-        self.settings.detection_range = self.spin_detection_range.value()
+        self.settings.detection_range = self.combo_detection_range.currentData()
         self.settings.relay_delay = self.combo_relay_delay.currentData()
         self.settings.glitch_filter = self.spin_glitch_filter.value()
 
