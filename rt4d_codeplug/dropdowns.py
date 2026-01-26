@@ -26,6 +26,13 @@ SCAN_VALUES = [
     ("Remove", 1),
 ]
 
+# RX/TX Permission - offset 0x00 bits [5:4]
+RX_TX_VALUES = [
+    ("RX+TX", 0),
+    ("RX Only", 1),
+    ("TX Only", 2),
+]
+
 # Alarm system
 ALARM_VALUES = [
     ("Disabled", 0),
@@ -44,7 +51,7 @@ DMR_MODE_VALUES = [
     ("On", 1),
 ]
 
-# Analog modulation - offset 0x00
+# Analog modulation - offset 0x04 bits [5:4]
 ANALOG_MODULATION_VALUES = [
     ("FM", 0),
     ("AM", 1),

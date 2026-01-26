@@ -170,25 +170,29 @@ class CodeplugSerializer:
 
         # Analog specific
         else:
-            # Analog modulation: FM/AM/SSB (offset 0x00)
-            data[0x00] = channel.analog_modulation.value
+            # Byte 0x04 layout:
+            # bit 0: reserved
+            # bits 1-3: DcsEncrypt (ctdcs_select)
+            # bits 4-5: Modulation (FM/AM/SSB)
+            # bit 6: bIsNarrow (bandwidth)
+            modulation = channel.analog_modulation.value if channel.analog_modulation else AnalogModulation.FM.value
+            data[0x04] = ((channel.ctdcs_select & 0x07) << 1)
+            data[0x04] |= (modulation & 0x03) << 4
+            data[0x04] |= (channel.bandwidth & 0x01) << 6
 
-            # Bandwidth (offset 0x03)
-            data[0x03] = channel.bandwidth
-
-            # RX CTCSS/DCS (offset 0x04-0x05)
+            # RX CTCSS/DCS (offset 0x05-0x06)
             rx_tone_bytes = encode_subaudio_bytes(channel.rx_ctcss)
-            data[0x04:0x06] = rx_tone_bytes
+            data[0x05:0x07] = rx_tone_bytes
 
-            # TX CTCSS/DCS (offset 0x0E-0x0F)
+            # TX CTCSS/DCS (offset 0x0F-0x10)
             tx_tone_bytes = encode_subaudio_bytes(channel.tx_ctcss)
-            data[0x0E:0x10] = tx_tone_bytes
+            data[0x0F:0x11] = tx_tone_bytes
 
             # Analog busy lock (offset 0x11)
             data[0x11] = channel.ana_busy_lock
 
-            # TOT and CT/DCS Select (offset 0x12)
-            data[0x12] = (channel.tot_analog & 0x1F) | ((channel.ctdcs_select & 0x07) << 5)
+            # TOT (offset 0x12)
+            data[0x12] = channel.tot_analog & 0x1F
 
             # Tail tone and Scrambler (offset 0x13)
             data[0x13] = ((channel.tail_tone & 0x0F) << 4) | (channel.scramble & 0x0F)

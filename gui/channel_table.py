@@ -23,7 +23,7 @@ from rt4d_codeplug import Codeplug, Channel, ChannelMode, PowerLevel, ScanMode
 from rt4d_codeplug.dropdowns import (
     TOT_VALUES, TX_PRIORITY_VALUES, ALARM_VALUES, SCRAMBLER_VALUES,
     CTCSS_DCS_VALUES, BANDWIDTH_VALUES, CTDCS_SELECT_VALUES, TAIL_TONE_VALUES,
-    DMR_MONITOR_VALUES, DMR_MODE_VALUES
+    DMR_MONITOR_VALUES, DMR_MODE_VALUES, ANALOG_MODULATION_VALUES, RX_TX_VALUES
 )
 from .options_dialog import OptionsDialog
 
@@ -342,6 +342,12 @@ class ChannelTableWidget(QWidget):
         self.detail_scan.currentIndexChanged.connect(self.on_detail_changed)
         basic_layout.addRow("Scan:", self.detail_scan)
 
+        self.detail_rx_tx = QComboBox()
+        for label, value in RX_TX_VALUES:
+            self.detail_rx_tx.addItem(label, value)
+        self.detail_rx_tx.currentIndexChanged.connect(self.on_detail_changed)
+        basic_layout.addRow("RX/TX Permission:", self.detail_rx_tx)
+
         basic_group.setLayout(basic_layout)
         layout.addWidget(basic_group)
 
@@ -460,11 +466,17 @@ class ChannelTableWidget(QWidget):
         self.detail_scramble.currentIndexChanged.connect(self.on_detail_changed)
         analog_layout.addRow("Scrambler:", self.detail_scramble)
 
+        self.detail_modulation = QComboBox()
+        for label, value in ANALOG_MODULATION_VALUES:
+            self.detail_modulation.addItem(label, value)
+        self.detail_modulation.currentIndexChanged.connect(self.on_detail_changed)
+        analog_layout.addRow("Modulation:", self.detail_modulation)
+
         self.detail_bandwidth = QComboBox()
         for label, value in BANDWIDTH_VALUES:
             self.detail_bandwidth.addItem(label, value)
         self.detail_bandwidth.currentIndexChanged.connect(self.on_detail_changed)
-        analog_layout.addRow("Modulation:", self.detail_bandwidth)
+        analog_layout.addRow("Bandwidth:", self.detail_bandwidth)
 
         self.detail_tx_priority_analog = QComboBox()
         for label, value in TX_PRIORITY_VALUES:
@@ -581,6 +593,7 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.blockSignals(True)
         self.detail_power.blockSignals(True)
         self.detail_scan.blockSignals(True)
+        self.detail_rx_tx.blockSignals(True)
         self.detail_time_slot.blockSignals(True)
         self.detail_color_code.blockSignals(True)
         self.detail_dmr_mode.blockSignals(True)
@@ -595,6 +608,7 @@ class ChannelTableWidget(QWidget):
         self.detail_rx_ctcss.blockSignals(True)
         self.detail_tx_ctcss.blockSignals(True)
         self.detail_scramble.blockSignals(True)
+        self.detail_modulation.blockSignals(True)
         self.detail_bandwidth.blockSignals(True)
         self.detail_tx_priority_analog.blockSignals(True)
         self.detail_tot_analog.blockSignals(True)
@@ -609,6 +623,11 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.setCurrentIndex(1 if channel.is_digital() else 0)
         self.detail_power.setCurrentIndex(0 if channel.power == PowerLevel.HIGH else 1)
         self.detail_scan.setCurrentIndex(0 if channel.scan == ScanMode.ADD else 1)
+        # RX/TX Permission - find index by value
+        for i in range(self.detail_rx_tx.count()):
+            if self.detail_rx_tx.itemData(i) == channel.rx_tx:
+                self.detail_rx_tx.setCurrentIndex(i)
+                break
 
         # Load DMR settings
         self.detail_time_slot.setCurrentIndex(channel.dmr_time_slot)
@@ -690,6 +709,11 @@ class ChannelTableWidget(QWidget):
             if self.detail_scramble.itemData(i) == channel.scramble:
                 self.detail_scramble.setCurrentIndex(i)
                 break
+        # Modulation (FM/AM/SSB)
+        for i in range(self.detail_modulation.count()):
+            if self.detail_modulation.itemData(i) == channel.analog_modulation.value:
+                self.detail_modulation.setCurrentIndex(i)
+                break
         # Bandwidth
         for i in range(self.detail_bandwidth.count()):
             if self.detail_bandwidth.itemData(i) == channel.bandwidth:
@@ -732,6 +756,7 @@ class ChannelTableWidget(QWidget):
         self.detail_mode.blockSignals(False)
         self.detail_power.blockSignals(False)
         self.detail_scan.blockSignals(False)
+        self.detail_rx_tx.blockSignals(False)
         self.detail_time_slot.blockSignals(False)
         self.detail_color_code.blockSignals(False)
         self.detail_dmr_mode.blockSignals(False)
@@ -746,6 +771,7 @@ class ChannelTableWidget(QWidget):
         self.detail_rx_ctcss.blockSignals(False)
         self.detail_tx_ctcss.blockSignals(False)
         self.detail_scramble.blockSignals(False)
+        self.detail_modulation.blockSignals(False)
         self.detail_bandwidth.blockSignals(False)
         self.detail_tx_priority_analog.blockSignals(False)
         self.detail_tot_analog.blockSignals(False)
@@ -871,6 +897,7 @@ class ChannelTableWidget(QWidget):
         channel.mode = ChannelMode.DIGITAL if self.detail_mode.currentIndex() == 1 else ChannelMode.ANALOG
         channel.power = PowerLevel.HIGH if self.detail_power.currentIndex() == 0 else PowerLevel.LOW
         channel.scan = ScanMode.ADD if self.detail_scan.currentIndex() == 0 else ScanMode.REMOVE
+        channel.rx_tx = self.detail_rx_tx.currentData()
 
         # DMR settings
         channel.dmr_time_slot = self.detail_time_slot.currentIndex()
@@ -892,6 +919,10 @@ class ChannelTableWidget(QWidget):
         tx_ctcss_text = self.detail_tx_ctcss.currentText()
         channel.tx_ctcss = None if tx_ctcss_text == "None" else tx_ctcss_text
         channel.scramble = self.detail_scramble.currentData()
+        # Modulation (FM/AM/SSB)
+        from rt4d_codeplug import AnalogModulation
+        modulation_value = self.detail_modulation.currentData()
+        channel.analog_modulation = AnalogModulation(modulation_value) if modulation_value is not None else AnalogModulation.FM
         channel.bandwidth = self.detail_bandwidth.currentData()
         channel.ana_busy_lock = self.detail_tx_priority_analog.currentData()
         channel.tot_analog = self.detail_tot_analog.currentData()

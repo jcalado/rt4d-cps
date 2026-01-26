@@ -205,35 +205,44 @@ class CodeplugParser:
 
             # Analog specific fields
             else:
-                # Analog modulation: FM/AM/SSB (offset 0x00)
-                modulation_byte = ch_data[0x00]
-                if modulation_byte == 0x00:
+                # Byte 0x04 layout:
+                # bit 0: reserved
+                # bits 1-3: DcsEncrypt (ctdcs_select)
+                # bits 4-5: Modulation (FM/AM/SSB)
+                # bit 6: bIsNarrow (bandwidth)
+                byte_0x04 = ch_data[0x04]
+
+                # Analog modulation: FM/AM/SSB (offset 0x04, bits 4-5)
+                modulation_bits = (byte_0x04 >> 4) & 0x03
+                if modulation_bits == 0x00:
                     channel.analog_modulation = AnalogModulation.FM
-                elif modulation_byte == 0x01:
+                elif modulation_bits == 0x01:
                     channel.analog_modulation = AnalogModulation.AM
-                elif modulation_byte == 0x02:
+                elif modulation_bits == 0x02:
                     channel.analog_modulation = AnalogModulation.SSB
                 else:
                     channel.analog_modulation = AnalogModulation.FM  # Default to FM
 
-                # RX CTCSS/DCS (offset 0x04-0x05)
-                rx_tone_bytes = ch_data[0x04:0x06]
+                # Bandwidth (offset 0x04, bit 6)
+                channel.bandwidth = (byte_0x04 >> 6) & 0x01
+
+                # CT/DCS Select (offset 0x04, bits 1-3)
+                channel.ctdcs_select = (byte_0x04 >> 1) & 0x07
+
+                # RX CTCSS/DCS (offset 0x05-0x06)
+                rx_tone_bytes = ch_data[0x05:0x07]
                 channel.rx_ctcss = decode_subaudio_bytes(rx_tone_bytes)
 
-                # TX CTCSS/DCS (offset 0x0E-0x0F)
-                tx_tone_bytes = ch_data[0x0E:0x10]
+                # TX CTCSS/DCS (offset 0x0F-0x10)
+                tx_tone_bytes = ch_data[0x0F:0x11]
                 channel.tx_ctcss = decode_subaudio_bytes(tx_tone_bytes)
-
-                # Bandwidth (offset 0x03)
-                channel.bandwidth = ch_data[0x03]
 
                 # Analog busy lock (offset 0x11)
                 channel.ana_busy_lock = ch_data[0x11]
 
-                # TOT and CT/DCS Select (offset 0x12)
+                # TOT (offset 0x12)
                 byte_0x12 = ch_data[0x12]
                 channel.tot_analog = byte_0x12 & 0x1F  # Lower 5 bits
-                channel.ctdcs_select = (byte_0x12 >> 5) & 0x07  # Upper 3 bits
 
                 # Tail tone and Scrambler (offset 0x13)
                 byte_0x13 = ch_data[0x13]

@@ -80,7 +80,7 @@ class Channel:
     rx_ctcss: Optional[str] = None  # e.g., "67.0" or "D023N"
     tx_ctcss: Optional[str] = None
     scramble: int = 0
-    analog_modulation: AnalogModulation = AnalogModulation.FM  # FM/AM/SSB (offset 0x00)
+    analog_modulation: AnalogModulation = AnalogModulation.FM  # FM/AM/SSB (offset 0x04, bits 4-5)
     bandwidth: int = 0  # Bandwidth: 0=Wide/25kHz, 1=Narrow/12.5kHz (offset 0x04, bit 6)
     ana_busy_lock: int = 0  # Analog busy channel lockout (byte 0x03, bits 3-4)
     tot_analog: int = 0  # Transmit timeout for analog (offset 0x12, lower 5 bits)
