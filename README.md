@@ -4,7 +4,7 @@ If you like my work, you can support me at [ko-fi.com/jcalado](https://ko-fi.com
 
 ## RT-4D CPS
 
-A GUI for exploring, editing, and flashing RT-4D radio codeplug files, full support for DualTachyon's refw firmware.
+A GUI for exploring, editing, and flashing RT-4D radio codeplug files, full support for [DualTachyon's](https://github.com/DualTachyon) refw firmware.
 
 > [!CAUTION]
 > This software is NOT compatible with Radtel's FW >= 3.18.
