@@ -40,4 +40,4 @@ Run `python3 rt4d_gui.py` to launch the PySide6 editor for interactive channel/c
 - Existing legacy scripts in the repo print to stdout; the new suite uses asserts.
 - 
 ## Fixtures
-- `tests.4rdmf`should be a golden dump from a live radio used for parser/serializer regressions.
+- `tests.4rdmf`should be a golden codeplug export from a live radio used for parser/serializer regressions.
