@@ -1,6 +1,10 @@
-# RT4D Tools
+## Support
 
-Utility scripts and GUI for exploring, editing, and flashing RT-4D radio codeplug files.
+If you like my work, you can support me at [ko-fi.com/jcalado](https://ko-fi.com/jcalado)
+
+## RT-4D CPS
+
+A GUI for exploring, editing, and flashing RT-4D radio codeplug files, full support for DualTachyon's refw firmware.
 
 > [!CAUTION]
 > This software is NOT compatible with Radtel's FW >= 3.18.
@@ -33,7 +37,3 @@ Run `python3 rt4d_gui.py` to launch the PySide6 editor for interactive channel/c
 - 
 ## Fixtures
 - `tests.4rdmf`should be a golden dump from a live radio used for parser/serializer regressions.
-
-## Support
-
-If you like my work, you can support me at [ko-fi.com/jcalado](https://ko-fi.com/jcalado)
