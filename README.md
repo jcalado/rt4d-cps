@@ -3,10 +3,7 @@
 Utility scripts and GUI for exploring, editing, and flashing RT-4D radio codeplug files.
 
 > [!CAUTION]
-> This software is NOT compatible with FW >= 3.18.
-
-> [!WARNING]
-> This project is pre-release beta software; expect rough edges and verify programming steps on a non-critical radio first.
+> This software is NOT compatible with Radtel's FW >= 3.18.
 
 ## Getting Started
 - Ensure Python 3.9+ is installed.
