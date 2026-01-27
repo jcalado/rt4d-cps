@@ -9,6 +9,10 @@ A GUI for exploring, editing, and flashing RT-4D radio codeplug files, full supp
 > [!CAUTION]
 > This software is NOT compatible with Radtel's FW >= 3.18.
 
+## Download
+
+There's prebuilt binaries for Windows, macOS and Linux on the releases page.
+
 ## Getting Started
 - Ensure Python 3.9+ is installed.
 - Install dependencies: `pip install -r requirements.txt`
