@@ -11,7 +11,7 @@ A GUI for exploring, editing, and flashing RT-4D radio codeplug files, full supp
 
 ## Download
 
-There's prebuilt binaries for Windows, macOS and Linux on the releases page.
+There's prebuilt binaries for Windows, macOS and Linux on the [releases page](https://github.com/jcalado/rt4d-cps/releases).
 
 ## Getting Started
 - Ensure Python 3.9+ is installed.
