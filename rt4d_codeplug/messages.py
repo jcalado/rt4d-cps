@@ -18,6 +18,33 @@ class MessageParser:
     """Parser for DMR SMS messages from SPI flash"""
 
     @staticmethod
+    def _parse_bcd(bcd_bytes: bytes) -> int:
+        """Convert BCD encoded bytes to integer"""
+        # Check if all bytes are 0xFF (empty/invalid)
+        if all(b == 0xFF for b in bcd_bytes):
+            return 0
+
+        result = 0
+        for byte_val in reversed(bcd_bytes):
+            high_nibble = (byte_val >> 4) & 0x0F
+            low_nibble = byte_val & 0x0F
+
+            # Invalid BCD if nibbles > 9 (unless 0xF which means empty)
+            if high_nibble > 9 and high_nibble != 0xF:
+                return 0
+            if low_nibble > 9 and low_nibble != 0xF:
+                return 0
+
+            # Treat 0xF nibbles as 0
+            if high_nibble == 0xF:
+                high_nibble = 0
+            if low_nibble == 0xF:
+                low_nibble = 0
+
+            result = result * 100 + high_nibble * 10 + low_nibble
+        return result
+
+    @staticmethod
     def parse_message(data: bytes, msg_type: MessageType, index: int = 0) -> Optional[Message]:
         """Parse a single 256-byte message entry.
 
@@ -26,7 +53,7 @@ class MessageParser:
         |--------|------|--------------|------------------------------------------|
         | 0      | 1    | Message Type | 0=Preset, 1=Draft, 2=Inbox, 3=Outbox     |
         | 1      | 1    | Call Type    | 0=Private, 1=Group, 2=All (Inbox/Outbox) |
-        | 2-5    | 4    | Contact ID   | 32-bit LE (Inbox/Outbox only)            |
+        | 2-5    | 4    | Contact ID   | BCD encoded (Inbox/Outbox only)          |
         | 6-11   | 6    | Timestamp    | YY-MM-DD HH:MM:SS (Inbox/Outbox only)    |
         | 12-55  | 44   | Reserved     | 0xFF filled                              |
         | 56-255 | 200  | Message Text | GBK encoding                             |
@@ -50,10 +77,8 @@ class MessageParser:
             except ValueError:
                 pass
 
-        # Parse contact ID (32-bit little-endian)
-        contact_id = int.from_bytes(data[2:6], 'little')
-        if contact_id == 0xFFFFFFFF:
-            contact_id = 0
+        # Parse contact ID (BCD encoded, 4 bytes)
+        contact_id = MessageParser._parse_bcd(data[2:6])
 
         # Parse timestamp (6 bytes: YY, MM, DD, HH, MM, SS)
         timestamp = None
@@ -126,6 +151,18 @@ class MessageSerializer:
     """Serializer for DMR SMS messages to SPI flash format"""
 
     @staticmethod
+    def _to_bcd(value: int) -> bytes:
+        """Convert integer to BCD encoded bytes (4 bytes)"""
+        bcd = bytearray(4)
+        for i in range(4):
+            low = value % 10
+            value //= 10
+            high = value % 10
+            value //= 10
+            bcd[i] = (high << 4) | low
+        return bytes(bcd)
+
+    @staticmethod
     def serialize_message(message: Message) -> bytes:
         """Serialize a message to 256-byte entry format.
 
@@ -147,9 +184,9 @@ class MessageSerializer:
         # Call type
         data[1] = message.call_type.value
 
-        # Contact ID (32-bit little-endian)
+        # Contact ID (BCD encoded, 4 bytes)
         if message.contact_id > 0:
-            data[2:6] = message.contact_id.to_bytes(4, 'little')
+            data[2:6] = MessageSerializer._to_bcd(message.contact_id)
 
         # Timestamp (6 bytes: YY, MM, DD, HH, MM, SS)
         if message.timestamp:
