@@ -10,7 +10,8 @@ from .models import (
     ChannelMode, PowerLevel, ScanMode, ContactType,
     EncryptionKey, EncryptionType,
     Message, MessageStore, MessageType, CallType,
-    FMPreset, FMSettings
+    FMPreset, FMSettings,
+    AnalogModulation
 )
 from .parser import CodeplugParser
 from .serializer import CodeplugSerializer
@@ -37,6 +38,7 @@ __all__ = [
     "CallType",
     "FMPreset",
     "FMSettings",
+    "AnalogModulation",
     "CodeplugParser",
     "CodeplugSerializer",
     "MessageParser",
