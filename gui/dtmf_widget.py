@@ -84,11 +84,6 @@ class DTMFWidget(QWidget):
         self.send_select_combo.currentIndexChanged.connect(self.on_settings_changed)
         settings_layout.addRow("Send Select:", self.send_select_combo)
 
-        # Display Enable
-        self.display_enable_check = QCheckBox("Enable DTMF Display/Decode")
-        self.display_enable_check.stateChanged.connect(self.on_settings_changed)
-        settings_layout.addRow("", self.display_enable_check)
-
         # DTMF Gain
         self.gain_spin = QSpinBox()
         self.gain_spin.setRange(0, 127)
@@ -112,6 +107,11 @@ class DTMFWidget(QWidget):
         self.remote_cal_time_check = QCheckBox("Enable Remote Cal Time")
         self.remote_cal_time_check.stateChanged.connect(self.on_settings_changed)
         settings_layout.addRow("", self.remote_cal_time_check)
+
+        # Display Enable
+        self.display_enable_check = QCheckBox("Enable DTMF Display/Decode")
+        self.display_enable_check.stateChanged.connect(self.on_settings_changed)
+        settings_layout.addRow("", self.display_enable_check)
 
         settings_group.setLayout(settings_layout)
         layout.addWidget(settings_group)
