@@ -603,17 +603,18 @@ CALLSIGN_LOOKUP_VALUES = [
 
 # DMR Scan Speed (offset 0x39C)
 DMR_SCAN_SPEED_VALUES = [
-    ("Fast", 0),
-    ("Medium", 1),
-    ("Slow", 2),
+    ("400 ms", 0),
+    ("600 ms", 1),
+    ("800 ms", 2),
+    ("1000 ms", 3),
 ]
 
 # PTT Lock (offset 0x39D)
 # DT custom firmware: 3 options
 PTT_LOCK_VALUES = [
     ("Off", 0),
-    ("When Locked", 1),
-    ("Always", 2),
+    ("On while Locked", 1),
+    ("On always", 2),
 ]
 
 # Zone Channel Display (offset 0x39E)
