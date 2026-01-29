@@ -1,5 +1,6 @@
 """Radio Address Book Upload Dialog"""
 
+import serial
 import serial.tools.list_ports
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
@@ -67,18 +68,20 @@ class AddressBookWriteThread(QThread):
             # Close connection
             self.log_message.emit("Closing connection...")
             uart.command_close()
-            uart.close()
 
             if success:
                 self.write_finished.emit(True, f"Successfully wrote {len(self.database):,} contacts to radio!")
             else:
                 self.write_finished.emit(False, "Write operation failed. Check logs for details.")
 
+        except serial.SerialException as e:
+            self.write_finished.emit(False, f"Could not open {self.port_name}. Check the COM port and ensure the radio is connected.\n\n{e}")
         except Exception as e:
             self.write_finished.emit(False, f"Error: {str(e)}")
+        finally:
             try:
                 uart.close()
-            except:
+            except Exception:
                 pass
 
 

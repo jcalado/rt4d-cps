@@ -1,6 +1,7 @@
 """Message Radio Dialog for reading/writing messages to radio"""
 
 import platform
+import serial
 import serial.tools.list_ports
 from typing import Optional, List
 
@@ -33,13 +34,12 @@ class MessageWorker(QThread):
 
     def run(self):
         """Execute radio operation"""
+        uart = RT4DUART()
         try:
-            uart = RT4DUART()
             uart.open(self.port)
 
             if uart.is_bootloader_mode():
                 self.finished.emit(False, "Radio is in bootloader mode!", None)
-                uart.close()
                 return
 
             uart.command_notify()
@@ -50,10 +50,16 @@ class MessageWorker(QThread):
                 self.write_messages(uart)
 
             uart.command_close()
-            uart.close()
 
+        except serial.SerialException as e:
+            self.finished.emit(False, f"Could not open {self.port}. Check the COM port and ensure the radio is connected.\n\n{e}", None)
         except Exception as e:
             self.finished.emit(False, str(e), None)
+        finally:
+            try:
+                uart.close()
+            except Exception:
+                pass
 
     def read_messages(self, uart: RT4DUART):
         """Read messages from radio"""

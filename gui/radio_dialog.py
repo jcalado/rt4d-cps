@@ -1,6 +1,7 @@
 """Radio Backup and Flash Dialogs"""
 
 import platform
+import serial
 import serial.tools.list_ports
 from pathlib import Path
 from typing import Optional
@@ -35,13 +36,12 @@ class RadioWorker(QThread):
 
     def run(self):
         """Execute radio operation"""
+        uart = RT4DUART()
         try:
-            uart = RT4DUART()
             uart.open(self.port)
 
             if uart.is_bootloader_mode():
                 self.finished.emit(False, "Radio is in bootloader mode, not normal mode!")
-                uart.close()
                 return
 
             uart.command_notify()
@@ -52,10 +52,16 @@ class RadioWorker(QThread):
                 self.flash(uart)
 
             uart.command_close()
-            uart.close()
 
+        except serial.SerialException as e:
+            self.finished.emit(False, f"Could not open {self.port}. Check the COM port and ensure the radio is connected.\n\n{e}")
         except Exception as e:
             self.finished.emit(False, str(e))
+        finally:
+            try:
+                uart.close()
+            except Exception:
+                pass
 
     def backup(self, uart: RT4DUART):
         """Backup from radio"""
