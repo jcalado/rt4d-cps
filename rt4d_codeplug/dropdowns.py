@@ -528,8 +528,8 @@ SCAN_SPEED_ANALOG_VALUES = [
 
 # TX Backlight (offset 0x381)
 TX_BACKLIGHT_VALUES = [
-    ("Off", 0),
-    ("On", 1),
+    ("Always on", 0),
+    ("Off after 5s", 1),
 ]
 
 # Green Key Long Press - same values as function keys (offset 0x382)
