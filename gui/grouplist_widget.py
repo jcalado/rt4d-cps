@@ -39,8 +39,6 @@ class GroupListWidget(QWidget):
         left_layout = QVBoxLayout()
         left_widget.setLayout(left_layout)
 
-        left_layout.addWidget(QLabel("<b>Group Lists</b>"))
-
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["#", "Name", "Contacts"])

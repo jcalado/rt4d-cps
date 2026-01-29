@@ -39,8 +39,6 @@ class ContactWidget(QWidget):
         left_layout = QVBoxLayout()
         left_widget.setLayout(left_layout)
 
-        left_layout.addWidget(QLabel("<b>DMR Contacts</b>"))
-
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["#", "Name", "Type", "DMR ID"])

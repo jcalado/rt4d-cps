@@ -39,8 +39,6 @@ class ZoneWidget(QWidget):
         left_layout = QVBoxLayout()
         left_widget.setLayout(left_layout)
 
-        left_layout.addWidget(QLabel("<b>Zones</b>"))
-
         self.table = QTableWidget()
         self.table.setColumnCount(3)
         self.table.setHorizontalHeaderLabels(["#", "Name", "Channels"])
