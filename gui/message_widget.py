@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 
+from . import theme as _theme
 from rt4d_codeplug.models import Message, MessageStore, MessageType, CallType
 from rt4d_codeplug.constants import (
     MAX_PRESET_MESSAGES, MAX_DRAFT_MESSAGES,
@@ -259,7 +260,7 @@ class MessageWidget(QWidget):
             "Use 'Read from Radio' to load messages, and 'Write Presets to Radio' to save preset messages."
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        info_label.setStyleSheet(f"color: {_theme.hint_color()}; font-style: italic; padding: 5px;")
         layout.addWidget(info_label)
 
         # Button bar

@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 
+from . import theme as _theme
 from rt4d_uart import RT4DUART
 from rt4d_codeplug.global_contacts import GlobalContactDatabase, GlobalContactCSVParser
 
@@ -127,7 +128,7 @@ class RadioAddressBookDialog(QDialog):
 
         # High-speed mode warning (shown when 256000 is selected)
         self.highspeed_warning = QLabel("⚠️ High-speed mode: Hold # key during radio boot")
-        self.highspeed_warning.setStyleSheet("color: orange; font-weight: bold;")
+        self.highspeed_warning.setStyleSheet(f"color: {_theme.error_color()}; font-weight: bold;")
         self.highspeed_warning.setVisible(False)  # Hidden by default for 115200
         layout.addWidget(self.highspeed_warning)
 

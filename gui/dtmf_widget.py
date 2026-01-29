@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal, QRegularExpression
 from PySide6.QtGui import QRegularExpressionValidator
 
+from . import theme as _theme
 from rt4d_codeplug import RadioSettings
 from rt4d_codeplug.dropdowns import (
     DTMF_SEND_DELAY_VALUES, DTMF_DURATION_VALUES,
@@ -121,7 +122,7 @@ class DTMFWidget(QWidget):
 
         # Info label
         info_label = QLabel("Valid characters: 0-9, A-D, *, # (max 14 characters per code)")
-        info_label.setStyleSheet("color: gray; font-size: 10px;")
+        info_label.setStyleSheet(f"color: {_theme.hint_color()}; font-size: 10px;")
         codes_layout.addWidget(info_label)
 
         # Codes table

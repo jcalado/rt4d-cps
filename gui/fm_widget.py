@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
 
+from . import theme as _theme
 from rt4d_codeplug.models import FMSettings, FMPreset
 from rt4d_codeplug.fm_radio import FMParser, FMSerializer, FM_FREQ_MIN, FM_FREQ_MAX
 
@@ -36,7 +37,7 @@ class FMWidget(QWidget):
         #     f"up to 16 frequencies in the range {FM_FREQ_MIN}-{FM_FREQ_MAX} MHz."
         # )
         # info_label.setWordWrap(True)
-        # info_label.setStyleSheet("color: #666; font-style: italic; padding: 5px;")
+        # info_label.setStyleSheet(f"color: {_theme.hint_color()}; font-style: italic; padding: 5px;")
         # layout.addWidget(info_label)
 
         # Settings bar

@@ -285,8 +285,8 @@ class ChannelTableWidget(QWidget):
         # Add to splitter
         splitter.addWidget(left_widget)
         splitter.addWidget(self.details_panel)
-        splitter.setStretchFactor(0, 2)  # Table takes 2/3
-        splitter.setStretchFactor(1, 1)  # Details takes 1/3
+        splitter.setStretchFactor(0, 6)  # Table takes 6/11
+        splitter.setStretchFactor(1, 5)  # Details takes 5/11
 
     def create_details_panel(self):
         """Create channel details panel"""

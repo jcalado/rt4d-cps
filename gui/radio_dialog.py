@@ -12,6 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QThread, Signal
 
+from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
 from rt4d_uart import RT4DUART
 from rt4d_codeplug.constants import SPI_REGIONS
@@ -393,7 +394,7 @@ class RadioFlashDialog(QDialog):
 
         # Warning
         warning = QLabel("⚠️ Warning: This will overwrite data on your radio!")
-        warning.setStyleSheet("color: red; font-weight: bold;")
+        warning.setStyleSheet(f"color: {_theme.error_color()}; font-weight: bold;")
         layout.addWidget(warning)
 
         # Port selection
@@ -431,12 +432,12 @@ class RadioFlashDialog(QDialog):
             self.label_beta41_info = QLabel(
                 "Beta41+ codeplug detected - layout option locked."
             )
-            self.label_beta41_info.setStyleSheet("color: #008800; font-size: 10px;")
+            self.label_beta41_info.setStyleSheet(f"color: {_theme.success_color()}; font-size: 10px;")
         else:
             self.label_beta41_info = QLabel(
                 "ℹ️  REFW Beta41+ layout is incompatible with stock firmware."
             )
-            self.label_beta41_info.setStyleSheet("color: #0066cc; font-size: 10px;")
+            self.label_beta41_info.setStyleSheet(f"color: {_theme.info_color()}; font-size: 10px;")
         self.label_beta41_info.setWordWrap(True)
         region_layout.addWidget(self.label_beta41_info)
 

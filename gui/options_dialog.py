@@ -3,10 +3,12 @@
 from typing import Tuple
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QCheckBox, QDoubleSpinBox, QPushButton, QGroupBox
+    QApplication, QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
+    QLabel, QCheckBox, QDoubleSpinBox, QPushButton, QGroupBox, QComboBox
 )
 from PySide6.QtCore import QSettings
+
+from . import theme as _theme
 
 
 class OptionsDialog(QDialog):
@@ -50,6 +52,18 @@ class OptionsDialog(QDialog):
         main_layout = QVBoxLayout()
         self.setLayout(main_layout)
 
+        # Theme section
+        theme_group = QGroupBox("Appearance")
+        theme_layout = QFormLayout()
+
+        self.combo_theme = QComboBox()
+        self.combo_theme.addItems(["System", "Light", "Dark"])
+        self.combo_theme.currentTextChanged.connect(self._on_theme_changed)
+        theme_layout.addRow("Theme:", self.combo_theme)
+
+        theme_group.setLayout(theme_layout)
+        main_layout.addWidget(theme_group)
+
         # Repeater Frequency Shift section
         shift_group = QGroupBox("Repeater Frequency Shift")
         shift_layout = QVBoxLayout()
@@ -65,7 +79,7 @@ class OptionsDialog(QDialog):
             f"VHF range: {self.VHF_MIN:.0f}-{self.VHF_MAX:.0f} MHz, "
             f"UHF range: {self.UHF_MIN:.0f}-{self.UHF_MAX:.0f} MHz"
         )
-        desc_label.setStyleSheet("color: gray; font-size: 11px;")
+        desc_label.setStyleSheet(f"color: {_theme.hint_color()}; font-size: 11px;")
         shift_layout.addWidget(desc_label)
 
         # Shift values form
@@ -98,7 +112,7 @@ class OptionsDialog(QDialog):
             "Tip: Use positive values for repeater output above input,\n"
             "negative values for repeater output below input."
         )
-        hint_label.setStyleSheet("color: gray; font-size: 10px; font-style: italic;")
+        hint_label.setStyleSheet(f"color: {_theme.hint_color()}; font-size: 10px; font-style: italic;")
         shift_layout.addWidget(hint_label)
 
         shift_group.setLayout(shift_layout)
@@ -118,6 +132,9 @@ class OptionsDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
+    _THEME_LABELS = {"system": "System", "light": "Light", "dark": "Dark"}
+    _THEME_MODES = {"System": "system", "Light": "light", "Dark": "dark"}
+
     def load_settings(self) -> None:
         """Load settings from QSettings"""
         settings = self._get_settings()
@@ -132,6 +149,9 @@ class OptionsDialog(QDialog):
             settings.value(self.KEY_UHF_SHIFT, self.DEFAULT_UHF_SHIFT, type=float)
         )
 
+        saved = _theme.get_saved_theme()
+        self.combo_theme.setCurrentText(self._THEME_LABELS.get(saved, "System"))
+
     def save_settings(self) -> None:
         """Save settings to QSettings"""
         settings = self._get_settings()
@@ -144,6 +164,12 @@ class OptionsDialog(QDialog):
         """Handle OK button - save settings and close"""
         self.save_settings()
         super().accept()
+
+    def _on_theme_changed(self, text: str) -> None:
+        """Apply the selected theme immediately."""
+        mode = self._THEME_MODES.get(text, "system")
+        _theme.save_theme(mode)
+        _theme.apply_theme(QApplication.instance(), mode)
 
     @staticmethod
     def get_auto_shift_settings() -> Tuple[bool, float, float]:

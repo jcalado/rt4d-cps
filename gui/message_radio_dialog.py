@@ -13,6 +13,7 @@ from PySide6.QtCore import QThread, Signal
 from rt4d_codeplug.models import Message, MessageStore, MessageType
 from rt4d_codeplug.messages import MessageParser, MessageSerializer
 from rt4d_codeplug.constants import MESSAGE_REGIONS
+from . import theme as _theme
 from rt4d_uart import RT4DUART
 
 
@@ -159,7 +160,7 @@ class MessageRadioDialog(QDialog):
         # Warning for write operation
         if self.operation == "write":
             warning = QLabel("Note: Writing messages to radio may not be fully supported yet.")
-            warning.setStyleSheet("color: orange; font-weight: bold;")
+            warning.setStyleSheet(f"color: {_theme.error_color()}; font-weight: bold;")
             warning.setWordWrap(True)
             layout.addWidget(warning)
 

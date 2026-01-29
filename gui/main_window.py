@@ -39,7 +39,7 @@ class MainWindow(QMainWindow):
     def init_ui(self):
         """Initialize the user interface"""
         self.setWindowTitle(f"RT-4D Editor v{__version__}")
-        self.setGeometry(100, 100, 1000, 700)
+        self.setGeometry(100, 100, 1200, 700)
 
         # Create menu bar
         self.create_menus()

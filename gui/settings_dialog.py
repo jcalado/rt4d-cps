@@ -2,6 +2,7 @@
 
 from typing import Optional
 
+from . import theme as _theme
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLabel, QLineEdit, QSpinBox, QComboBox, QCheckBox,
@@ -717,7 +718,7 @@ class CustomFirmwareDialog(QDialog):
             "If you are using stock firmware, these values will be ignored by the radio.</i>"
         )
         info_label.setWordWrap(True)
-        info_label.setStyleSheet("QLabel { background-color: #fff3cd; color: #856404; border: 1px solid #ffc107; padding: 10px; border-radius: 4px; }")
+        info_label.setStyleSheet(_theme.warning_style())
         main_layout.addWidget(info_label)
 
         # Scroll area for settings
