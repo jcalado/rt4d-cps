@@ -1185,83 +1185,93 @@ class SettingsWidget(QWidget):
 
         # Operation section
         operation_group = QGroupBox("Operation Settings")
-        operation_layout = QFormLayout()
+        operation_columns = QHBoxLayout()
+
+        # Left column: general operation
+        left_form = QFormLayout()
 
         self.combo_dual_watch = QComboBox()
         for label, value in DUAL_WATCH_VALUES:
             self.combo_dual_watch.addItem(label, value)
         self.combo_dual_watch.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Dual Watch:", self.combo_dual_watch)
+        left_form.addRow("Dual Watch:", self.combo_dual_watch)
 
         self.combo_talkaround = QComboBox()
         for label, value in TALKAROUND_VALUES:
             self.combo_talkaround.addItem(label, value)
         self.combo_talkaround.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Talkaround:", self.combo_talkaround)
+        left_form.addRow("Talkaround:", self.combo_talkaround)
 
         self.combo_alarm_type = QComboBox()
         for label, value in ALARM_TYPE_VALUES:
             self.combo_alarm_type.addItem(label, value)
         self.combo_alarm_type.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Alarm Type:", self.combo_alarm_type)
+        left_form.addRow("Alarm Type:", self.combo_alarm_type)
 
         self.combo_tx_priority = QComboBox()
         for label, value in TX_PRIORITY_GLOBAL_VALUES:
             self.combo_tx_priority.addItem(label, value)
         self.combo_tx_priority.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("TX Priority:", self.combo_tx_priority)
-
-        self.combo_main_band = QComboBox()
-        for label, value in MAIN_BAND_VALUES:
-            self.combo_main_band.addItem(label, value)
-        self.combo_main_band.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Main Band:", self.combo_main_band)
-
-        self.combo_main_ptt = QComboBox()
-        for label, value in MAIN_PTT_VALUES:
-            self.combo_main_ptt.addItem(label, value)
-        self.combo_main_ptt.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Main PTT:", self.combo_main_ptt)
+        left_form.addRow("TX Priority:", self.combo_tx_priority)
 
         self.combo_vfo_step = QComboBox()
         for label, value in VFO_STEP_VALUES:
             self.combo_vfo_step.addItem(label, value)
         self.combo_vfo_step.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("VFO Step:", self.combo_vfo_step)
+        left_form.addRow("VFO Step:", self.combo_vfo_step)
+
+        operation_columns.addLayout(left_form)
+
+        # Right column: band configuration
+        right_form = QFormLayout()
+
+        self.combo_main_band = QComboBox()
+        for label, value in MAIN_BAND_VALUES:
+            self.combo_main_band.addItem(label, value)
+        self.combo_main_band.currentIndexChanged.connect(self.on_settings_changed)
+        right_form.addRow("Main Band:", self.combo_main_band)
+
+        self.combo_main_ptt = QComboBox()
+        for label, value in MAIN_PTT_VALUES:
+            self.combo_main_ptt.addItem(label, value)
+        self.combo_main_ptt.currentIndexChanged.connect(self.on_settings_changed)
+        right_form.addRow("Main PTT:", self.combo_main_ptt)
 
         self.combo_work_mode_a = QComboBox()
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_a.addItem(label, value)
         self.combo_work_mode_a.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Mode:", self.combo_work_mode_a)
+        right_form.addRow("Band A Mode:", self.combo_work_mode_a)
 
         self.spin_zone_a = QSpinBox()
         self.spin_zone_a.setRange(0, 255)
         self.spin_zone_a.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Zone:", self.spin_zone_a)
+        right_form.addRow("Band A Zone:", self.spin_zone_a)
 
         self.spin_channel_a = QSpinBox()
         self.spin_channel_a.setRange(1, 1024)
         self.spin_channel_a.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Channel:", self.spin_channel_a)
+        right_form.addRow("Band A Channel:", self.spin_channel_a)
 
         self.combo_work_mode_b = QComboBox()
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_b.addItem(label, value)
         self.combo_work_mode_b.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Mode:", self.combo_work_mode_b)
+        right_form.addRow("Band B Mode:", self.combo_work_mode_b)
 
         self.spin_zone_b = QSpinBox()
         self.spin_zone_b.setRange(0, 255)
         self.spin_zone_b.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Zone:", self.spin_zone_b)
+        right_form.addRow("Band B Zone:", self.spin_zone_b)
 
         self.spin_channel_b = QSpinBox()
         self.spin_channel_b.setRange(1, 1024)
         self.spin_channel_b.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Channel:", self.spin_channel_b)
+        right_form.addRow("Band B Channel:", self.spin_channel_b)
 
-        operation_group.setLayout(operation_layout)
+        operation_columns.addLayout(right_form)
+
+        operation_group.setLayout(operation_columns)
         layout.addWidget(operation_group)
 
         # Clocks/Timers section
