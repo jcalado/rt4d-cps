@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QMessageBox, QSplitter, QLabel,
-    QGroupBox, QInputDialog, QLineEdit
+    QGroupBox, QInputDialog, QLineEdit, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
@@ -183,7 +183,10 @@ class ZoneWidget(QWidget):
         # Set splitter sizes
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setSizes([400, 600])
+        left_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        right_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        splitter.setStretchFactor(0, 2)  # List takes 2/3
+        splitter.setStretchFactor(1, 1)  # Details takes 1/3
 
     def load_codeplug(self, codeplug: Optional[Codeplug]):
         """Load codeplug data"""

@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QComboBox, QMessageBox, QSplitter, QGroupBox, QFormLayout,
     QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QLabel, QScrollArea,
-    QFileDialog, QCompleter
+    QFileDialog, QCompleter, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal, QRegularExpression, QStringListModel
 from PySide6.QtGui import QColor, QDropEvent, QKeyEvent, QKeySequence, QRegularExpressionValidator
@@ -285,6 +285,8 @@ class ChannelTableWidget(QWidget):
         # Add to splitter
         splitter.addWidget(left_widget)
         splitter.addWidget(self.details_panel)
+        left_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.details_panel.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         splitter.setStretchFactor(0, 6)  # Table takes 6/11
         splitter.setStretchFactor(1, 5)  # Details takes 5/11
 

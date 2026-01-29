@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QMessageBox, QSplitter, QLabel, QLineEdit, QSpinBox, QComboBox,
-    QGroupBox, QFormLayout
+    QGroupBox, QFormLayout, QSizePolicy
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
@@ -113,8 +113,10 @@ class ContactWidget(QWidget):
         # Add to splitter
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 1)
+        left_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        right_widget.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        splitter.setStretchFactor(0, 2)  # List takes 2/3
+        splitter.setStretchFactor(1, 1)  # Details takes 1/3
 
     def load_codeplug(self, codeplug: Codeplug):
         """Load contacts from codeplug"""
