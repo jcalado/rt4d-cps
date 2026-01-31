@@ -82,11 +82,6 @@ class SettingsDialog(QDialog):
             self.combo_startup_picture.addItem(label, value)
         startup_layout.addRow("Startup Picture:", self.combo_startup_picture)
 
-        self.combo_tx_protection = QComboBox()
-        for label, value in TX_PROTECTION_VALUES:
-            self.combo_tx_protection.addItem(label, value)
-        startup_layout.addRow("TX Protection:", self.combo_tx_protection)
-
         self.combo_startup_beep = QComboBox()
         for label, value in STARTUP_BEEP_VALUES:
             self.combo_startup_beep.addItem(label, value)
@@ -349,11 +344,6 @@ class SettingsDialog(QDialog):
         advanced_group = QGroupBox("Advanced Features")
         advanced_layout = QFormLayout()
 
-        self.combo_noaa_channel = QComboBox()
-        for label, value in NOAA_CHANNEL_VALUES:
-            self.combo_noaa_channel.addItem(label, value)
-        advanced_layout.addRow("NOAA Weather Channel:", self.combo_noaa_channel)
-
         self.combo_detection_range = QComboBox()
         for label, value in DETECT_RANGE_VALUES:
             self.combo_detection_range.addItem(label, value)
@@ -508,7 +498,6 @@ class SettingsDialog(QDialog):
         # Startup/Boot settings combo boxes
         combo_settings = [
             (self.combo_startup_picture, self.settings.startup_picture_enable),
-            (self.combo_tx_protection, self.settings.tx_protection),
             (self.combo_startup_beep, self.settings.startup_beep_enable),
             (self.combo_startup_label, self.settings.startup_label_enable),
         ]
@@ -568,8 +557,6 @@ class SettingsDialog(QDialog):
             (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
             (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
             (self.combo_call_group_display, self.settings.call_group_display),
-            # Advanced features
-            (self.combo_noaa_channel, self.settings.noaa_channel),
             # Function keys
             (self.combo_key_fs1_short, self.settings.key_fs1_short),
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
@@ -605,7 +592,6 @@ class SettingsDialog(QDialog):
         combo_mappings = [
             # Startup/Boot settings
             ('startup_picture_enable', self.combo_startup_picture),
-            ('tx_protection', self.combo_tx_protection),
             ('startup_beep_enable', self.combo_startup_beep),
             ('startup_label_enable', self.combo_startup_label),
             # Frequency lock ranges
@@ -635,8 +621,6 @@ class SettingsDialog(QDialog):
             ('group_call_hang_time', self.combo_group_call_hang_time),
             ('private_call_hang_time', self.combo_private_call_hang_time),
             ('call_group_display', self.combo_call_group_display),
-            # Advanced features
-            ('noaa_channel', self.combo_noaa_channel),
             # Function keys
             ('key_fs1_short', self.combo_key_fs1_short),
             ('key_fs1_long', self.combo_key_fs1_long),
@@ -1357,12 +1341,6 @@ class SettingsWidget(QWidget):
         self.combo_startup_picture_widget.currentIndexChanged.connect(self.on_settings_changed)
         startup_layout.addRow("Startup Picture:", self.combo_startup_picture_widget)
 
-        self.combo_tx_protection_widget = QComboBox()
-        for label, value in TX_PROTECTION_VALUES:
-            self.combo_tx_protection_widget.addItem(label, value)
-        self.combo_tx_protection_widget.currentIndexChanged.connect(self.on_settings_changed)
-        startup_layout.addRow("TX Protection:", self.combo_tx_protection_widget)
-
         startup_group.setLayout(startup_layout)
         layout.addWidget(startup_group)
 
@@ -1466,7 +1444,6 @@ class SettingsWidget(QWidget):
         self.spin_clock_4_hour.setEnabled(enabled)
         self.spin_clock_4_minute.setEnabled(enabled)
         self.combo_startup_picture_widget.setEnabled(enabled)
-        self.combo_tx_protection_widget.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
         self.btn_edit_custom_fw.setEnabled(enabled)
 
@@ -1523,7 +1500,6 @@ class SettingsWidget(QWidget):
         self.spin_clock_4_hour.blockSignals(True)
         self.spin_clock_4_minute.blockSignals(True)
         self.combo_startup_picture_widget.blockSignals(True)
-        self.combo_tx_protection_widget.blockSignals(True)
 
         # Load values
         self.edit_radio_name.setText(settings.radio_name)
@@ -1700,10 +1676,6 @@ class SettingsWidget(QWidget):
             if self.combo_startup_picture_widget.itemData(i) == settings.startup_picture_enable:
                 self.combo_startup_picture_widget.setCurrentIndex(i)
                 break
-        for i in range(self.combo_tx_protection_widget.count()):
-            if self.combo_tx_protection_widget.itemData(i) == settings.tx_protection:
-                self.combo_tx_protection_widget.setCurrentIndex(i)
-                break
 
         # Unblock signals
         self.edit_radio_name.blockSignals(False)
@@ -1751,7 +1723,6 @@ class SettingsWidget(QWidget):
         self.spin_clock_4_hour.blockSignals(False)
         self.spin_clock_4_minute.blockSignals(False)
         self.combo_startup_picture_widget.blockSignals(False)
-        self.combo_tx_protection_widget.blockSignals(False)
 
         self.set_enabled(True)
         self._apply_beta41_visibility()
@@ -1817,6 +1788,5 @@ class SettingsWidget(QWidget):
         self.settings.clock_4_hour = self.spin_clock_4_hour.value()
         self.settings.clock_4_minute = self.spin_clock_4_minute.value()
         self.settings.startup_picture_enable = self.combo_startup_picture_widget.currentData()
-        self.settings.tx_protection = self.combo_tx_protection_widget.currentData()
 
         self.data_modified.emit()
