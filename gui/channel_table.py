@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
     QComboBox, QMessageBox, QSplitter, QGroupBox, QFormLayout,
     QLineEdit, QSpinBox, QDoubleSpinBox, QCheckBox, QLabel, QScrollArea,
-    QFileDialog, QCompleter, QSizePolicy
+    QFileDialog, QCompleter, QSizePolicy, QStyledItemDelegate
 )
 from PySide6.QtCore import Qt, Signal, QRegularExpression, QStringListModel
 from PySide6.QtGui import QColor, QDropEvent, QKeyEvent, QKeySequence, QRegularExpressionValidator
@@ -142,6 +142,20 @@ class DraggableTableWidget(QTableWidget):
         self.selectRow(target_row)
 
 
+class NameColumnDelegate(QStyledItemDelegate):
+    """Delegate that enforces a max character length on the name column editor."""
+
+    def __init__(self, max_length=16, parent=None):
+        super().__init__(parent)
+        self._max_length = max_length
+
+    def createEditor(self, parent, option, index):
+        editor = super().createEditor(parent, option, index)
+        if isinstance(editor, QLineEdit):
+            editor.setMaxLength(self._max_length)
+        return editor
+
+
 class ChannelTableWidget(QWidget):
     """Widget for displaying and editing channels"""
 
@@ -191,6 +205,7 @@ class ChannelTableWidget(QWidget):
         ])
 
         # Configure table
+        self.table.setItemDelegateForColumn(1, NameColumnDelegate(16, self.table))
         self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.EditKeyPressed)
 
         # Resize columns
@@ -1313,7 +1328,7 @@ class ChannelTableWidget(QWidget):
         new_channel = copy.deepcopy(self.copied_channel)
         new_channel.uuid = str(uuid4())  # Generate new UUID for the copy
         new_channel.position = new_pos
-        new_channel.name = f"{self.copied_channel.name} Copy"
+        new_channel.name = f"{self.copied_channel.name} Copy"[:16]
 
         self.codeplug.add_channel(new_channel)
 

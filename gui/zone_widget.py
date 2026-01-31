@@ -346,16 +346,19 @@ class ZoneWidget(QWidget):
         if not zone:
             return
 
-        new_name, ok = QInputDialog.getText(
-            self,
-            "Rename Zone",
-            "Zone name:",
-            QLineEdit.Normal,
-            zone.name
-        )
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Rename Zone")
+        dialog.setLabelText("Zone name:")
+        dialog.setTextValue(zone.name)
+        line_edit = dialog.findChild(QLineEdit)
+        if line_edit:
+            line_edit.setMaxLength(16)
+        if dialog.exec() != QInputDialog.Accepted:
+            return
+        new_name = dialog.textValue()
 
-        if ok and new_name and new_name != zone.name:
-            zone.name = new_name[:16]  # Max 16 chars
+        if new_name and new_name != zone.name:
+            zone.name = new_name
             self.refresh_table()
             self.refresh_details()
             self.data_modified.emit()
@@ -373,20 +376,23 @@ class ZoneWidget(QWidget):
 
         # Prompt for name
         zone_num = len(active_zones) + 1
-        name, ok = QInputDialog.getText(
-            self,
-            "New Zone",
-            "Zone name:",
-            QLineEdit.Normal,
-            f"Zone {zone_num}"
-        )
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("New Zone")
+        dialog.setLabelText("Zone name:")
+        dialog.setTextValue(f"Zone {zone_num}")
+        line_edit = dialog.findChild(QLineEdit)
+        if line_edit:
+            line_edit.setMaxLength(16)
+        if dialog.exec() != QInputDialog.Accepted:
+            return
+        name = dialog.textValue()
 
-        if not ok or not name:
+        if not name:
             return
 
         # Create zone (UUID is auto-generated, index is not set - calculated on save)
         zone = Zone(
-            name=name[:16],
+            name=name,
             channels=[]
         )
 
