@@ -23,7 +23,7 @@ from rt4d_codeplug.dropdowns import (
     STARTUP_LABEL_VALUES,
     FREQUENCY_LOCK_VALUES, SCAN_DIRECTION_VALUES, SCAN_RETURN_VALUES,
     SCAN_MODE_VALUES, SCAN_DWELL_VALUES, FUNCTION_KEY_VALUES,
-    SQUELCH_LEVEL_VALUES, BEEP_VALUES,
+    SQUELCH_LEVEL_VALUES, BEEP_VALUES, TX_END_TONE_VALUES,
     LCD_CONTRAST_VALUES, DISPLAY_LINES_VALUES, DUAL_DISPLAY_VALUES,
     REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
     NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES, DETECT_RANGE_VALUES
@@ -249,9 +249,9 @@ class SettingsDialog(QDialog):
         analog_audio_layout.addRow("TX Start Beep:", self.combo_tx_start_beep)
 
         self.combo_roger_beep = QComboBox()
-        for label, value in BEEP_VALUES:
+        for label, value in TX_END_TONE_VALUES:
             self.combo_roger_beep.addItem(label, value)
-        analog_audio_layout.addRow("Roger Beep:", self.combo_roger_beep)
+        analog_audio_layout.addRow("TX End Tone:", self.combo_roger_beep)
 
         self.spin_tone_frequency = QSpinBox()
         self.spin_tone_frequency.setRange(0, 65535)

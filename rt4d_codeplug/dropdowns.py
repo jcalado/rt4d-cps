@@ -327,6 +327,14 @@ BEEP_VALUES = [
     ("On", 1),
 ]
 
+# TX End Tone (roger beep) values
+TX_END_TONE_VALUES = [
+    ("Off", 0),
+    ("Roger Beep 1", 1),
+    ("Roger Beep 2", 2),
+    ("Send Radio Name", 3),
+]
+
 # LCD contrast values (0-15)
 LCD_CONTRAST_VALUES = [
     ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5),
