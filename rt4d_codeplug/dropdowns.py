@@ -342,8 +342,8 @@ DISPLAY_LINES_VALUES = [
 
 # Dual display mode
 DUAL_DISPLAY_VALUES = [
-    ("Off", 0),
-    ("On", 1),
+    ("On", 0),
+    ("Off", 1),
 ]
 
 # Remote control enable
