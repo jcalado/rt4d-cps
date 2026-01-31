@@ -34,7 +34,7 @@ class DraggableTableWidget(QTableWidget):
     rows_reordered = Signal(int, int)  # source_row, target_row
     copy_requested = Signal(int)  # row index
     paste_requested = Signal(int)  # row index to paste after (-1 for end)
-    delete_requested = Signal(int)  # row index
+    delete_requested = Signal(list)  # list of row indices
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -43,7 +43,7 @@ class DraggableTableWidget(QTableWidget):
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDropIndicatorShown(True)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.verticalHeader().setVisible(False)
         self._item_changed_handler = None
 
@@ -67,10 +67,10 @@ class DraggableTableWidget(QTableWidget):
             event.accept()
             return
         elif event.matches(QKeySequence.StandardKey.Delete):
-            # Delete - Delete selected channel
-            current_row = self.currentRow()
-            if current_row >= 0:
-                self.delete_requested.emit(current_row)
+            # Delete - Delete selected channel(s)
+            rows = sorted(set(idx.row() for idx in self.selectedIndexes()))
+            if rows:
+                self.delete_requested.emit(rows)
                 event.accept()
                 return
 
@@ -1344,32 +1344,26 @@ class ChannelTableWidget(QWidget):
 
         self.data_modified.emit()
 
-    def on_delete_channel(self, row: int):
-        """Handle channel delete (Delete key)"""
-        if not self.codeplug or row < 0:
+    def on_delete_channel(self, rows: list):
+        """Handle channel delete (Delete key) for one or more selected rows"""
+        if not self.codeplug or not rows:
             return
 
-        # Get the channel at this row by UUID
-        index_item = self.table.item(row, 0)
-        if not index_item:
+        # Collect channels to delete
+        channels_to_delete = []
+        for row in rows:
+            index_item = self.table.item(row, 0)
+            if not index_item:
+                continue
+            channel_uuid = index_item.data(Qt.UserRole)
+            channel = self.codeplug.get_channel(channel_uuid)
+            if channel:
+                channels_to_delete.append(channel)
+
+        if not channels_to_delete:
             return
 
-        channel_uuid = index_item.data(Qt.UserRole)
-        channel = self.codeplug.get_channel(channel_uuid)
-
-        if channel:
-            reply = QMessageBox.question(
-                self,
-                "Confirm Delete",
-                f"Delete channel '{channel.name}'?",
-                QMessageBox.Yes | QMessageBox.No
-            )
-
-            if reply == QMessageBox.Yes:
-                self.codeplug.channels.remove(channel)
-                # DO NOT modify indices - they are recalculated on save
-                self.refresh_table()
-                self.data_modified.emit()
+        self._confirm_and_delete(channels_to_delete)
 
     def add_channel(self):
         """Add a new channel after the selected position"""
@@ -1431,29 +1425,68 @@ class ChannelTableWidget(QWidget):
         self.data_modified.emit()
 
     def delete_channel(self):
-        """Delete selected channel"""
-        current_row = self.table.currentRow()
-        if current_row < 0:
+        """Delete selected channel(s)"""
+        rows = sorted(set(idx.row() for idx in self.table.selectedIndexes()))
+        if not rows:
             QMessageBox.warning(self, "Warning", "No channel selected")
             return
 
-        index_item = self.table.item(current_row, 0)
-        channel_uuid = index_item.data(Qt.UserRole)
-        channel = self.codeplug.get_channel(channel_uuid)
+        # Collect channels to delete
+        channels_to_delete = []
+        for row in rows:
+            index_item = self.table.item(row, 0)
+            if not index_item:
+                continue
+            channel_uuid = index_item.data(Qt.UserRole)
+            channel = self.codeplug.get_channel(channel_uuid)
+            if channel:
+                channels_to_delete.append(channel)
 
-        if channel:
-            reply = QMessageBox.question(
-                self,
-                "Confirm Delete",
-                f"Delete channel '{channel.name}'?",
-                QMessageBox.Yes | QMessageBox.No
+        if not channels_to_delete:
+            return
+
+        self._confirm_and_delete(channels_to_delete)
+
+    def _confirm_and_delete(self, channels: list):
+        """Show confirmation dialog and delete the given channels.
+
+        After deletion, asks the user whether to remove gaps in the
+        remaining channel positions (renumber) or keep them as-is.
+        """
+        count = len(channels)
+        if count == 1:
+            msg = f"Delete channel '{channels[0].name}'?"
+        else:
+            names = "\n".join(f"  {ch.position}: {ch.name}" for ch in channels[:20])
+            if count > 20:
+                names += f"\n  ... and {count - 20} more"
+            msg = f"Delete {count} channels?\n\n{names}"
+
+        reply = QMessageBox.question(
+            self, "Confirm Delete", msg,
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if reply != QMessageBox.Yes:
+            return
+
+        for ch in channels:
+            self.codeplug.channels.remove(ch)
+
+        # Ask whether to close the gaps left by the deleted positions
+        if self.codeplug.channels:
+            gap_reply = QMessageBox.question(
+                self, "Remove Gaps",
+                "Do you want to renumber the remaining channels to remove gaps in positions?",
+                QMessageBox.Yes | QMessageBox.No,
             )
+            if gap_reply == QMessageBox.Yes:
+                for i, ch in enumerate(
+                    sorted(self.codeplug.channels, key=lambda c: c.position)
+                ):
+                    ch.position = i + 1
 
-            if reply == QMessageBox.Yes:
-                self.codeplug.channels.remove(channel)
-                # DO NOT modify indices - they are recalculated on save
-                self.refresh_table()
-                self.data_modified.emit()
+        self.refresh_table()
+        self.data_modified.emit()
 
     def save_to_codeplug(self, codeplug: Codeplug):
         """Save current table state to codeplug (already saved via on_item_changed)"""
