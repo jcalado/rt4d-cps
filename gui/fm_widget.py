@@ -48,8 +48,8 @@ class FMWidget(QWidget):
         # FM Mode
         settings_layout.addWidget(QLabel("Mode:"))
         self.mode_combo = QComboBox()
-        self.mode_combo.addItem("Channel Mode", 0)
-        self.mode_combo.addItem("Frequency Mode", 1)
+        self.mode_combo.addItem("Frequency Mode", 0)
+        self.mode_combo.addItem("Channel Mode", 1)
         self.mode_combo.currentIndexChanged.connect(self.on_setting_changed)
         settings_layout.addWidget(self.mode_combo)
 

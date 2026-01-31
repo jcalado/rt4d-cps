@@ -32,7 +32,7 @@ class TestFMParser:
     def test_parse_header_fields(self):
         """Test parsing header fields"""
         data = bytearray([0xFF] * 1024)
-        data[0] = 1  # mode = Frequency Mode
+        data[0] = 1  # mode = Channel Mode
         data[1] = 2  # standby = 2
         data[2] = 5  # selected_area = 5
         data[3] = 10  # selected_channel = 10

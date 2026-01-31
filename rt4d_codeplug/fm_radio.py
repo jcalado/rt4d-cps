@@ -5,7 +5,7 @@ Handles parsing and serializing FM radio preset data from/to codeplug format.
 FM Data Structure (1024 bytes total):
 | Offset | Size | Field        | Description                           |
 |--------|------|--------------|---------------------------------------|
-| 0      | 1    | FM Mode      | 0=Channel Mode, 1=Frequency Mode      |
+| 0      | 1    | FM Mode      | 0=Frequency Mode, 1=Channel Mode      |
 | 1      | 1    | FM Standby   | Standby setting                       |
 | 2      | 1    | FM Area      | Selected area index (0-15)            |
 | 3      | 1    | FM Channel   | Selected channel index (0-15)         |

@@ -630,7 +630,7 @@ class FMPreset:
 @dataclass
 class FMSettings:
     """FM Radio settings and presets"""
-    mode: int = 0  # 0=Channel Mode, 1=Frequency Mode
+    mode: int = 0  # 0=Frequency Mode, 1=Channel Mode
     standby: int = 0  # Standby setting
     selected_area: int = 0  # Selected preset index (0-15)
     selected_channel: int = 0  # Selected channel/frequency index within preset (0-15)
