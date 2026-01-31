@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QSettings
 
 from . import theme as _theme
+from .update_checker import is_update_check_enabled, set_update_check_enabled
 
 
 class OptionsDialog(QDialog):
@@ -63,6 +64,16 @@ class OptionsDialog(QDialog):
 
         theme_group.setLayout(theme_layout)
         main_layout.addWidget(theme_group)
+
+        # Updates section
+        updates_group = QGroupBox("Updates")
+        updates_layout = QVBoxLayout()
+
+        self.chk_auto_update = QCheckBox("Automatically check for updates on startup")
+        updates_layout.addWidget(self.chk_auto_update)
+
+        updates_group.setLayout(updates_layout)
+        main_layout.addWidget(updates_group)
 
         # Repeater Frequency Shift section
         shift_group = QGroupBox("Repeater Frequency Shift")
@@ -139,6 +150,8 @@ class OptionsDialog(QDialog):
         """Load settings from QSettings"""
         settings = self._get_settings()
 
+        self.chk_auto_update.setChecked(is_update_check_enabled())
+
         self.chk_auto_shift.setChecked(
             settings.value(self.KEY_AUTO_SHIFT_ENABLED, False, type=bool)
         )
@@ -155,6 +168,8 @@ class OptionsDialog(QDialog):
     def save_settings(self) -> None:
         """Save settings to QSettings"""
         settings = self._get_settings()
+
+        set_update_check_enabled(self.chk_auto_update.isChecked())
 
         settings.setValue(self.KEY_AUTO_SHIFT_ENABLED, self.chk_auto_shift.isChecked())
         settings.setValue(self.KEY_VHF_SHIFT, self.spin_vhf_shift.value())

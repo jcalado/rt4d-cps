@@ -22,6 +22,10 @@ from .addressbook_widget import AddressBookWidget
 from .message_widget import MessageWidget
 from .fm_widget import FMWidget
 from .options_dialog import OptionsDialog
+from .update_checker import (
+    UpdateCheckWorker, UpdateDialog,
+    is_update_check_enabled, get_skipped_version,
+)
 
 
 class MainWindow(QMainWindow):
@@ -32,6 +36,8 @@ class MainWindow(QMainWindow):
         self.codeplug: Optional[Codeplug] = None
         self.current_file: Optional[Path] = None
         self.modified = False
+        self._first_show = True
+        self._update_worker: Optional[UpdateCheckWorker] = None
 
         self.init_ui()
         self.update_title()
@@ -199,6 +205,12 @@ class MainWindow(QMainWindow):
 
         # Help menu
         help_menu = menubar.addMenu("&Help")
+
+        self.action_check_updates = QAction("Check for &Updates...", self)
+        self.action_check_updates.triggered.connect(lambda: self._start_update_check(manual=True))
+        help_menu.addAction(self.action_check_updates)
+
+        help_menu.addSeparator()
 
         self.action_about = QAction("&About", self)
         self.action_about.triggered.connect(self.show_about)
@@ -473,6 +485,49 @@ class MainWindow(QMainWindow):
         self.action_import_csv.setEnabled(enabled)
         self.action_export_csv.setEnabled(enabled)
         self.action_flash.setEnabled(enabled)
+
+    # ── Update check ─────────────────────────────────────────────
+
+    def showEvent(self, event):
+        """Trigger auto-update check on first show."""
+        super().showEvent(event)
+        if self._first_show:
+            self._first_show = False
+            if is_update_check_enabled():
+                self._start_update_check(manual=False)
+
+    def _start_update_check(self, *, manual: bool) -> None:
+        """Launch the background update check.
+
+        *manual* indicates the user explicitly asked (Help menu).
+        """
+        self._update_manual = manual
+        self._update_worker = UpdateCheckWorker()
+        self._update_worker.update_available.connect(self._on_update_available)
+        self._update_worker.no_update.connect(self._on_no_update)
+        self._update_worker.check_failed.connect(self._on_update_check_failed)
+        self._update_worker.start()
+
+    def _on_update_available(self, version: str, notes: str, download_url: str, release_url: str) -> None:
+        # For automatic checks, honour the "skip this version" setting
+        if not self._update_manual and version == get_skipped_version():
+            return
+        dialog = UpdateDialog(self, version, notes, download_url, release_url)
+        dialog.exec()
+
+    def _on_no_update(self) -> None:
+        if self._update_manual:
+            QMessageBox.information(
+                self, "Up to Date",
+                f"You are running the latest version ({__version__})."
+            )
+
+    def _on_update_check_failed(self, error: str) -> None:
+        if self._update_manual:
+            QMessageBox.warning(
+                self, "Update Check Failed",
+                f"Could not check for updates:\n{error}"
+            )
 
     def closeEvent(self, event):
         """Handle window close"""
