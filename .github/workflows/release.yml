@@ -13,7 +13,19 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            arch: x64
+            suffix: windows-x64
+          - os: windows-latest
+            arch: x86
+            suffix: windows-x86
+          - os: macos-latest
+            arch: x64
+            suffix: macos
+          - os: ubuntu-latest
+            arch: x64
+            suffix: linux
     env:
       PYTHONUTF8: "1"
     steps:
@@ -24,6 +36,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          architecture: ${{ matrix.arch }}
 
       - name: Determine version
         shell: python
@@ -74,28 +87,31 @@ jobs:
         shell: pwsh
         run: |
           Set-Location dist
-          $archive = "RT4D-Editor-$env:VERSION-windows.zip"
+          $suffix = "${{ matrix.suffix }}"
+          $archive = "RT4D-Editor-$env:VERSION-$suffix.zip"
           Compress-Archive -Path RT4D-Editor -DestinationPath $archive
           "ARTIFACT_PATH=dist/$archive" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "ARTIFACT_NAME=RT4D-Editor-$env:VERSION-windows" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "ARTIFACT_NAME=RT4D-Editor-$env:VERSION-$suffix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Archive build (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           cd dist
-          archive="RT4D-Editor-${VERSION}-macos.zip"
+          suffix="${{ matrix.suffix }}"
+          archive="RT4D-Editor-${VERSION}-${suffix}.zip"
           zip -r "$archive" RT4D-Editor.app
           echo "ARTIFACT_PATH=dist/$archive" >> $GITHUB_ENV
-          echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-macos" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-${suffix}" >> $GITHUB_ENV
 
       - name: Archive build (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           cd dist
-          archive="RT4D-Editor-${VERSION}-linux.zip"
+          suffix="${{ matrix.suffix }}"
+          archive="RT4D-Editor-${VERSION}-${suffix}.zip"
           zip -r "$archive" RT4D-Editor
           echo "ARTIFACT_PATH=dist/$archive" >> $GITHUB_ENV
-          echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-linux" >> $GITHUB_ENV
+          echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-${suffix}" >> $GITHUB_ENV
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -129,6 +145,7 @@ jobs:
           name: RT4D Editor ${{ env.VERSION }}
           fail_on_unmatched_files: true
           files: |
-            release/RT4D-Editor-${{ env.VERSION }}-windows/RT4D-Editor-${{ env.VERSION }}-windows.zip
+            release/RT4D-Editor-${{ env.VERSION }}-windows-x64/RT4D-Editor-${{ env.VERSION }}-windows-x64.zip
+            release/RT4D-Editor-${{ env.VERSION }}-windows-x86/RT4D-Editor-${{ env.VERSION }}-windows-x86.zip
             release/RT4D-Editor-${{ env.VERSION }}-macos/RT4D-Editor-${{ env.VERSION }}-macos.zip
             release/RT4D-Editor-${{ env.VERSION }}-linux/RT4D-Editor-${{ env.VERSION }}-linux.zip
