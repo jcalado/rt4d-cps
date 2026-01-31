@@ -225,8 +225,12 @@ class ZoneWidget(QWidget):
             item = QTableWidgetItem(zone.name)
             self.table.setItem(row, 1, item)
 
-            # Channel count
-            item = QTableWidgetItem(str(len(zone.channels)))
+            # Channel count - only count channels that still exist
+            if self.codeplug:
+                valid_count = sum(1 for uuid in zone.channels if self.codeplug.get_channel(uuid))
+            else:
+                valid_count = len(zone.channels)
+            item = QTableWidgetItem(str(valid_count))
             self.table.setItem(row, 2, item)
 
             # Track which row to reselect

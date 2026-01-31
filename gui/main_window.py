@@ -325,8 +325,25 @@ class MainWindow(QMainWindow):
         if not file_path:
             return
 
+        # Ask user whether to replace or append
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Import CSV")
+        msg.setText("How would you like to import channels?")
+        btn_replace = msg.addButton("Replace existing", QMessageBox.AcceptRole)
+        btn_append = msg.addButton("Append to end", QMessageBox.ActionRole)
+        msg.addButton("Cancel", QMessageBox.RejectRole)
+        msg.exec()
+
+        clicked = msg.clickedButton()
+        if clicked == btn_replace:
+            mode = "replace"
+        elif clicked == btn_append:
+            mode = "append"
+        else:
+            return
+
         try:
-            self.channel_widget.import_csv(file_path)
+            self.channel_widget.import_csv(file_path, mode=mode)
             self.on_data_modified()
             QMessageBox.information(self, "Success", "CSV imported successfully")
         except Exception as e:
@@ -436,7 +453,8 @@ class MainWindow(QMainWindow):
         self.channel_widget.reload_current_channel_details()
 
     def on_channels_modified(self):
-        """Handle channels modification - refresh zone widget channel lists"""
+        """Handle channels modification - refresh zone widget channel lists and counts"""
+        self.zone_widget.refresh_table()
         self.zone_widget.refresh_details()
 
     def update_title(self):

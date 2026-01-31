@@ -1565,8 +1565,25 @@ class ChannelTableWidget(QWidget):
         if not file_path:
             return
 
+        # Ask user whether to replace or append
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Import CSV")
+        msg.setText("How would you like to import channels?")
+        btn_replace = msg.addButton("Replace existing", QMessageBox.AcceptRole)
+        btn_append = msg.addButton("Append to end", QMessageBox.ActionRole)
+        msg.addButton("Cancel", QMessageBox.RejectRole)
+        msg.exec()
+
+        clicked = msg.clickedButton()
+        if clicked == btn_replace:
+            mode = "replace"
+        elif clicked == btn_append:
+            mode = "append"
+        else:
+            return
+
         try:
-            self.import_csv(file_path)
+            self.import_csv(file_path, mode=mode)
             QMessageBox.information(self, "Success", "CSV imported successfully")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to import CSV:\n{e}")
@@ -1593,38 +1610,63 @@ class ChannelTableWidget(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to export CSV:\n{e}")
 
-    def import_csv(self, file_path: str):
-        """Import channels from CSV in RT-4D CPS format"""
+    def import_csv(self, file_path: str, mode: str = "replace"):
+        """Import channels from CSV in RT-4D CPS format.
+
+        Args:
+            file_path: Path to the CSV file.
+            mode: "replace" to overwrite channels at their CSV positions,
+                  "append" to add channels after the last existing channel.
+        """
         if not self.codeplug:
             raise ValueError("No codeplug loaded")
 
+        from rt4d_codeplug.constants import MAX_CHANNELS
         from rt4d_codeplug.dropdowns import (
             TOT_VALUES, TX_PRIORITY_VALUES, DMR_MODE_VALUES, DMR_MONITOR_VALUES,
             BANDWIDTH_VALUES, TAIL_TONE_VALUES, SCRAMBLER_VALUES, CTDCS_SELECT_VALUES,
-            ANALOG_MODULATION_VALUES
+            ANALOG_MODULATION_VALUES, ALARM_VALUES, RX_TX_VALUES
         )
         from rt4d_codeplug import AnalogModulation
+
+        if mode == "replace":
+            # Clear all existing channels so only CSV contents remain
+            self.codeplug.channels.clear()
+        elif mode == "append":
+            # Determine the starting position after existing channels
+            active = self.codeplug.get_active_channels()
+            if active:
+                next_position = max(ch.position for ch in active) + 1
+            else:
+                next_position = 1
+            skipped = 0
 
         with open(file_path, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
 
             for row in reader:
                 try:
-                    # Parse channel number as position
-                    position = int(row.get('Channel Number', 0))
-                    if position < 1 or position > 1024:
-                        print(f"Warning: Invalid channel position {position}, skipping")
-                        continue
-
-                    # Check if channel exists at this position (for update) or create new
-                    channel = self.codeplug.get_channel_by_position(position)
-                    if not channel:
-                        # New channel with specified position
+                    if mode == "append":
+                        # Ignore CSV position, assign sequentially
+                        if next_position > MAX_CHANNELS:
+                            skipped += 1
+                            continue
+                        position = next_position
+                        next_position += 1
                         channel = Channel(position=position)
                         self.codeplug.add_channel(channel)
                     else:
-                        # Update existing channel at this position
-                        pass
+                        # Replace mode: use CSV position
+                        position = int(row.get('Channel Number', 0))
+                        if position < 1 or position > MAX_CHANNELS:
+                            print(f"Warning: Invalid channel position {position}, skipping")
+                            continue
+
+                        # Check if channel exists at this position (for update) or create new
+                        channel = self.codeplug.get_channel_by_position(position)
+                        if not channel:
+                            channel = Channel(position=position)
+                            self.codeplug.add_channel(channel)
 
                     # Common fields
                     channel.name = row.get('Channel Name', '')[:16]
@@ -1642,6 +1684,10 @@ class ChannelTableWidget(QWidget):
                     # Scan
                     scan_str = row.get('Scan Add', 'Add')
                     channel.scan = ScanMode.ADD if scan_str == 'Add' else ScanMode.REMOVE
+
+                    # RX/TX Permission
+                    rx_tx_str = row.get('RX/TX', 'RX+TX')
+                    channel.rx_tx = self._find_dropdown_value(RX_TX_VALUES, rx_tx_str)
 
                     if channel.is_digital():
                         # Digital-specific fields - use UUID-based lookups
@@ -1678,6 +1724,9 @@ class ChannelTableWidget(QWidget):
                         id_select = row.get('ID Select', 'Radio ID')
                         channel.use_radio_id = (id_select == 'Radio ID')
 
+                        alarm_str = row.get('Alarm', 'Disabled')
+                        channel.alarm = self._find_dropdown_value(ALARM_VALUES, alarm_str)
+
                     else:
                         # Analog-specific fields
                         channel.rx_ctcss = row.get('RX TONE', None) or None
@@ -1711,6 +1760,13 @@ class ChannelTableWidget(QWidget):
                     print(f"Warning: Skipping invalid row at channel {row.get('Channel Number', '?')}: {e}")
                     continue
 
+        if mode == "append" and skipped > 0:
+            QMessageBox.warning(
+                self, "Warning",
+                f"{skipped} channel(s) were skipped because the maximum "
+                f"of {MAX_CHANNELS} channels was reached."
+            )
+
         self.refresh_table()
         self.data_modified.emit()
 
@@ -1722,7 +1778,7 @@ class ChannelTableWidget(QWidget):
         from rt4d_codeplug.dropdowns import (
             TOT_VALUES, TX_PRIORITY_VALUES, DMR_MODE_VALUES, DMR_MONITOR_VALUES,
             BANDWIDTH_VALUES, TAIL_TONE_VALUES, SCRAMBLER_VALUES, CTDCS_SELECT_VALUES,
-            ANALOG_MODULATION_VALUES
+            ANALOG_MODULATION_VALUES, ALARM_VALUES, RX_TX_VALUES
         )
 
         # Export channels in list order (this is the order shown in the UI)
@@ -1733,8 +1789,9 @@ class ChannelTableWidget(QWidget):
             # Write header matching RT-4D CPS format
             writer.writerow([
                 'Channel Number', 'Rx Frequency', 'Tx Frequency', 'Channel Type', 'Power', 'Scan Add',
+                'RX/TX',
                 'Channel Name', 'TG List', 'Contact', 'DMR Enrcypt', 'DMR Mode', 'Timeslot', 'Colour Code',
-                'DMR Politely TX', 'DMR TOT', 'Promiscuos Mode', 'Channel ID', 'ID Select',
+                'DMR Politely TX', 'DMR TOT', 'Promiscuos Mode', 'Channel ID', 'ID Select', 'Alarm',
                 'RX TONE', 'TX TONE', 'Bandwidth (kHz)', 'Busy Lock', 'ANA TOT', 'Tail Tone', 'Scrambler',
                 'DCS Type', 'ANA Mute Code 1', 'ANA Mute Code 2', 'ANA Mute Code 3', 'AM_FM RX'
             ])
@@ -1747,6 +1804,7 @@ class ChannelTableWidget(QWidget):
                 channel_type = 'Digital' if ch.is_digital() else 'Analog'
                 power = 'High' if ch.power == PowerLevel.HIGH else 'Low'
                 scan_add = 'Add' if ch.scan == ScanMode.ADD else 'Remove'
+                rx_tx = self._get_dropdown_label(RX_TX_VALUES, ch.rx_tx)
                 channel_name = ch.name
 
                 # Digital-specific fields - use UUID-based lookups
@@ -1762,6 +1820,7 @@ class ChannelTableWidget(QWidget):
                     promiscuos_mode = self._get_dropdown_label(DMR_MONITOR_VALUES, ch.dmr_monitor)
                     channel_id = ch.dmr_id
                     id_select = 'Radio ID' if ch.use_radio_id else 'Channel ID'
+                    alarm = self._get_dropdown_label(ALARM_VALUES, ch.alarm)
                     rx_tone = ''
                     tx_tone = ''
                     bandwidth = ''
@@ -1785,6 +1844,7 @@ class ChannelTableWidget(QWidget):
                     promiscuos_mode = ''
                     channel_id = ''
                     id_select = ''
+                    alarm = ''
                     rx_tone = ch.rx_ctcss or ''
                     tx_tone = ch.tx_ctcss or ''
                     bandwidth = '12.5' if ch.bandwidth == 1 else '25'
@@ -1798,8 +1858,9 @@ class ChannelTableWidget(QWidget):
 
                 writer.writerow([
                     channel_num, rx_freq, tx_freq, channel_type, power, scan_add,
+                    rx_tx,
                     channel_name, tg_list, contact, dmr_encrypt, dmr_mode, timeslot, colour_code,
-                    dmr_politely_tx, dmr_tot, promiscuos_mode, channel_id, id_select,
+                    dmr_politely_tx, dmr_tot, promiscuos_mode, channel_id, id_select, alarm,
                     rx_tone, tx_tone, bandwidth, busy_lock, ana_tot, tail_tone, scrambler,
                     dcs_type, mute_code, 0, 0, am_fm_rx
                 ])
