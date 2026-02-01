@@ -80,7 +80,7 @@ jobs:
 
       - name: Build executable
         run: |
-          pyinstaller --noconfirm --windowed --name RT4D-Editor rt4d_gui.py
+          pyinstaller --noconfirm RT4D-Editor.spec
 
       - name: Archive build (Windows)
         if: matrix.os == 'windows-latest'
@@ -89,7 +89,7 @@ jobs:
           Set-Location dist
           $suffix = "${{ matrix.suffix }}"
           $archive = "RT4D-Editor-$env:VERSION-$suffix.zip"
-          Compress-Archive -Path RT4D-Editor -DestinationPath $archive
+          Compress-Archive -Path RT4D-Editor.exe -DestinationPath $archive
           "ARTIFACT_PATH=dist/$archive" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "ARTIFACT_NAME=RT4D-Editor-$env:VERSION-$suffix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
@@ -99,7 +99,7 @@ jobs:
           cd dist
           suffix="${{ matrix.suffix }}"
           archive="RT4D-Editor-${VERSION}-${suffix}.zip"
-          zip -r "$archive" RT4D-Editor.app
+          zip "$archive" RT4D-Editor
           echo "ARTIFACT_PATH=dist/$archive" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-${suffix}" >> $GITHUB_ENV
 
@@ -109,7 +109,7 @@ jobs:
           cd dist
           suffix="${{ matrix.suffix }}"
           archive="RT4D-Editor-${VERSION}-${suffix}.zip"
-          zip -r "$archive" RT4D-Editor
+          zip "$archive" RT4D-Editor
           echo "ARTIFACT_PATH=dist/$archive" >> $GITHUB_ENV
           echo "ARTIFACT_NAME=RT4D-Editor-${VERSION}-${suffix}" >> $GITHUB_ENV
 
