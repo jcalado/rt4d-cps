@@ -7,7 +7,6 @@ directly to the platform/architecture-specific asset.
 
 import json
 import platform
-import struct
 import webbrowser
 from urllib.error import URLError
 from urllib.request import Request, urlopen
@@ -62,10 +61,9 @@ def get_platform_asset_suffix() -> str:
     of the host OS.
     """
     system = platform.system()
-    bits = struct.calcsize("P") * 8
 
     if system == "Windows":
-        return "windows-x64" if bits == 64 else "windows-x86"
+        return "windows"
     if system == "Darwin":
         return "macos"
     # Linux or other

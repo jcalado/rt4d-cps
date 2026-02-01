@@ -16,10 +16,7 @@ jobs:
         include:
           - os: windows-latest
             arch: x64
-            suffix: windows-x64
-          - os: windows-latest
-            arch: x86
-            suffix: windows-x86
+            suffix: windows
           - os: macos-latest
             arch: x64
             suffix: macos
@@ -145,7 +142,6 @@ jobs:
           name: RT4D Editor ${{ env.VERSION }}
           fail_on_unmatched_files: true
           files: |
-            release/RT4D-Editor-${{ env.VERSION }}-windows-x64/RT4D-Editor-${{ env.VERSION }}-windows-x64.zip
-            release/RT4D-Editor-${{ env.VERSION }}-windows-x86/RT4D-Editor-${{ env.VERSION }}-windows-x86.zip
+            release/RT4D-Editor-${{ env.VERSION }}-windows/RT4D-Editor-${{ env.VERSION }}-windows.zip
             release/RT4D-Editor-${{ env.VERSION }}-macos/RT4D-Editor-${{ env.VERSION }}-macos.zip
             release/RT4D-Editor-${{ env.VERSION }}-linux/RT4D-Editor-${{ env.VERSION }}-linux.zip
