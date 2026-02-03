@@ -11,7 +11,19 @@ from PySide6.QtWidgets import (
     QPushButton, QFileDialog, QProgressBar, QMessageBox,
     QCheckBox, QGroupBox
 )
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import Qt, QSettings, QThread, Signal
+
+_SETTINGS_ORG = "RT4D-Editor"
+_SETTINGS_APP = "RT4D-Editor"
+_KEY_LAST_PORT = "last_serial_port"
+
+
+def _get_last_port() -> str:
+    return QSettings(_SETTINGS_ORG, _SETTINGS_APP).value(_KEY_LAST_PORT, "", type=str)
+
+
+def _save_last_port(port: str) -> None:
+    QSettings(_SETTINGS_ORG, _SETTINGS_APP).setValue(_KEY_LAST_PORT, port)
 
 from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
@@ -283,6 +295,12 @@ class RadioBackupDialog(QDialog):
         for port in ports:
             self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
 
+        last = _get_last_port()
+        if last:
+            idx = self.port_combo.findData(last)
+            if idx >= 0:
+                self.port_combo.setCurrentIndex(idx)
+
     def browse_file(self):
         """Browse for save file"""
         # Show only .bin for full backup, .4rdmf for selective backup
@@ -366,6 +384,7 @@ class RadioBackupDialog(QDialog):
         self.btn_backup.setEnabled(True)
 
         if success:
+            _save_last_port(self.port_combo.currentData())
             QMessageBox.information(self, "Success", message)
             self.accept()
         else:
@@ -517,6 +536,12 @@ class RadioFlashDialog(QDialog):
         for port in ports:
             self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
 
+        last = _get_last_port()
+        if last:
+            idx = self.port_combo.findData(last)
+            if idx >= 0:
+                self.port_combo.setCurrentIndex(idx)
+
     def start_flash(self):
         """Start flash operation"""
         port = self.port_combo.currentData()
@@ -581,6 +606,7 @@ class RadioFlashDialog(QDialog):
         self.btn_flash.setEnabled(True)
 
         if success:
+            _save_last_port(self.port_combo.currentData())
             QMessageBox.information(self, "Success", message)
             self.accept()
         else:
