@@ -1169,6 +1169,8 @@ class SettingsWidget(QWidget):
 
         # Operation section
         operation_group = QGroupBox("Operation Settings")
+        operation_main_layout = QVBoxLayout()
+
         operation_layout = QFormLayout()
 
         self.combo_dual_watch = QComboBox()
@@ -1213,39 +1215,58 @@ class SettingsWidget(QWidget):
         self.combo_vfo_step.currentIndexChanged.connect(self.on_settings_changed)
         operation_layout.addRow("VFO Step:", self.combo_vfo_step)
 
+        operation_main_layout.addLayout(operation_layout)
+
+        # Band A and Band B settings in two columns
+        bands_layout = QHBoxLayout()
+
+        band_a_group = QGroupBox("Band A")
+        band_a_layout = QFormLayout()
+
         self.combo_work_mode_a = QComboBox()
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_a.addItem(label, value)
         self.combo_work_mode_a.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Mode:", self.combo_work_mode_a)
+        band_a_layout.addRow("Mode:", self.combo_work_mode_a)
 
         self.spin_zone_a = QSpinBox()
         self.spin_zone_a.setRange(0, 255)
         self.spin_zone_a.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Zone:", self.spin_zone_a)
+        band_a_layout.addRow("Zone:", self.spin_zone_a)
 
         self.spin_channel_a = QSpinBox()
         self.spin_channel_a.setRange(1, 1024)
         self.spin_channel_a.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band A Channel:", self.spin_channel_a)
+        band_a_layout.addRow("Channel:", self.spin_channel_a)
+
+        band_a_group.setLayout(band_a_layout)
+        bands_layout.addWidget(band_a_group)
+
+        band_b_group = QGroupBox("Band B")
+        band_b_layout = QFormLayout()
 
         self.combo_work_mode_b = QComboBox()
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_b.addItem(label, value)
         self.combo_work_mode_b.currentIndexChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Mode:", self.combo_work_mode_b)
+        band_b_layout.addRow("Mode:", self.combo_work_mode_b)
 
         self.spin_zone_b = QSpinBox()
         self.spin_zone_b.setRange(0, 255)
         self.spin_zone_b.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Zone:", self.spin_zone_b)
+        band_b_layout.addRow("Zone:", self.spin_zone_b)
 
         self.spin_channel_b = QSpinBox()
         self.spin_channel_b.setRange(1, 1024)
         self.spin_channel_b.valueChanged.connect(self.on_settings_changed)
-        operation_layout.addRow("Band B Channel:", self.spin_channel_b)
+        band_b_layout.addRow("Channel:", self.spin_channel_b)
 
-        operation_group.setLayout(operation_layout)
+        band_b_group.setLayout(band_b_layout)
+        bands_layout.addWidget(band_b_group)
+
+        operation_main_layout.addLayout(bands_layout)
+
+        operation_group.setLayout(operation_main_layout)
         layout.addWidget(operation_group)
 
         # Clocks/Timers section
