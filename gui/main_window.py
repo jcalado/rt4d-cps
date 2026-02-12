@@ -195,6 +195,17 @@ class MainWindow(QMainWindow):
         self.action_flash.triggered.connect(self.flash_to_radio)
         radio_menu.addAction(self.action_flash)
 
+        radio_menu.addSeparator()
+
+        self.action_flash_firmware = QAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Flash &Firmware...", self
+        )
+        self.action_flash_firmware.setToolTip("Flash device firmware")
+        self.action_flash_firmware.setStatusTip("Update radio firmware via bootloader")
+        self.action_flash_firmware.triggered.connect(self.flash_firmware)
+        radio_menu.addAction(self.action_flash_firmware)
+
         # Options menu
         options_menu = menubar.addMenu("&Options")
 
@@ -425,6 +436,12 @@ class MainWindow(QMainWindow):
 
         from .radio_dialog import RadioFlashDialog
         dialog = RadioFlashDialog(self, self.codeplug)
+        dialog.exec()
+
+    def flash_firmware(self):
+        """Flash firmware to radio"""
+        from .radio_dialog import FirmwareFlashDialog
+        dialog = FirmwareFlashDialog(self)
         dialog.exec()
 
     def show_about(self):

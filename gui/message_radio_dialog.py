@@ -16,6 +16,7 @@ from rt4d_codeplug.messages import MessageParser, MessageSerializer
 from rt4d_codeplug.constants import MESSAGE_REGIONS
 from . import theme as _theme
 from rt4d_uart import RT4DUART
+from .radio_dialog import _populate_port_combo
 
 
 class MessageWorker(QThread):
@@ -234,17 +235,7 @@ class MessageRadioDialog(QDialog):
 
     def refresh_ports(self):
         """Refresh available serial ports"""
-        self.port_combo.clear()
-        ports = list(serial.tools.list_ports.comports())
-
-        # On Linux, prioritize USB ports
-        if platform.system() == "Linux":
-            usb_ports = [p for p in ports if "USB" in p.device.upper() or "USB" in p.description.upper()]
-            other_ports = [p for p in ports if p not in usb_ports]
-            ports = usb_ports + other_ports
-
-        for port in ports:
-            self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
+        _populate_port_combo(self.port_combo)
 
     def start_operation(self):
         """Start the read/write operation"""

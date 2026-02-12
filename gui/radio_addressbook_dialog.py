@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from . import theme as _theme
 from rt4d_uart import RT4DUART
+from .radio_dialog import _populate_port_combo
 from rt4d_codeplug.global_contacts import GlobalContactDatabase, GlobalContactCSVParser
 
 
@@ -167,14 +168,7 @@ class RadioAddressBookDialog(QDialog):
 
     def refresh_ports(self):
         """Refresh available serial ports"""
-        self.port_combo.clear()
-        ports = serial.tools.list_ports.comports()
-
-        for port in ports:
-            self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
-
-        if self.port_combo.count() == 0:
-            self.port_combo.addItem("No ports found", None)
+        _populate_port_combo(self.port_combo)
 
     def on_baud_changed(self):
         """Handle baud rate selection change"""

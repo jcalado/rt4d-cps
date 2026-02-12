@@ -15,9 +15,23 @@ from PySide6.QtCore import Qt, QThread, Signal
 
 from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
-from rt4d_uart import RT4DUART
+from rt4d_uart import RT4DUART, FIRMWARE_SIZE, FIRMWARE_CHUNK_SIZE, validate_firmware_file, prepare_firmware_data
 from rt4d_codeplug.constants import SPI_REGIONS
 from rt4d_codeplug.utils import detect_settings_bank
+
+
+def _populate_port_combo(combo: QComboBox):
+    """Populate a combo box with available serial ports (USB first on Linux)."""
+    combo.clear()
+    ports = list(serial.tools.list_ports.comports())
+
+    if platform.system() == "Linux":
+        usb_ports = [p for p in ports if "USB" in p.device.upper() or "USB" in p.description.upper()]
+        other_ports = [p for p in ports if p not in usb_ports]
+        ports = usb_ports + other_ports
+
+    for port in ports:
+        combo.addItem(f"{port.device} - {port.description}", port.device)
 
 
 class RadioWorker(QThread):
@@ -271,17 +285,7 @@ class RadioBackupDialog(QDialog):
 
     def refresh_ports(self):
         """Refresh available serial ports"""
-        self.port_combo.clear()
-        ports = list(serial.tools.list_ports.comports())
-
-        # On Linux, prioritize USB ports at the top of the list
-        if platform.system() == "Linux":
-            usb_ports = [p for p in ports if "USB" in p.device.upper() or "USB" in p.description.upper()]
-            other_ports = [p for p in ports if p not in usb_ports]
-            ports = usb_ports + other_ports
-
-        for port in ports:
-            self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
+        _populate_port_combo(self.port_combo)
 
     def browse_file(self):
         """Browse for save file"""
@@ -505,17 +509,7 @@ class RadioFlashDialog(QDialog):
 
     def refresh_ports(self):
         """Refresh available serial ports"""
-        self.port_combo.clear()
-        ports = list(serial.tools.list_ports.comports())
-
-        # On Linux, prioritize USB ports at the top of the list
-        if platform.system() == "Linux":
-            usb_ports = [p for p in ports if "USB" in p.device.upper() or "USB" in p.description.upper()]
-            other_ports = [p for p in ports if p not in usb_ports]
-            ports = usb_ports + other_ports
-
-        for port in ports:
-            self.port_combo.addItem(f"{port.device} - {port.description}", port.device)
+        _populate_port_combo(self.port_combo)
 
     def start_flash(self):
         """Start flash operation"""
@@ -579,6 +573,234 @@ class RadioFlashDialog(QDialog):
         self.progress_bar.setValue(100 if success else 0)
         self.status_label.setText(message)
         self.btn_flash.setEnabled(True)
+
+        if success:
+            QMessageBox.information(self, "Success", message)
+            self.accept()
+        else:
+            QMessageBox.critical(self, "Error", message)
+
+
+class FirmwareWorker(QThread):
+    """Worker thread for firmware flashing"""
+    progress = Signal(int, str)  # percent, message
+    finished = Signal(bool, str)  # success, message
+
+    def __init__(self, port: str, file_path: str):
+        super().__init__()
+        self.port = port
+        self.file_path = file_path
+
+    def run(self):
+        """Execute firmware flash operation"""
+        uart = RT4DUART()
+        try:
+            self.progress.emit(5, "Loading firmware file...")
+            firmware_data = prepare_firmware_data(self.file_path)
+            total_chunks = FIRMWARE_SIZE // FIRMWARE_CHUNK_SIZE
+
+            self.progress.emit(10, "Opening serial port...")
+            uart.open(self.port)
+
+            self.progress.emit(15, "Probing bootloader...")
+            uart.probe_bootloader()
+
+            self.progress.emit(20, "Sending handshake...")
+            uart.command_handshake()
+
+            self.progress.emit(25, "Erasing firmware (do not disconnect!)...")
+            uart.command_trigger_erase()
+
+            # Write firmware chunks (25-95% of progress)
+            for chunk_num in range(total_chunks):
+                offset = chunk_num * FIRMWARE_CHUNK_SIZE
+                chunk_data = firmware_data[offset:offset + FIRMWARE_CHUNK_SIZE]
+                uart.command_write_firmware(offset, chunk_data)
+
+                percent = 25 + int((chunk_num + 1) / total_chunks * 70)
+                self.progress.emit(percent, f"Writing firmware: {chunk_num + 1}/{total_chunks}")
+
+            self.progress.emit(100, "Complete")
+            self.finished.emit(True,
+                               "Firmware flashed successfully!\n\n"
+                               "The radio will now reboot with the new firmware.")
+
+        except serial.SerialException as e:
+            self.finished.emit(False,
+                               f"Could not open {self.port}. "
+                               f"Check the port and ensure the radio is connected.\n\n{e}")
+        except Exception as e:
+            self.finished.emit(False, str(e))
+        finally:
+            try:
+                uart.close()
+            except Exception:
+                pass
+
+
+class FirmwareFlashDialog(QDialog):
+    """Dialog for flashing firmware to radio"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.firmware_file: Optional[Path] = None
+        self.worker: Optional[FirmwareWorker] = None
+        self.init_ui()
+
+    def init_ui(self):
+        """Initialize UI"""
+        self.setWindowTitle("Flash Firmware to Radio")
+        self.setModal(True)
+        self.setMinimumWidth(500)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Warning
+        warning = QLabel(
+            "This will REPLACE the firmware on your radio.\n"
+            "The radio must be in bootloader mode (power on while holding PTT)."
+        )
+        warning.setStyleSheet(_theme.warning_style())
+        warning.setWordWrap(True)
+        layout.addWidget(warning)
+
+        # Port selection
+        port_layout = QHBoxLayout()
+        port_layout.addWidget(QLabel("Serial Port:"))
+        self.port_combo = QComboBox()
+        self.refresh_ports()
+        port_layout.addWidget(self.port_combo)
+
+        btn_refresh = QPushButton("Refresh")
+        btn_refresh.clicked.connect(self.refresh_ports)
+        port_layout.addWidget(btn_refresh)
+        layout.addLayout(port_layout)
+
+        # Firmware file selection
+        file_layout = QHBoxLayout()
+        file_layout.addWidget(QLabel("Firmware:"))
+        self.file_label = QLabel("(not selected)")
+        file_layout.addWidget(self.file_label)
+
+        btn_browse = QPushButton("Browse...")
+        btn_browse.clicked.connect(self.browse_firmware)
+        file_layout.addWidget(btn_browse)
+        layout.addLayout(file_layout)
+
+        # Validation status
+        self.validation_label = QLabel("")
+        layout.addWidget(self.validation_label)
+
+        # Progress
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
+
+        self.status_label = QLabel("")
+        layout.addWidget(self.status_label)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        self.btn_flash = QPushButton("Flash Firmware")
+        self.btn_flash.setEnabled(False)
+        self.btn_flash.clicked.connect(self.start_flash)
+        button_layout.addWidget(self.btn_flash)
+
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.clicked.connect(self.reject)
+        button_layout.addWidget(self.btn_cancel)
+
+        layout.addLayout(button_layout)
+
+    def refresh_ports(self):
+        """Refresh available serial ports"""
+        _populate_port_combo(self.port_combo)
+
+    def browse_firmware(self):
+        """Browse for firmware file"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Firmware File",
+            "",
+            "Binary Files (*.bin);;All Files (*)"
+        )
+        if not file_path:
+            return
+
+        self.firmware_file = Path(file_path)
+        self.file_label.setText(self.firmware_file.name)
+
+        # Validate
+        is_valid, error_msg, file_size = validate_firmware_file(file_path)
+        if is_valid:
+            self.validation_label.setText(f"Valid firmware file ({file_size} bytes)")
+            self.validation_label.setStyleSheet(f"color: {_theme.success_color()};")
+            self.btn_flash.setEnabled(True)
+        else:
+            self.validation_label.setText(error_msg)
+            self.validation_label.setStyleSheet(f"color: {_theme.error_color()};")
+            self.btn_flash.setEnabled(False)
+
+    def start_flash(self):
+        """Start firmware flash operation"""
+        port = self.port_combo.currentData()
+        if not port:
+            QMessageBox.warning(self, "Error", "No serial port selected")
+            return
+
+        if not self.firmware_file:
+            QMessageBox.warning(self, "Error", "No firmware file selected")
+            return
+
+        # Confirmation dialog with checkbox
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Confirm Firmware Flash")
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setText("You are about to flash firmware to the radio.")
+        msg_box.setInformativeText(
+            "This will:\n"
+            "  - ERASE the current firmware on the device\n"
+            "  - WRITE new firmware from the selected file\n"
+            "  - Potentially BRICK the device if interrupted\n\n"
+            f"Firmware file: {self.firmware_file.name}\n\n"
+            "The radio MUST be in bootloader mode."
+        )
+        checkbox = QCheckBox("I understand this will replace the device firmware")
+        msg_box.setCheckBox(checkbox)
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+
+        result = msg_box.exec()
+        if result != QMessageBox.Yes or not checkbox.isChecked():
+            return
+
+        # Start worker thread
+        self.worker = FirmwareWorker(port, str(self.firmware_file))
+        self.worker.progress.connect(self.on_progress)
+        self.worker.finished.connect(self.on_finished)
+
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
+        self.btn_flash.setEnabled(False)
+        self.btn_cancel.setEnabled(False)
+        self.status_label.setText("Connecting to radio...")
+
+        self.worker.start()
+
+    def on_progress(self, percent: int, message: str):
+        """Handle progress update"""
+        self.progress_bar.setValue(percent)
+        self.status_label.setText(message)
+
+    def on_finished(self, success: bool, message: str):
+        """Handle completion"""
+        self.progress_bar.setValue(100 if success else 0)
+        self.status_label.setText("Complete" if success else "Failed")
+        self.btn_flash.setEnabled(True)
+        self.btn_cancel.setEnabled(True)
 
         if success:
             QMessageBox.information(self, "Success", message)
