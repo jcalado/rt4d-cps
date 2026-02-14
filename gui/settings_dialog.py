@@ -481,10 +481,31 @@ class SettingsDialog(QDialog):
                 break
 
     def _get_function_key_label(self, label, value):
-        """Return beta41-aware label for function key."""
+        """Return version-aware label for function key."""
         if label == "Color Code Detect" and self.settings and self.settings.beta41:
             return "Talker Alias"
+        if label == "Send DTMF (Custom FW)" and self.settings and self.settings.beta_version >= 42:
+            return "DTMF List (Custom FW)"
         return label
+
+    def _update_function_key_labels(self):
+        """Re-apply version-aware labels on all function key combos."""
+        from rt4d_codeplug.dropdowns import FUNCTION_KEY_VALUES
+        combos = [
+            self.combo_key_fs1_short, self.combo_key_fs1_long,
+            self.combo_key_fs2_short, self.combo_key_fs2_long,
+            self.combo_key_0, self.combo_key_1, self.combo_key_2,
+            self.combo_key_3, self.combo_key_4, self.combo_key_5,
+            self.combo_key_6, self.combo_key_7, self.combo_key_8,
+            self.combo_key_9,
+        ]
+        for combo in combos:
+            for idx in range(combo.count()):
+                value = combo.itemData(idx)
+                for label, val in FUNCTION_KEY_VALUES:
+                    if val == value:
+                        combo.setItemText(idx, self._get_function_key_label(label, value))
+                        break
 
     def _apply_beta41_visibility(self):
         """Apply visibility based on beta41 flag."""
@@ -585,6 +606,9 @@ class SettingsDialog(QDialog):
         self._set_combo_value(self.combo_detection_range, self.settings.detection_range)
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
+
+        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
+        self._update_function_key_labels()
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
@@ -925,6 +949,20 @@ class CustomFirmwareDialog(QDialog):
         # Spin boxes (non-combo settings)
         self.spin_vfo_a_offset.setValue(self.settings.vfo_a_offset)
         self.spin_vfo_b_offset.setValue(self.settings.vfo_b_offset)
+
+        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
+        self._update_green_key_labels()
+
+    def _update_green_key_labels(self):
+        """Re-apply version-aware labels on green key long combo."""
+        if not self.settings or self.settings.beta_version < 42:
+            return
+        for idx in range(self.combo_green_key_long.count()):
+            value = self.combo_green_key_long.itemData(idx)
+            for label, val in GREEN_KEY_LONG_VALUES:
+                if val == value and label == "Send DTMF (Custom FW)":
+                    self.combo_green_key_long.setItemText(idx, "DTMF List (Custom FW)")
+                    break
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""

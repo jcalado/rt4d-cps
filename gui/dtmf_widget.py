@@ -77,12 +77,13 @@ class DTMFWidget(QWidget):
         self.send_mode_combo.currentIndexChanged.connect(self.on_settings_changed)
         settings_layout.addRow("Send Mode:", self.send_mode_combo)
 
-        # Send Select (Preset Code Selection)
+        # Send Select (Preset Code Selection) - label renamed to "DTMF List" in beta42+
         self.send_select_combo = QComboBox()
         for label, value in DTMF_PRESET_VALUES:
             self.send_select_combo.addItem(label, value)
         self.send_select_combo.currentIndexChanged.connect(self.on_settings_changed)
-        settings_layout.addRow("Send Select:", self.send_select_combo)
+        self.send_select_label = QLabel("Send Select:")
+        settings_layout.addRow(self.send_select_label, self.send_select_combo)
 
         # DTMF Gain
         self.gain_spin = QSpinBox()
@@ -211,6 +212,11 @@ class DTMFWidget(QWidget):
         # Spinboxes
         self.gain_spin.setValue(settings.dtmf_gain)
         self.decode_threshold_spin.setValue(settings.dtmf_decode_threshold)
+
+        # Update version-aware labels
+        self.send_select_label.setText(
+            "DTMF List:" if settings.beta_version >= 42 else "Send Select:"
+        )
 
         # Load DTMF codes and names
         has_custom_names = settings.beta_version >= 42
