@@ -16,7 +16,8 @@ from PySide6.QtCore import Qt, QThread, Signal
 from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
 from rt4d_uart import RT4DUART, FIRMWARE_SIZE, FIRMWARE_CHUNK_SIZE, validate_firmware_file, prepare_firmware_data
-from rt4d_codeplug.constants import SPI_REGIONS
+import struct
+from rt4d_codeplug.constants import SPI_REGIONS, OFFSET_DTMF_NAMES, SIZE_DTMF_NAMES, BETA_VERSION_OFFSET
 from rt4d_codeplug.utils import detect_settings_bank, read_zone_region_ab
 
 
@@ -81,8 +82,9 @@ class RadioWorker(QThread):
         """Backup from radio"""
         from rt4d_codeplug.constants import TOTAL_SIZE, OFFSET_CFG, OFFSET_CHANNELS, OFFSET_CONTACTS
         from rt4d_codeplug.constants import OFFSET_GROUPLISTS, OFFSET_ENCRYPT, OFFSET_ZONES, OFFSET_FM
+        from rt4d_codeplug.constants import OFFSET_DTMF_NAMES
         from rt4d_codeplug.constants import SIZE_CFG, SIZE_CHANNELS, SIZE_CONTACTS, SIZE_GROUPLISTS
-        from rt4d_codeplug.constants import SIZE_ENCRYPT, SIZE_ZONES, SIZE_FM
+        from rt4d_codeplug.constants import SIZE_ENCRYPT, SIZE_ZONES, SIZE_FM, SIZE_DTMF_NAMES
 
         # Full backup
         if not self.regions:
@@ -106,6 +108,14 @@ class RadioWorker(QThread):
         settings_bank_addr, beta41 = detect_settings_bank(uart)
         self.progress.emit(5, f"Detected settings at bank 0x{settings_bank_addr:06X}")
 
+        # Detect beta version for feature gating (beta42+ features)
+        beta_version = 0
+        if beta41:
+            version_data = uart.read_spi_region(settings_bank_addr + BETA_VERSION_OFFSET, 4)
+            if version_data:
+                raw = struct.unpack('<I', version_data)[0]
+                beta_version = 41 if raw in (0, 0xFFFFFFFF) else raw
+
         region_map = {
             'main_settings': (OFFSET_CFG, SIZE_CFG, settings_bank_addr),
             'channels': (OFFSET_CHANNELS, SIZE_CHANNELS, 0x004000),
@@ -114,6 +124,7 @@ class RadioWorker(QThread):
             'dmr_keys': (OFFSET_ENCRYPT, SIZE_ENCRYPT, 0x082000),
             'zones': (OFFSET_ZONES, SIZE_ZONES, 0x01C000),
             'fm_settings': (OFFSET_FM, SIZE_FM, 0x0D6000),
+            'dtmf_names': (OFFSET_DTMF_NAMES, SIZE_DTMF_NAMES, 0x0C7000),
         }
 
         total_regions = len(self.regions)
@@ -122,6 +133,8 @@ class RadioWorker(QThread):
             self.progress.emit(percent, f"Reading {region_name}...")
 
             if region_name not in region_map:
+                continue
+            if region_name == 'dtmf_names' and beta_version < 42:
                 continue
 
             file_offset, size, spi_address = region_map[region_name]
@@ -156,6 +169,10 @@ class RadioWorker(QThread):
 
             if region_name not in SPI_REGIONS:
                 continue
+            if region_name == "dtmf_names":
+                beta_ver = self.codeplug.settings.beta_version if self.codeplug and self.codeplug.settings else 0
+                if beta_ver < 42:
+                    continue
 
             # Extract appropriate data based on region
             if region_name == "channels":
@@ -172,6 +189,8 @@ class RadioWorker(QThread):
                 region_data = data[0x0:0x1000]
             elif region_name == "fm_settings":
                 region_data = data[0x43000:0x43400]  # FM data (1024 bytes)
+            elif region_name == "dtmf_names":
+                region_data = data[OFFSET_DTMF_NAMES:OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES]
             else:
                 continue
 
@@ -261,6 +280,10 @@ class RadioBackupDialog(QDialog):
         self.check_fm.setChecked(True)
         region_layout.addWidget(self.check_fm)
 
+        self.check_dtmf_names = QCheckBox("DTMF Preset Names")
+        self.check_dtmf_names.setChecked(True)
+        region_layout.addWidget(self.check_dtmf_names)
+
         region_group.setLayout(region_layout)
         layout.addWidget(region_group)
 
@@ -317,6 +340,7 @@ class RadioBackupDialog(QDialog):
         self.check_encryption.setEnabled(not checked)
         self.check_zones.setEnabled(not checked)
         self.check_fm.setEnabled(not checked)
+        self.check_dtmf_names.setEnabled(not checked)
 
     def start_backup(self):
         """Start backup operation"""
@@ -348,6 +372,8 @@ class RadioBackupDialog(QDialog):
                 regions.append("zones")
             if self.check_fm.isChecked():
                 regions.append("fm_settings")
+            if self.check_dtmf_names.isChecked():
+                regions.append("dtmf_names")
 
         # Start worker thread
         self.worker = RadioWorker("backup", port, str(self.backup_file), regions)
@@ -485,6 +511,10 @@ class RadioFlashDialog(QDialog):
         self.check_fm.setChecked(True)
         region_layout.addWidget(self.check_fm)
 
+        self.check_dtmf_names = QCheckBox("DTMF Preset Names")
+        self.check_dtmf_names.setChecked(True)
+        region_layout.addWidget(self.check_dtmf_names)
+
         region_group.setLayout(region_layout)
         layout.addWidget(region_group)
 
@@ -553,6 +583,8 @@ class RadioFlashDialog(QDialog):
             regions.append("zones")
         if self.check_fm.isChecked():
             regions.append("fm_settings")
+        if self.check_dtmf_names.isChecked():
+            regions.append("dtmf_names")
 
         # Start worker thread
         self.worker = RadioWorker("flash", port, None, regions, self.codeplug)

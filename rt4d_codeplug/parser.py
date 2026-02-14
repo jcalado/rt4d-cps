@@ -14,8 +14,8 @@ class CodeplugParser:
 
     def __init__(self, data: bytes):
         """Initialize parser with binary data"""
-        if len(data) != TOTAL_SIZE:
-            raise ValueError(f"Invalid file size: {len(data)} (expected {TOTAL_SIZE})")
+        if len(data) not in (TOTAL_SIZE, TOTAL_SIZE_LEGACY):
+            raise ValueError(f"Invalid file size: {len(data)} (expected {TOTAL_SIZE} or {TOTAL_SIZE_LEGACY})")
         self.data = data
         self._beta41_layout = False
 
@@ -29,12 +29,18 @@ class CodeplugParser:
         codeplug.encrypt_data = self.data[OFFSET_ENCRYPT:OFFSET_ENCRYPT + SIZE_ENCRYPT]
         codeplug.fm_data = self.data[OFFSET_FM:OFFSET_FM + SIZE_FM]
 
+        # Parse DTMF names (if present in file)
+        if len(self.data) >= OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES:
+            codeplug.dtmf_names_data = self.data[OFFSET_DTMF_NAMES:OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES]
+
         # Parse radio settings
         print("Parsing radio settings...")
         codeplug.settings = self.parse_settings(codeplug.cfg_data)
         if codeplug.settings:
             self._beta41_layout = bool(codeplug.settings.beta41)
             print(f"Detected beta41+ layout: {self._beta41_layout}")
+            # Parse DTMF names into settings
+            codeplug.settings.dtmf_names = self.parse_dtmf_names(codeplug.dtmf_names_data)
 
         # Parse channels
         print("Parsing channels...")
@@ -778,6 +784,17 @@ class CodeplugParser:
                 settings.beta_version = raw_version
 
         return settings
+
+    @staticmethod
+    def parse_dtmf_names(data: bytes) -> list[str]:
+        """Parse 16 DTMF preset names from 256-byte buffer (16 × 16 ASCII, 0xFF padded)"""
+        names = []
+        for i in range(MAX_DTMF_NAMES):
+            offset = i * DTMF_NAME_SIZE
+            raw = data[offset:offset + DTMF_NAME_SIZE]
+            name_bytes = bytes(b for b in raw if b != EMPTY_BYTE and b != 0x00)
+            names.append(name_bytes.decode('ascii', errors='ignore').strip())
+        return names
 
     @staticmethod
     def _parse_bcd(bcd_bytes: bytes) -> int:

@@ -185,8 +185,9 @@ def backup_from_radio(port: str, output_file: str, regions: list = None):
         # Create empty codeplug structure
         from rt4d_codeplug.constants import TOTAL_SIZE, OFFSET_CFG, OFFSET_CHANNELS, OFFSET_CONTACTS
         from rt4d_codeplug.constants import OFFSET_GROUPLISTS, OFFSET_ENCRYPT, OFFSET_ZONES, OFFSET_FM
+        from rt4d_codeplug.constants import OFFSET_DTMF_NAMES
         from rt4d_codeplug.constants import SIZE_CFG, SIZE_CHANNELS, SIZE_CONTACTS, SIZE_GROUPLISTS
-        from rt4d_codeplug.constants import SIZE_ENCRYPT, SIZE_ZONES, SIZE_FM
+        from rt4d_codeplug.constants import SIZE_ENCRYPT, SIZE_ZONES, SIZE_FM, SIZE_DTMF_NAMES
 
         codeplug_data = bytearray(b'\xff' * TOTAL_SIZE)
 
@@ -203,6 +204,7 @@ def backup_from_radio(port: str, output_file: str, regions: list = None):
             'dmr_keys': (OFFSET_ENCRYPT, SIZE_ENCRYPT, 0x082000),
             'zones': (OFFSET_ZONES, SIZE_ZONES, 0x01C000),
             'fm_settings': (OFFSET_FM, SIZE_FM, 0x0D6000),
+            'dtmf_names': (OFFSET_DTMF_NAMES, SIZE_DTMF_NAMES, 0x0C7000),
         }
 
         for region_name in regions:

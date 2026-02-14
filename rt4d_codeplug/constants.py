@@ -8,6 +8,7 @@ OFFSET_GROUPLISTS = 0x1D000
 OFFSET_ENCRYPT = 0x20000
 OFFSET_ZONES = 0x23000
 OFFSET_FM = 0x43000
+OFFSET_DTMF_NAMES = 0x43400
 
 # Section Sizes
 SIZE_CFG = 4096  # 0x1000
@@ -17,9 +18,11 @@ SIZE_GROUPLISTS = 12288  # 0x3000
 SIZE_ENCRYPT = 12288  # 0x3000
 SIZE_ZONES = 131072  # 0x20000 (256 × 512)
 SIZE_FM = 1024  # 0x400
+SIZE_DTMF_NAMES = 256  # 0x100 (16 × 16)
 
 # Total file size
-TOTAL_SIZE = 275456  # 0x43400
+TOTAL_SIZE = 275712  # 0x43500
+TOTAL_SIZE_LEGACY = 275456  # 0x43400 (files without DTMF names)
 
 # Per-item sizes
 CHANNEL_SIZE = 48
@@ -27,6 +30,8 @@ CONTACT_SIZE = 32
 ZONE_SIZE = 512
 GROUP_LIST_SIZE = 272
 GROUP_LIST_SIZE_NEW = 80
+DTMF_NAME_SIZE = 16
+MAX_DTMF_NAMES = 16
 
 # Max counts
 MAX_CHANNELS = 1024
@@ -50,6 +55,7 @@ SPI_REGIONS = {
     "default_sms": {"region_id": 0x97, "address": 0x094000, "size": 0x001000},
     "schedules": {"region_id": 0x98, "address": 0x0C6000, "size": 0x008000},
     "fm_settings": {"region_id": 0x99, "address": 0x0D6000, "size": 0x001000},
+    "dtmf_names": {"region_id": 0x80, "address": 0x0C7000, "size": 0x000100},
 }
 
 # Channel modes
