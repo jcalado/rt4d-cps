@@ -769,6 +769,14 @@ class CodeplugParser:
         settings.tx_alias = cfg_data[0x3A0]
         settings.beta41 = cfg_data[4092:4096] == BETA41_MAGIC
 
+        # Beta version detection (Beta 42+ stores version at offset 0xFF0 as u32 LE)
+        if settings.beta41:
+            raw_version = struct.unpack_from('<I', cfg_data, BETA_VERSION_OFFSET)[0]
+            if raw_version == 0 or raw_version == 0xFFFFFFFF:
+                settings.beta_version = 41
+            else:
+                settings.beta_version = raw_version
+
         return settings
 
     @staticmethod

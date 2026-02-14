@@ -78,12 +78,19 @@ FREQ_MULTIPLIER = 100000
 
 # Beta firmware layout detection
 BETA41_MAGIC = b'DTCN'
+BETA_VERSION_OFFSET = 0xFF0  # 32-bit LE beta version number (Beta 42+)
 
 # Settings bank addresses (SPI flash)
 SETTINGS_BANK0_ADDR = 0x002000  # Bank 0 settings location
 SETTINGS_BANK1_ADDR = 0x003000  # Bank 1 settings location (beta41+)
 BANK0_MAGIC_OFFSET = 0x002FFC   # DTCN magic location for bank 0 (0x2000 + 0xFFC)
 BANK1_MAGIC_OFFSET = 0x003FFC   # DTCN magic location for bank 1 (0x3000 + 0xFFC)
+
+# Zone A/B dual-bank constants (beta41+)
+ZONE_PAGE_SIZE = 4096            # 4KB pages for A/B detection
+ZONE_AB_BANK_OFFSET = 0x20000   # Offset from bank A to bank B
+ZONE_AB_MARKER_OFFSET = 0xFF8   # Marker position within each 4KB page
+ZONE_AB_MARKER = b'\xFF\xFF\xFF\xFFDTCN'  # 8-byte marker indicating active bank
 
 # Message SPI Flash Memory Map
 # All messages stored sequentially starting at 0x94000 (KB offset 592)

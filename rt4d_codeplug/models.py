@@ -437,6 +437,7 @@ class RadioSettings:
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
     tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928) - Beta41+ only
     beta41: bool = False  # Indicates the settings are Beta41+ compatible
+    beta_version: int = 0  # Beta version number (0=not beta/stock, 41=pre-42 DTCN, 42+=from offset 0xFF0)
 
 
 @dataclass
