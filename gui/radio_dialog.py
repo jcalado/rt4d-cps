@@ -17,7 +17,7 @@ from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
 from rt4d_uart import RT4DUART, FIRMWARE_SIZE, FIRMWARE_CHUNK_SIZE, validate_firmware_file, prepare_firmware_data
 from rt4d_codeplug.constants import SPI_REGIONS
-from rt4d_codeplug.utils import detect_settings_bank
+from rt4d_codeplug.utils import detect_settings_bank, read_zone_region_ab
 
 
 def _populate_port_combo(combo: QComboBox):
@@ -103,7 +103,7 @@ class RadioWorker(QThread):
         codeplug_data = bytearray(b'\xff' * TOTAL_SIZE)
 
         # Detect which bank contains active settings (beta41+ dual-bank support)
-        settings_bank_addr = detect_settings_bank(uart)
+        settings_bank_addr, beta41 = detect_settings_bank(uart)
         self.progress.emit(5, f"Detected settings at bank 0x{settings_bank_addr:06X}")
 
         region_map = {
@@ -125,7 +125,10 @@ class RadioWorker(QThread):
                 continue
 
             file_offset, size, spi_address = region_map[region_name]
-            region_data = uart.read_spi_region(spi_address, size)
+            if region_name == 'zones' and beta41:
+                region_data = read_zone_region_ab(uart, spi_address, size)
+            else:
+                region_data = uart.read_spi_region(spi_address, size)
 
             if region_data is None:
                 self.finished.emit(False, f"Failed to read {region_name}")
