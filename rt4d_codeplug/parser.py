@@ -462,12 +462,16 @@ class CodeplugParser:
 
             # Channel list starts at offset 0x14 (20)
             # Each channel is a 16-bit little-endian integer
-            for i in range(min(channel_count, 200)):  # Max 200 channels per zone
+            max_count = min(channel_count, 200)
+            j = 0
+            for i in range(200):  # Max 200 channels per zone
+                if j == max_count:
+                    break
                 offset = 0x14 + (i * 2)
-                if offset + 1 < len(zone_data):
-                    channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)
-                    if channel_idx != 0xFFFF and channel_idx < 1024:  # Valid channel index
+                channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)
+                if channel_idx != 0xFFFF and channel_idx < 1024:  # Valid channel index
                         parsed_channel_indices.append(channel_idx)
+                        j += 1
 
             zone = Zone(
                 index=index,
