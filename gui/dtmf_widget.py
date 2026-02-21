@@ -77,7 +77,7 @@ class DTMFWidget(QWidget):
         self.send_mode_combo.currentIndexChanged.connect(self.on_settings_changed)
         settings_layout.addRow("Send Mode:", self.send_mode_combo)
 
-        # Send Select (Preset Code Selection) - label renamed to "DTMF List" in beta42+
+        # Send Select (Preset Code Selection)
         self.send_select_combo = QComboBox()
         for label, value in DTMF_PRESET_VALUES:
             self.send_select_combo.addItem(label, value)
