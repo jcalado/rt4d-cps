@@ -301,7 +301,7 @@ class RadioSettings:
     call_group_display: int = 0  # Show call group during calls (offset 0x194/404)
 
     # DMR SMS Fields (offsets 0x195-0x19A)
-    dmr_send_dtmf: int = 0  # Send DTMF via DMR (offset 0x195/405)
+    dmr_send_dtmf: int = 0  # DTMF List via DMR (offset 0x195/405)
     sms_format: int = 0  # DMR SMS format (offset 0x196/406)
     sms_font: int = 0  # DMR SMS font (offset 0x197/407)
     caller_keep: int = 0  # Keep DMR caller info (offset 0x198/408)

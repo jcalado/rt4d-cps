@@ -82,7 +82,7 @@ class DTMFWidget(QWidget):
         for label, value in DTMF_PRESET_VALUES:
             self.send_select_combo.addItem(label, value)
         self.send_select_combo.currentIndexChanged.connect(self.on_settings_changed)
-        self.send_select_label = QLabel("Send Select:")
+        self.send_select_label = QLabel("DTMF List:")
         settings_layout.addRow(self.send_select_label, self.send_select_combo)
 
         # DTMF Gain
@@ -212,9 +212,6 @@ class DTMFWidget(QWidget):
         # Spinboxes
         self.gain_spin.setValue(settings.dtmf_gain)
         self.decode_threshold_spin.setValue(settings.dtmf_decode_threshold)
-
-        # Label
-        self.send_select_label.setText("DTMF List:")
 
         # Load DTMF codes and names
         for i in range(20):

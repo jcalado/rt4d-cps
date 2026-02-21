@@ -482,8 +482,6 @@ class SettingsDialog(QDialog):
         """Return display label for function key."""
         if label == "Color Code Detect":
             return "Talker Alias"
-        if label == "Send DTMF (Custom FW)":
-            return "DTMF List (Custom FW)"
         return label
 
     def _update_function_key_labels(self):
@@ -598,7 +596,6 @@ class SettingsDialog(QDialog):
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
-        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
         self._update_function_key_labels()
 
     def save_settings(self) -> RadioSettings:
@@ -930,17 +927,6 @@ class CustomFirmwareDialog(QDialog):
         self.spin_vfo_a_offset.setValue(self.settings.vfo_a_offset)
         self.spin_vfo_b_offset.setValue(self.settings.vfo_b_offset)
 
-        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
-        self._update_green_key_labels()
-
-    def _update_green_key_labels(self):
-        """Re-apply display labels on green key long combo."""
-        for idx in range(self.combo_green_key_long.count()):
-            value = self.combo_green_key_long.itemData(idx)
-            for label, val in GREEN_KEY_LONG_VALUES:
-                if val == value and label == "Send DTMF (Custom FW)":
-                    self.combo_green_key_long.setItemText(idx, "DTMF List (Custom FW)")
-                    break
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""

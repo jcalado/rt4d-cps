@@ -483,11 +483,11 @@ FUNCTION_KEY_VALUES = [
     ("DMR Encrypt On/Off", 38),
     ("RX Group List Selection", 39),
     # --- Custom Firmware Extensions (requires custom firmware) ---
-    ("Address Book (Custom FW)", 40),          # Custom FW only
-    ("Contacts List (Custom FW)", 41),         # Custom FW only
-    ("Next Zone (Custom FW)", 42),             # Custom FW only
-    ("Send DTMF (Custom FW)", 43),             # Custom FW only
-    ("Freq Monitor (Custom FW)", 44),          # Custom FW only
+    ("Address Book", 40),          # Custom FW only
+    ("Contacts List", 41),         # Custom FW only
+    ("Next Zone", 42),             # Custom FW only
+    ("DTMF List", 43),              # Custom FW only
+    ("Freq Monitor", 44),          # Custom FW only
 ]
 
 # DTMF Send Delay (offset 512)
