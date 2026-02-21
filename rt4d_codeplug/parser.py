@@ -7,6 +7,7 @@ from .models import (Channel, Contact, GroupList, Zone, Codeplug, ChannelMode,
                       AnalogModulation, RadioSettings)
 from .constants import *
 from .tones import decode_subaudio_bytes
+from .legacy import parse_channel_legacy, LEGACY_MAX_GROUP_LISTS, LEGACY_GROUP_LIST_SIZE, LEGACY_MAX_GROUP_LIST_IDS
 
 
 class CodeplugParser:
@@ -47,9 +48,9 @@ class CodeplugParser:
         print("Parsing channels...")
         for i in range(MAX_CHANNELS):
             if self._beta41_layout:
-                channel = self.parse_channel_new(i)
-            else:
                 channel = self.parse_channel(i)
+            else:
+                channel = parse_channel_legacy(self.data, i)
             if channel and not channel.is_empty():
                 codeplug.add_channel(channel)
 
@@ -65,13 +66,13 @@ class CodeplugParser:
         print(f"Parsed {len(codeplug.contacts)} contacts")
         print("Parsing group lists...")
         if self._beta41_layout:
-            max_lists = MAX_GROUP_LISTS_NEW
-            group_list_size = GROUP_LIST_SIZE_NEW
-            max_group_list_ids = MAX_GROUP_LIST_IDS_NEW
-        else:
             max_lists = MAX_GROUP_LISTS
             group_list_size = GROUP_LIST_SIZE
             max_group_list_ids = MAX_GROUP_LIST_IDS
+        else:
+            max_lists = LEGACY_MAX_GROUP_LISTS
+            group_list_size = LEGACY_GROUP_LIST_SIZE
+            max_group_list_ids = LEGACY_MAX_GROUP_LIST_IDS
         for i in range(max_lists):
             group_list = self.parse_group_list(i, max_lists, group_list_size, max_group_list_ids)
             if group_list and not group_list.is_empty():
@@ -141,133 +142,6 @@ class CodeplugParser:
                 delattr(gl, '_parsed_contact_indices')
 
     def parse_channel(self, index: int) -> Optional[Channel]:
-        """Parse a single channel"""
-        offset = OFFSET_CHANNELS + (index * CHANNEL_SIZE)
-        ch_data = self.data[offset:offset + CHANNEL_SIZE]
-
-        # Check if channel is empty
-        if ch_data[2] >= 2:
-            return None
-
-        try:
-            # Basic fields
-            mode_byte = ch_data[0x02]
-            mode = ChannelMode.DIGITAL if mode_byte == CHANNEL_MODE_DIGITAL else ChannelMode.ANALOG
-
-            # Frequencies (32-bit little-endian, stored as 10 Hz units)
-            rx_freq_int = struct.unpack('<I', ch_data[0x06:0x0A])[0]
-            tx_freq_int = struct.unpack('<I', ch_data[0x0A:0x0E])[0]
-            rx_freq = 0 if rx_freq_int == 0xFFFFFFFF else rx_freq_int
-            tx_freq = 0 if tx_freq_int == 0xFFFFFFFF else tx_freq_int
-
-            # Power and scan
-            power = PowerLevel.HIGH if ch_data[0x10] == POWER_HIGH else PowerLevel.LOW
-            scan = ScanMode.ADD if ch_data[0x13] == SCAN_ADD else ScanMode.REMOVE
-
-            # Channel name (16 bytes, GBK encoding)
-            name_bytes = ch_data[0x20:0x30]
-            # Remove padding (0xFF bytes)
-            name_bytes = bytes([b for b in name_bytes if b != EMPTY_BYTE])
-            try:
-                name = name_bytes.decode('gbk', errors='ignore').strip()
-            except:
-                name = name_bytes.decode('latin-1', errors='ignore').strip()
-
-            # Create channel object
-            channel = Channel(
-                position=index + 1,  # Convert 0-based slot to 1-based position
-                name=name,
-                rx_freq=rx_freq,
-                tx_freq=tx_freq,
-                mode=mode,
-                power=power,
-                scan=scan,
-            )
-
-            # Digital/DMR specific fields
-            if mode == ChannelMode.DIGITAL:
-                # ID Select field (offset 0x00): 0=Radio ID, 1=Channel ID
-                id_select_byte = ch_data[0x00]
-                channel.use_radio_id = (id_select_byte == 0x00)
-
-                channel.dmr_time_slot = ch_data[0x03]
-                channel.dmr_color_code = ch_data[0x04]
-                channel.dmr_mode = ch_data[0x05]
-                channel.dmr_monitor = ch_data[0x0E]  # Promiscuous mode
-                channel.dmr_busy_lock = ch_data[0x11]
-                channel.tot = ch_data[0x14]
-                channel.alarm = ch_data[0x15]
-                # Store parsed indices temporarily for UUID resolution later
-                channel._parsed_group_list_index = struct.unpack('<H', ch_data[0x16:0x18])[0]
-                # Contact index: file stores 0-based slot numbers, convert to 1-based contact.index
-                contact_slot = struct.unpack('<H', ch_data[0x18:0x1A])[0]
-                if contact_slot == 0xFFFF:
-                    channel._parsed_contact_index = 0  # No contact selected
-                else:
-                    channel._parsed_contact_index = contact_slot + 1  # Convert slot to index
-                channel._parsed_encrypt_index = struct.unpack('<H', ch_data[0x1A:0x1C])[0]
-                # DMR ID is BCD encoded at offset 0x1C-0x1F
-                dmr_id_bytes = ch_data[0x1C:0x20]
-                channel.dmr_id = self._parse_bcd(dmr_id_bytes)
-
-            # Analog specific fields
-            else:
-                # Byte 0x04 layout:
-                # bit 0: reserved
-                # bits 1-3: DcsEncrypt (ctdcs_select)
-                # bits 4-5: Modulation (FM/AM/SSB)
-                # bit 6: bIsNarrow (bandwidth)
-                byte_0x04 = ch_data[0x04]
-
-                # Analog modulation: FM/AM/SSB (offset 0x04, bits 4-5)
-                modulation_bits = (byte_0x04 >> 4) & 0x03
-                if modulation_bits == 0x00:
-                    channel.analog_modulation = AnalogModulation.FM
-                elif modulation_bits == 0x01:
-                    channel.analog_modulation = AnalogModulation.AM
-                elif modulation_bits == 0x02:
-                    channel.analog_modulation = AnalogModulation.SSB
-                else:
-                    channel.analog_modulation = AnalogModulation.FM  # Default to FM
-
-                # Bandwidth (offset 0x04, bit 6)
-                channel.bandwidth = (byte_0x04 >> 6) & 0x01
-
-                # CT/DCS Select (offset 0x04, bits 1-3)
-                channel.ctdcs_select = (byte_0x04 >> 1) & 0x07
-
-                # RX CTCSS/DCS (offset 0x05-0x06)
-                rx_tone_bytes = ch_data[0x05:0x07]
-                channel.rx_ctcss = decode_subaudio_bytes(rx_tone_bytes)
-
-                # TX CTCSS/DCS (offset 0x0F-0x10)
-                tx_tone_bytes = ch_data[0x0F:0x11]
-                channel.tx_ctcss = decode_subaudio_bytes(tx_tone_bytes)
-
-                # Analog busy lock (offset 0x11)
-                channel.ana_busy_lock = ch_data[0x11]
-
-                # TOT (offset 0x12)
-                byte_0x12 = ch_data[0x12]
-                channel.tot_analog = byte_0x12 & 0x1F  # Lower 5 bits
-
-                # Tail tone and Scrambler (offset 0x13)
-                byte_0x13 = ch_data[0x13]
-                channel.tail_tone = (byte_0x13 >> 4) & 0x0F  # Upper 4 bits
-                channel.scramble = byte_0x13 & 0x0F  # Lower 4 bits
-
-                # Encrypted sub-audio codes (offsets 0x14-0x1F)
-                # Read as 32-bit little-endian integers
-                channel.mute_code = struct.unpack('<I', ch_data[0x14:0x18])[0]
-
-            return channel
-
-        except Exception as e:
-            print(f"Warning: Error parsing channel {index}: {e}")
-            return None
-
-
-    def parse_channel_new(self, index: int) -> Optional[Channel]:
         """Parse a single channel using the beta41+ layout"""
         offset = OFFSET_CHANNELS + (index * CHANNEL_SIZE)
         ch_data = self.data[offset:offset + CHANNEL_SIZE]

@@ -81,8 +81,8 @@ class CodeplugSerializer:
             data[offset:offset + ZONE_SIZE] = zone_data
 
         # Write group lists (always beta41+ layout: 80 bytes, 32 contacts)
-        group_list_size = GROUP_LIST_SIZE_NEW
-        max_contacts = MAX_GROUP_LIST_IDS_NEW
+        group_list_size = GROUP_LIST_SIZE
+        max_contacts = MAX_GROUP_LIST_IDS
         for group_list in codeplug.group_lists:
             gl_data = CodeplugSerializer.serialize_group_list(group_list, contact_idx_map, group_list_size, max_contacts)
             # Group list index is 1-based, convert to 0-based slot for file offset
