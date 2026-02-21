@@ -6,6 +6,7 @@ from .models import (Channel, Contact, GroupList, Zone, Codeplug, ChannelMode,
                       PowerLevel, ScanMode, ContactType, EncryptionKey, EncryptionType,
                       AnalogModulation, RadioSettings)
 from .constants import *
+from .constants import ZONE_SCAN_LIST_OFFSET, ZONE_SCAN_LIST_SIZE
 from .tones import decode_subaudio_bytes
 from .legacy import parse_channel_legacy, LEGACY_MAX_GROUP_LISTS, LEGACY_GROUP_LIST_SIZE, LEGACY_MAX_GROUP_LIST_IDS
 
@@ -130,9 +131,18 @@ class CodeplugParser:
         # Binary stores 0-based slot indices, but channels use 1-based positions
         for zone in codeplug.zones:
             if hasattr(zone, '_parsed_channel_indices'):
-                zone.channels = [channel_uuid_map.get(idx + 1, "") for idx in zone._parsed_channel_indices
-                                if (idx + 1) in channel_uuid_map]
+                parsed_scan = getattr(zone, '_parsed_scan_list', [])
+                resolved_channels = []
+                resolved_scan = []
+                for i, idx in enumerate(zone._parsed_channel_indices):
+                    if (idx + 1) in channel_uuid_map:
+                        resolved_channels.append(channel_uuid_map[idx + 1])
+                        resolved_scan.append(parsed_scan[i] if i < len(parsed_scan) else True)
+                zone.channels = resolved_channels
+                zone.scan_list = resolved_scan
                 delattr(zone, '_parsed_channel_indices')
+                if hasattr(zone, '_parsed_scan_list'):
+                    delattr(zone, '_parsed_scan_list')
 
         # Resolve group list contact references
         for gl in codeplug.group_lists:
@@ -348,11 +358,22 @@ class CodeplugParser:
                         parsed_channel_indices.append(channel_idx)
                         j += 1
 
+            # Parse scan list bitmap (25 bytes at offset 0x1A4)
+            scan_data = zone_data[ZONE_SCAN_LIST_OFFSET:ZONE_SCAN_LIST_OFFSET + ZONE_SCAN_LIST_SIZE]
+            all_ff = all(b == EMPTY_BYTE for b in scan_data)
+            scan_list = []
+            for i in range(len(parsed_channel_indices)):
+                if all_ff:
+                    scan_list.append(True)  # Backwards compat: all-0xFF → all scan enabled
+                else:
+                    scan_list.append(bool(scan_data[i // 8] & (1 << (i % 8))))
+
             zone = Zone(
                 index=index,
                 name=name,
             )
             zone._parsed_channel_indices = parsed_channel_indices
+            zone._parsed_scan_list = scan_list
             return zone
 
         except Exception as e:

@@ -143,8 +143,8 @@ class ZoneWidget(QWidget):
         selected_layout.addLayout(selected_filter_layout)
 
         self.selected_list = QTableWidget()
-        self.selected_list.setColumnCount(3)
-        self.selected_list.setHorizontalHeaderLabels(["Pos", "Name", "TS"])
+        self.selected_list.setColumnCount(4)
+        self.selected_list.setHorizontalHeaderLabels(["Pos", "Name", "TS", "Scan"])
         self.selected_list.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.selected_list.verticalHeader().setVisible(False)
         self.selected_list.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -155,6 +155,8 @@ class ZoneWidget(QWidget):
         selected_header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Pos
         selected_header.setSectionResizeMode(1, QHeaderView.Stretch)           # Name
         selected_header.setSectionResizeMode(2, QHeaderView.ResizeToContents)  # TS
+        selected_header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Scan
+        self.selected_list.itemChanged.connect(self._on_scan_changed)
         selected_layout.addWidget(self.selected_list)
 
         btn_layout = QHBoxLayout()
@@ -298,7 +300,8 @@ class ZoneWidget(QWidget):
                 self.available_list.setItem(row, 2, ts_item)
 
         # Populate channels in zone (in order) - zone.channels is a list of UUIDs
-        for channel_uuid in self.current_zone.channels:
+        self.selected_list.blockSignals(True)
+        for zone_idx, channel_uuid in enumerate(self.current_zone.channels):
             channel = self.codeplug.get_channel(channel_uuid)
             if channel:
                 # Apply filter - match name or position
@@ -324,6 +327,24 @@ class ZoneWidget(QWidget):
                 else:
                     ts_item = QTableWidgetItem("")
                 self.selected_list.setItem(row, 2, ts_item)
+
+                # Scan checkbox column
+                scan_item = QTableWidgetItem()
+                scan_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+                scan_val = self.current_zone.scan_list[zone_idx] if zone_idx < len(self.current_zone.scan_list) else True
+                scan_item.setCheckState(Qt.Checked if scan_val else Qt.Unchecked)
+                scan_item.setData(Qt.UserRole, zone_idx)  # Store zone index for updates
+                self.selected_list.setItem(row, 3, scan_item)
+        self.selected_list.blockSignals(False)
+
+    def _on_scan_changed(self, item: QTableWidgetItem):
+        """Handle scan checkbox toggle in the selected channels table"""
+        if item.column() != 3 or not self.current_zone:
+            return
+        zone_idx = item.data(Qt.UserRole)
+        if zone_idx is not None and 0 <= zone_idx < len(self.current_zone.scan_list):
+            self.current_zone.set_channel_scan(zone_idx, item.checkState() == Qt.Checked)
+            self.data_modified.emit()
 
     def on_selection_changed(self):
         """Handle zone selection change"""
@@ -590,6 +611,11 @@ class ZoneWidget(QWidget):
         channels[actual_index], channels[actual_index - 1] = \
             channels[actual_index - 1], channels[actual_index]
 
+        # Swap corresponding scan_list entries
+        sl = self.current_zone.scan_list
+        if actual_index < len(sl) and actual_index - 1 < len(sl):
+            sl[actual_index], sl[actual_index - 1] = sl[actual_index - 1], sl[actual_index]
+
         self.refresh_details()
 
         # Re-select the moved channel by finding its new row
@@ -629,6 +655,11 @@ class ZoneWidget(QWidget):
         channels = self.current_zone.channels
         channels[actual_index], channels[actual_index + 1] = \
             channels[actual_index + 1], channels[actual_index]
+
+        # Swap corresponding scan_list entries
+        sl = self.current_zone.scan_list
+        if actual_index < len(sl) and actual_index + 1 < len(sl):
+            sl[actual_index], sl[actual_index + 1] = sl[actual_index + 1], sl[actual_index]
 
         self.refresh_details()
 

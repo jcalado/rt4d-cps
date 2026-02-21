@@ -220,6 +220,7 @@ class Zone:
     index: int = 0  # Computed from list position on save, used for display
     name: str = ""
     channels: List[str] = field(default_factory=list)  # List of channel UUIDs
+    scan_list: List[bool] = field(default_factory=list)  # Per-channel scan flags (one per channel)
 
     def __post_init__(self):
         """Validate zone data"""
@@ -236,11 +237,20 @@ class Zone:
             raise ValueError("Zone can contain maximum 200 channels")
         if channel_uuid not in self.channels:
             self.channels.append(channel_uuid)
+            self.scan_list.append(True)
 
     def remove_channel(self, channel_uuid: str):
         """Remove a channel from this zone by UUID"""
         if channel_uuid in self.channels:
-            self.channels.remove(channel_uuid)
+            idx = self.channels.index(channel_uuid)
+            self.channels.pop(idx)
+            if idx < len(self.scan_list):
+                self.scan_list.pop(idx)
+
+    def set_channel_scan(self, index: int, scan: bool):
+        """Set scan flag for channel at given zone index"""
+        if 0 <= index < len(self.scan_list):
+            self.scan_list[index] = scan
 
 
 @dataclass

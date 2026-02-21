@@ -5,6 +5,7 @@ from .models import (Codeplug, Channel, Contact, Zone, ChannelMode, PowerLevel,
                       ScanMode, ContactType, EncryptionKey, EncryptionType,
                       AnalogModulation)
 from .constants import *
+from .constants import ZONE_SCAN_LIST_OFFSET, ZONE_SCAN_LIST_SIZE
 from .tones import encode_subaudio_bytes
 
 
@@ -240,6 +241,15 @@ class CodeplugSerializer:
             offset = 0x14 + (i * 2)
             data[offset] = channel_idx & 0xFF
             data[offset + 1] = (channel_idx >> 8) & 0xFF
+
+        # Scan list bitmap (25 bytes at offset 0x1A4, initialized to 0x00 = all skip)
+        for i in range(ZONE_SCAN_LIST_SIZE):
+            data[ZONE_SCAN_LIST_OFFSET + i] = 0x00
+        for i in range(channel_count):
+            # Default missing scan_list entries to True
+            scan = zone.scan_list[i] if i < len(zone.scan_list) else True
+            if scan:
+                data[ZONE_SCAN_LIST_OFFSET + i // 8] |= (1 << (i % 8))
 
         return bytes(data)
 
