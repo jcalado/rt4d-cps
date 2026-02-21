@@ -471,8 +471,6 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
-        self._apply_beta41_visibility()
-
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
@@ -481,10 +479,10 @@ class SettingsDialog(QDialog):
                 break
 
     def _get_function_key_label(self, label, value):
-        """Return version-aware label for function key."""
-        if label == "Color Code Detect" and self.settings and self.settings.beta41:
+        """Return display label for function key."""
+        if label == "Color Code Detect":
             return "Talker Alias"
-        if label == "Send DTMF (Custom FW)" and self.settings and self.settings.beta_version >= 42:
+        if label == "Send DTMF (Custom FW)":
             return "DTMF List (Custom FW)"
         return label
 
@@ -506,13 +504,6 @@ class SettingsDialog(QDialog):
                     if val == value:
                         combo.setItemText(idx, self._get_function_key_label(label, value))
                         break
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.clock_group.setVisible(False)
-        else:
-            self.clock_group.setVisible(True)
 
     def load_settings(self):
         """Load settings into form"""
@@ -895,23 +886,12 @@ class CustomFirmwareDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
-        self._apply_beta41_visibility()
-
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
             if combo.itemData(i) == value:
                 combo.setCurrentIndex(i)
                 break
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.combo_dmr_gid_name.setVisible(False)
-            self.label_dmr_gid_name.setVisible(False)
-        else:
-            self.combo_dmr_gid_name.setVisible(True)
-            self.label_dmr_gid_name.setVisible(True)
 
     def load_settings(self):
         """Load settings into form"""
@@ -954,9 +934,7 @@ class CustomFirmwareDialog(QDialog):
         self._update_green_key_labels()
 
     def _update_green_key_labels(self):
-        """Re-apply version-aware labels on green key long combo."""
-        if not self.settings or self.settings.beta_version < 42:
-            return
+        """Re-apply display labels on green key long combo."""
         for idx in range(self.combo_green_key_long.count()):
             value = self.combo_green_key_long.itemData(idx)
             for label, val in GREEN_KEY_LONG_VALUES:
@@ -1875,16 +1853,6 @@ class SettingsWidget(QWidget):
         self.combo_startup_picture_widget.blockSignals(False)
 
         self.set_enabled(True)
-        self._apply_beta41_visibility()
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.check_apo.setVisible(False)
-            self.clock_group.setVisible(False)
-        else:
-            self.check_apo.setVisible(True)
-            self.clock_group.setVisible(True)
 
     def on_settings_changed(self):
         """Handle settings changes"""

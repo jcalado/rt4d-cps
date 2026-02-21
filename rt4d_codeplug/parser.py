@@ -37,7 +37,8 @@ class CodeplugParser:
         print("Parsing radio settings...")
         codeplug.settings = self.parse_settings(codeplug.cfg_data)
         if codeplug.settings:
-            self._beta41_layout = bool(codeplug.settings.beta41)
+            # Detect layout format from DTCN magic bytes (for choosing channel parser)
+            self._beta41_layout = codeplug.cfg_data[4092:4096] == BETA41_MAGIC
             print(f"Detected beta41+ layout: {self._beta41_layout}")
             # Parse DTMF names into settings
             codeplug.settings.dtmf_names = self.parse_dtmf_names(codeplug.dtmf_names_data)
@@ -777,15 +778,6 @@ class CodeplugParser:
         settings.zone_channel_display = cfg_data[0x39E]
         settings.dmr_gid_name = cfg_data[0x39F]
         settings.tx_alias = cfg_data[0x3A0]
-        settings.beta41 = cfg_data[4092:4096] == BETA41_MAGIC
-
-        # Beta version detection (Beta 42+ stores version at offset 0xFF0 as u32 LE)
-        if settings.beta41:
-            raw_version = struct.unpack_from('<I', cfg_data, BETA_VERSION_OFFSET)[0]
-            if raw_version == 0 or raw_version == 0xFFFFFFFF:
-                settings.beta_version = 41
-            else:
-                settings.beta_version = raw_version
 
         return settings
 

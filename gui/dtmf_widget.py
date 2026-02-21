@@ -213,26 +213,19 @@ class DTMFWidget(QWidget):
         self.gain_spin.setValue(settings.dtmf_gain)
         self.decode_threshold_spin.setValue(settings.dtmf_decode_threshold)
 
-        # Update version-aware labels
-        self.send_select_label.setText(
-            "DTMF List:" if settings.beta_version >= 42 else "Send Select:"
-        )
+        # Label
+        self.send_select_label.setText("DTMF List:")
 
         # Load DTMF codes and names
-        has_custom_names = settings.beta_version >= 42
         for i in range(20):
             code = settings.dtmf_codes[i] if i < len(settings.dtmf_codes) else ""
             self.codes_table.item(i, 2).setText(code)
-            # Load user-editable names for first 16 (beta42+ only)
+            # Load user-editable names for first 16
             if i < 16:
                 name_item = self.codes_table.item(i, 1)
-                if has_custom_names:
-                    name = settings.dtmf_names[i] if i < len(settings.dtmf_names) else ""
-                    name_item.setText(name if name else self.PRESET_NAMES[i])
-                    name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
-                else:
-                    name_item.setText(self.PRESET_NAMES[i])
-                    name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
+                name = settings.dtmf_names[i] if i < len(settings.dtmf_names) else ""
+                name_item.setText(name if name else self.PRESET_NAMES[i])
+                name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
 
         self._updating = False
 
@@ -259,15 +252,14 @@ class DTMFWidget(QWidget):
             code = self.codes_table.item(i, 2).text()
             settings.dtmf_codes.append(code)
 
-        # Save DTMF names (first 16 only, beta42+ only)
-        if settings.beta_version >= 42:
-            settings.dtmf_names = []
-            for i in range(16):
-                name = self.codes_table.item(i, 1).text()
-                # Store empty string if name matches the default placeholder
-                if name == self.PRESET_NAMES[i]:
-                    name = ""
-                settings.dtmf_names.append(name[:16])
+        # Save DTMF names (first 16)
+        settings.dtmf_names = []
+        for i in range(16):
+            name = self.codes_table.item(i, 1).text()
+            # Store empty string if name matches the default placeholder
+            if name == self.PRESET_NAMES[i]:
+                name = ""
+            settings.dtmf_names.append(name[:16])
 
     def on_settings_changed(self):
         """Handle settings change"""

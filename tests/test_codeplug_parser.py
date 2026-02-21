@@ -127,26 +127,19 @@ def test_serializer_round_trip_preserves_key_fields(codeplug):
     assert snapshot_zones(reparsed) == original_zones
 
 
-def test_beta41_settings_round_trip_preserves_magic_bytes():
-    codeplug = Codeplug(settings=RadioSettings(beta41=True))
+def test_settings_round_trip_always_writes_dtcn_magic():
+    codeplug = Codeplug(settings=RadioSettings())
 
     serialized = CodeplugSerializer.serialize(codeplug)
 
     assert len(serialized) == TOTAL_SIZE
-
-    parser = CodeplugParser(serialized)
-    with contextlib.redirect_stdout(io.StringIO()):
-        reparsed = parser.parse()
-
-    assert reparsed.settings.beta41 is True
+    # DTCN magic should always be written at bytes 4092-4096 of the settings block
+    assert serialized[4092:4096] == b'DTCN'
 
 
 def test_parser_radio_settings_identity(codeplug):
     """Test that radio identity settings are parsed correctly"""
     settings = codeplug.settings
-
-    # Beta41+ codeplug should have beta41 flag set
-    assert settings.beta41 is True
 
     # Radio identity - these are from codeplug.41-plus.4rdmf
     assert settings.radio_name == "CS7BLE"
@@ -193,7 +186,6 @@ def snapshot_settings(settings):
         # Identity
         'radio_name': settings.radio_name,
         'radio_id': settings.radio_id,
-        'beta41': settings.beta41,
         # Audio
         'squelch_level': settings.squelch_level,
         'digital_squelch': settings.digital_squelch,

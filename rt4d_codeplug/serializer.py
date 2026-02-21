@@ -59,14 +59,9 @@ class CodeplugSerializer:
         # Write CFG section
         data[OFFSET_CFG:OFFSET_CFG + SIZE_CFG] = codeplug.cfg_data
 
-        use_beta_layout = bool(codeplug.settings and codeplug.settings.beta41)
-
         # Write channels at their designated positions
         for channel in codeplug.channels:
-            if use_beta_layout:
-                ch_data = CodeplugSerializer.serialize_channel_new(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
-            else:
-                ch_data = CodeplugSerializer.serialize_channel(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
+            ch_data = CodeplugSerializer.serialize_channel(channel, contact_idx_map, group_list_idx_map, encrypt_idx_map)
             # Position is 1-based, convert to 0-based slot for offset calculation
             slot = channel.position - 1
             offset = OFFSET_CHANNELS + (slot * CHANNEL_SIZE)
@@ -85,9 +80,9 @@ class CodeplugSerializer:
             offset = OFFSET_ZONES + (zone.index * ZONE_SIZE)
             data[offset:offset + ZONE_SIZE] = zone_data
 
-        # Write group lists
-        group_list_size = GROUP_LIST_SIZE_NEW if use_beta_layout else GROUP_LIST_SIZE
-        max_contacts = MAX_GROUP_LIST_IDS_NEW if use_beta_layout else MAX_GROUP_LIST_IDS
+        # Write group lists (always beta41+ layout: 80 bytes, 32 contacts)
+        group_list_size = GROUP_LIST_SIZE_NEW
+        max_contacts = MAX_GROUP_LIST_IDS_NEW
         for group_list in codeplug.group_lists:
             gl_data = CodeplugSerializer.serialize_group_list(group_list, contact_idx_map, group_list_size, max_contacts)
             # Group list index is 1-based, convert to 0-based slot for file offset
@@ -112,105 +107,7 @@ class CodeplugSerializer:
 
     @staticmethod
     def serialize_channel(channel: Channel, contact_idx_map: dict, group_list_idx_map: dict, encrypt_idx_map: dict) -> bytes:
-        """Serialize a single channel to 48 bytes"""
-        data = bytearray(b'\xff' * CHANNEL_SIZE)
-
-        if channel.is_empty():
-            return bytes(data)
-
-        # Basic fields
-        data[0x01] = 0x01
-        data[0x02] = channel.mode.value
-
-        # Frequencies (32-bit little-endian, stored as 10 Hz units)
-        struct.pack_into('<I', data, 0x06, channel.rx_freq)
-        struct.pack_into('<I', data, 0x0A, channel.tx_freq)
-
-        # Power and scan
-        data[0x10] = channel.power.value
-        data[0x13] = channel.scan.value
-
-        # Channel name (GBK encoding, 16 bytes)
-        try:
-            name_bytes = channel.name.encode('gbk')[:16]
-        except:
-            name_bytes = channel.name.encode('latin-1', errors='ignore')[:16]
-
-        for i, byte in enumerate(name_bytes):
-            data[0x20 + i] = byte
-        # Pad remaining with 0xFF
-        for i in range(len(name_bytes), 16):
-            data[0x20 + i] = EMPTY_BYTE
-
-        # Digital/DMR specific fields
-        if channel.mode == ChannelMode.DIGITAL:
-            # ID Select field (offset 0x00): 0=Radio ID, 1=Channel ID
-            data[0x00] = 0x00 if channel.use_radio_id else 0x01
-
-            data[0x03] = channel.dmr_time_slot
-            data[0x04] = channel.dmr_color_code
-            data[0x05] = channel.dmr_mode
-            data[0x0E] = channel.dmr_monitor  # Promiscuous mode
-            data[0x11] = channel.dmr_busy_lock
-            data[0x14] = channel.tot
-            data[0x15] = channel.alarm
-            # Convert UUID references to indices
-            group_list_index = group_list_idx_map.get(channel.group_list_uuid, 0)
-            struct.pack_into('<H', data, 0x16, group_list_index)
-            # Contact: convert UUID to index, then to 0-based slot number for file
-            contact_index = contact_idx_map.get(channel.contact_uuid, 0)
-            if contact_index == 0:
-                contact_slot = 0xFFFF  # No contact selected
-            else:
-                contact_slot = contact_index - 1  # Convert index to slot
-            struct.pack_into('<H', data, 0x18, contact_slot)
-            encrypt_index = encrypt_idx_map.get(channel.encrypt_uuid, 0)
-            struct.pack_into('<H', data, 0x1A, encrypt_index)
-            # DMR ID: write 0 if using radio ID, otherwise write channel DMR ID
-            if channel.use_radio_id:
-                bcd_bytes = CodeplugSerializer._to_bcd(0)
-            else:
-                bcd_bytes = CodeplugSerializer._to_bcd(channel.dmr_id)
-            data[0x1C:0x20] = bcd_bytes
-
-        # Analog specific
-        else:
-            # Byte 0x04 layout:
-            # bit 0: reserved
-            # bits 1-3: DcsEncrypt (ctdcs_select)
-            # bits 4-5: Modulation (FM/AM/SSB)
-            # bit 6: bIsNarrow (bandwidth)
-            modulation = channel.analog_modulation.value if channel.analog_modulation else AnalogModulation.FM.value
-            data[0x04] = ((channel.ctdcs_select & 0x07) << 1)
-            data[0x04] |= (modulation & 0x03) << 4
-            data[0x04] |= (channel.bandwidth & 0x01) << 6
-
-            # RX CTCSS/DCS (offset 0x05-0x06)
-            rx_tone_bytes = encode_subaudio_bytes(channel.rx_ctcss)
-            data[0x05:0x07] = rx_tone_bytes
-
-            # TX CTCSS/DCS (offset 0x0F-0x10)
-            tx_tone_bytes = encode_subaudio_bytes(channel.tx_ctcss)
-            data[0x0F:0x11] = tx_tone_bytes
-
-            # Analog busy lock (offset 0x11)
-            data[0x11] = channel.ana_busy_lock
-
-            # TOT (offset 0x12)
-            data[0x12] = channel.tot_analog & 0x1F
-
-            # Tail tone and Scrambler (offset 0x13)
-            data[0x13] = ((channel.tail_tone & 0x0F) << 4) | (channel.scramble & 0x0F)
-
-            # Encrypted sub-audio codes (offsets 0x14-0x1F)
-            # Write as 32-bit little-endian integers
-            data[0x14:0x18] = struct.pack('<I', channel.mute_code)
-
-        return bytes(data)
-
-    @staticmethod
-    def serialize_channel_new(channel: Channel, contact_idx_map: dict, group_list_idx_map: dict, encrypt_idx_map: dict) -> bytes:
-        """Serialize a single beta41+ channel to 48 bytes"""
+        """Serialize a single channel to 48 bytes (beta41+ layout)"""
         data = bytearray(b'\xff' * CHANNEL_SIZE)
 
         if channel.is_empty():
@@ -695,8 +592,7 @@ class CodeplugSerializer:
         data[0x39F] = settings.dmr_gid_name & 0xFF
         data[0x3A0] = settings.tx_alias & 0xFF
         
-        if settings.beta41:
-            data[4092:4096] = BETA41_MAGIC
+        data[4092:4096] = BETA41_MAGIC
 
         return bytes(data)
 

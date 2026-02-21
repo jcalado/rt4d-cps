@@ -16,8 +16,7 @@ from PySide6.QtCore import Qt, QThread, Signal
 from . import theme as _theme
 from rt4d_codeplug import Codeplug, CodeplugParser, CodeplugSerializer
 from rt4d_uart import RT4DUART, FIRMWARE_SIZE, FIRMWARE_CHUNK_SIZE, validate_firmware_file, prepare_firmware_data
-import struct
-from rt4d_codeplug.constants import SPI_REGIONS, OFFSET_DTMF_NAMES, SIZE_DTMF_NAMES, BETA_VERSION_OFFSET
+from rt4d_codeplug.constants import SPI_REGIONS, OFFSET_DTMF_NAMES, SIZE_DTMF_NAMES
 from rt4d_codeplug.utils import detect_settings_bank, read_zone_region_ab
 
 
@@ -104,17 +103,9 @@ class RadioWorker(QThread):
         # Selective backup
         codeplug_data = bytearray(b'\xff' * TOTAL_SIZE)
 
-        # Detect which bank contains active settings (beta41+ dual-bank support)
-        settings_bank_addr, beta41 = detect_settings_bank(uart)
+        # Detect which bank contains active settings (dual-bank support)
+        settings_bank_addr, _bank_is_beta41 = detect_settings_bank(uart)
         self.progress.emit(5, f"Detected settings at bank 0x{settings_bank_addr:06X}")
-
-        # Detect beta version for feature gating (beta42+ features)
-        beta_version = 0
-        if beta41:
-            version_data = uart.read_spi_region(settings_bank_addr + BETA_VERSION_OFFSET, 4)
-            if version_data:
-                raw = struct.unpack('<I', version_data)[0]
-                beta_version = 41 if raw in (0, 0xFFFFFFFF) else raw
 
         region_map = {
             'main_settings': (OFFSET_CFG, SIZE_CFG, settings_bank_addr),
@@ -134,11 +125,9 @@ class RadioWorker(QThread):
 
             if region_name not in region_map:
                 continue
-            if region_name == 'dtmf_names' and beta_version < 42:
-                continue
 
             file_offset, size, spi_address = region_map[region_name]
-            if region_name == 'zones' and beta41:
+            if region_name == 'zones':
                 region_data = read_zone_region_ab(uart, spi_address, size)
             else:
                 region_data = uart.read_spi_region(spi_address, size)
@@ -169,10 +158,6 @@ class RadioWorker(QThread):
 
             if region_name not in SPI_REGIONS:
                 continue
-            if region_name == "dtmf_names":
-                beta_ver = self.codeplug.settings.beta_version if self.codeplug and self.codeplug.settings else 0
-                if beta_ver < 42:
-                    continue
 
             # Extract appropriate data based on region
             if region_name == "channels":
@@ -452,37 +437,6 @@ class RadioFlashDialog(QDialog):
         region_group = QGroupBox("Regions to Flash")
         region_layout = QVBoxLayout()
 
-        # Beta41+ layout control
-        self.check_beta41 = QCheckBox("Use Beta41+ Layout (REFW)")
-        self.check_beta41.setToolTip(
-            "Enable this to write channels in the REFW Beta41+ layout.\n"
-            "Only enable if your radio has REFW Beta41 or newer custom firmware installed.\n"
-            "WARNING: Stock firmware does NOT support this layout!"
-        )
-        # Initialize from codeplug settings - if beta41+, lock the checkbox
-        is_beta41 = self.codeplug and self.codeplug.settings and self.codeplug.settings.beta41
-        if is_beta41:
-            self.check_beta41.setChecked(True)
-            self.check_beta41.setEnabled(False)
-        region_layout.addWidget(self.check_beta41)
-
-        # Info label for Beta41+ warning
-        if is_beta41:
-            self.label_beta41_info = QLabel(
-                "Beta41+ codeplug detected - layout option locked."
-            )
-            self.label_beta41_info.setStyleSheet(f"color: {_theme.success_color()}; font-size: 10px;")
-        else:
-            self.label_beta41_info = QLabel(
-                "ℹ️  REFW Beta41+ layout is incompatible with stock firmware."
-            )
-            self.label_beta41_info.setStyleSheet(f"color: {_theme.info_color()}; font-size: 10px;")
-        self.label_beta41_info.setWordWrap(True)
-        region_layout.addWidget(self.label_beta41_info)
-
-        # Spacing after beta41 section
-        region_layout.addSpacing(10)
-
         self.check_settings = QCheckBox("Main Settings")
         self.check_settings.setChecked(True)
         region_layout.addWidget(self.check_settings)
@@ -562,10 +516,6 @@ class RadioFlashDialog(QDialog):
 
         if reply != QMessageBox.Yes:
             return
-
-        # Apply beta41 layout setting from checkbox
-        if self.codeplug and self.codeplug.settings:
-            self.codeplug.settings.beta41 = self.check_beta41.isChecked()
 
         # Determine regions
         regions = []

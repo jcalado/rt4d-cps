@@ -190,20 +190,19 @@ class GroupList:
     uuid: str = field(default_factory=lambda: str(uuid4()))
     index: int = 0  # Computed from list position on save, used for display
     name: str = ""
-    contacts: List[str] = field(default_factory=list)  # List of contact UUIDs (max 128 old, 32 new layout)
+    contacts: List[str] = field(default_factory=list)  # List of contact UUIDs (max 32)
 
     def __post_init__(self):
         """Validate group list data"""
         if len(self.name) > 14:
             self.name = self.name[:14]
-        # Note: max contacts depends on layout (128 for old, 32 for B41+)
-        # Actual enforcement happens at serialization time
+        # Max 32 contacts per group list (B41+ layout)
 
     def is_empty(self) -> bool:
         """Check if group list is empty/unused"""
         return not self.name
 
-    def add_contact(self, contact_uuid: str, max_contacts: int = 128):
+    def add_contact(self, contact_uuid: str, max_contacts: int = 32):
         """Add a contact to this group list by UUID"""
         if len(self.contacts) < max_contacts and contact_uuid not in self.contacts:
             self.contacts.append(contact_uuid)
@@ -437,9 +436,7 @@ class RadioSettings:
     ptt_lock: int = 0  # PTT lock feature (offset 0x39D/925)
     zone_channel_display: int = 0  # Show Zone CH on display (offset 0x39E/926)
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
-    tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928) - Beta41+ only
-    beta41: bool = False  # Indicates the settings are Beta41+ compatible
-    beta_version: int = 0  # Beta version number (0=not beta/stock, 41=pre-42 DTCN, 42+=from offset 0xFF0)
+    tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928)
 
 
 @dataclass

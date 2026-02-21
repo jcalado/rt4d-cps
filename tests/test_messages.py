@@ -41,9 +41,9 @@ class TestMessageParser:
         data[0] = MessageType.INBOX.value
         data[1] = CallType.GROUP.value
 
-        # Contact ID: 12345678 (little-endian)
+        # Contact ID: 12345678 (BCD encoded)
         contact_id = 12345678
-        data[2:6] = contact_id.to_bytes(4, 'little')
+        data[2:6] = MessageSerializer._to_bcd(contact_id)
 
         # Timestamp: 2024-06-15 14:30:45
         data[6] = 24   # Year - 2000
@@ -135,8 +135,8 @@ class TestMessageSerializer:
         assert data[0] == MessageType.OUTBOX.value
         assert data[1] == CallType.GROUP.value
 
-        # Check contact ID
-        assert int.from_bytes(data[2:6], 'little') == 9876543
+        # Check contact ID (BCD encoded)
+        assert MessageParser._parse_bcd(data[2:6]) == 9876543
 
         # Check timestamp
         assert data[6] == 25   # Year - 2000
