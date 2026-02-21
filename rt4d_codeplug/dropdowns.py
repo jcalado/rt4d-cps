@@ -488,6 +488,7 @@ FUNCTION_KEY_VALUES = [
     ("Next Zone", 42),             # Custom FW only
     ("DTMF List", 43),              # Custom FW only
     ("Freq Monitor", 44),          # Custom FW only
+    ("DMR Last Call", 45),          # Custom FW only
 ]
 
 # DTMF Send Delay (offset 512)
