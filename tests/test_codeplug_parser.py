@@ -165,7 +165,7 @@ def test_parser_radio_settings_display(codeplug):
 
     # Display settings should be within valid ranges
     assert 0 <= settings.backlight_brightness <= 4
-    assert 0 <= settings.lcd_contrast <= 15
+    assert 0 <= settings.lcd_contrast <= 13
     assert settings.display_mode_a in (0, 1, 2)  # channel, freq, name
     assert settings.display_mode_b in (0, 1, 2)
 

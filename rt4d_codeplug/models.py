@@ -290,7 +290,7 @@ class RadioSettings:
     display_mode_b: int = 0  # Display mode for band B (0=channel, 1=freq, 2=name) (offset 0x8A/138)
     rssi_refresh: int = 0  # RSSI refresh rate (offset 0x0A8-0x0A9/168-169, u16 LE)
     slaver_ptt: int = 0  # Side 1 as secondary PTT (offset 0x0E8/232)
-    lcd_contrast: int = 7  # LCD contrast 0-15 (offset 0x0E9/233)
+    lcd_contrast: int = 7  # LCD contrast 0-13 (offset 0x0E9/233)
     display_lines: int = 0  # 6 digits or 8 digits frequency display mode (offset 0x0EA/234)
     dual_display_mode: int = 0  # Dual display mode (offset 0x0EB/235)
 
