@@ -348,21 +348,6 @@ REMOTE_CONTROL_VALUES = [
     ("On", 1),
 ]
 
-# Group/Private call hang time (ms)
-HANG_TIME_VALUES = [
-    ("0 ms", 0),
-    ("500 ms", 500),
-    ("1000 ms", 1000),
-    ("1500 ms", 1500),
-    ("2000 ms", 2000),
-    ("2500 ms", 2500),
-    ("3000 ms", 3000),
-    ("3500 ms", 3500),
-    ("4000 ms", 4000),
-    ("4500 ms", 4500),
-    ("5000 ms", 5000),
-]
-
 # Detection Range in Frequency Monitor/Detect (offset 0x110)
 DETECT_RANGE_VALUES = [
     ("18-64 MHz", 0),

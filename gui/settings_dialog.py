@@ -25,7 +25,7 @@ from rt4d_codeplug.dropdowns import (
     SCAN_MODE_VALUES, SCAN_DWELL_VALUES, FUNCTION_KEY_VALUES,
     SQUELCH_LEVEL_VALUES, BEEP_VALUES, TX_END_TONE_VALUES,
     LCD_CONTRAST_VALUES, DISPLAY_LINES_VALUES, DUAL_DISPLAY_VALUES,
-    REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
+    REMOTE_CONTROL_VALUES, DISPLAY_ENABLE_VALUES,
     NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES, DETECT_RANGE_VALUES
 )
 # Custom firmware settings
@@ -317,15 +317,15 @@ class SettingsDialog(QDialog):
             self.combo_remote_control.addItem(label, value)
         dmr_layout.addRow("Remote Control:", self.combo_remote_control)
 
-        self.combo_group_call_hang_time = QComboBox()
-        for label, value in HANG_TIME_VALUES:
-            self.combo_group_call_hang_time.addItem(label, value)
-        dmr_layout.addRow("Group Call Hang Time:", self.combo_group_call_hang_time)
+        self.spin_group_call_hang_time = QSpinBox()
+        self.spin_group_call_hang_time.setRange(0, 60)
+        self.spin_group_call_hang_time.setSuffix(" s")
+        dmr_layout.addRow("Group Call Hang Time:", self.spin_group_call_hang_time)
 
-        self.combo_private_call_hang_time = QComboBox()
-        for label, value in HANG_TIME_VALUES:
-            self.combo_private_call_hang_time.addItem(label, value)
-        dmr_layout.addRow("Private Call Hang Time:", self.combo_private_call_hang_time)
+        self.spin_private_call_hang_time = QSpinBox()
+        self.spin_private_call_hang_time.setRange(0, 60)
+        self.spin_private_call_hang_time.setSuffix(" s")
+        dmr_layout.addRow("Private Call Hang Time:", self.spin_private_call_hang_time)
 
         dmr_group.setLayout(dmr_layout)
         scroll_layout.addWidget(dmr_group)
@@ -553,8 +553,6 @@ class SettingsDialog(QDialog):
             (self.combo_dual_display_mode, self.settings.dual_display_mode),
             # DMR operation settings
             (self.combo_remote_control, self.settings.remote_control),
-            (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
-            (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
             # Function keys
             (self.combo_key_fs1_short, self.settings.key_fs1_short),
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
@@ -575,6 +573,8 @@ class SettingsDialog(QDialog):
             self._set_combo_value(combo, value)
 
         # Spin boxes
+        self.spin_group_call_hang_time.setValue(self.settings.group_call_hang_time)
+        self.spin_private_call_hang_time.setValue(self.settings.private_call_hang_time)
         self.spin_tx_mic_gain.setValue(self.settings.tx_mic_gain)
         self.spin_rx_speaker_volume.setValue(self.settings.rx_speaker_volume)
         self.spin_tone_frequency.setValue(self.settings.tone_frequency)
@@ -617,8 +617,6 @@ class SettingsDialog(QDialog):
             ('dual_display_mode', self.combo_dual_display_mode),
             # DMR operation settings
             ('remote_control', self.combo_remote_control),
-            ('group_call_hang_time', self.combo_group_call_hang_time),
-            ('private_call_hang_time', self.combo_private_call_hang_time),
             # Function keys
             ('key_fs1_short', self.combo_key_fs1_short),
             ('key_fs1_long', self.combo_key_fs1_long),
@@ -641,6 +639,8 @@ class SettingsDialog(QDialog):
             setattr(self.settings, attr_name, combo.currentData())
 
         # Spin boxes
+        self.settings.group_call_hang_time = self.spin_group_call_hang_time.value()
+        self.settings.private_call_hang_time = self.spin_private_call_hang_time.value()
         self.settings.startup_display_line = self.spin_startup_line.value()
         self.settings.startup_display_column = self.spin_startup_column.value()
         self.settings.freq_lock_1_start = self.spin_freq_lock_1_start.value()
@@ -1249,13 +1249,6 @@ class SettingsWidget(QWidget):
 
         operation_group.setLayout(operation_main_layout)
         layout.addWidget(operation_group)
-
-        # Startup/Boot Options section
-        startup_group = QGroupBox("Startup/Boot Options")
-        startup_layout = QFormLayout()
-
-        startup_group.setLayout(startup_layout)
-        layout.addWidget(startup_group)
 
         layout.addStretch()
 

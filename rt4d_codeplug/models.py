@@ -306,8 +306,8 @@ class RadioSettings:
 
     # DMR Enhancements (offsets 0x184-0x19A)
     remote_control: int = 0  # Remote control enable (offset 0x184/388)
-    group_call_hang_time: int = 3000  # Group call hang time in ms (offset 0x18F-0x190/399-400, u16 LE)
-    private_call_hang_time: int = 3000  # Private call hang time in ms (offset 0x191-0x192/401-402, u16 LE)
+    group_call_hang_time: int = 3  # Group call hang time in seconds (offset 0x18F-0x190/399-400, u16 LE)
+    private_call_hang_time: int = 3  # Private call hang time in seconds (offset 0x191-0x192/401-402, u16 LE)
     # DMR SMS Fields (offsets 0x195-0x19A)
     dmr_send_dtmf: int = 0  # DTMF List via DMR (offset 0x195/405)
     sms_format: int = 0  # DMR SMS format (offset 0x196/406)
