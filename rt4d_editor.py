@@ -117,8 +117,6 @@ def show_settings(codeplug: Codeplug):
 
     print("\n--- Power ---")
     print(f"Power Save Mode:    {s.power_save_mode}")
-    print(f"Auto Power Off:     {'On' if s.apo_enabled else 'Off'}")
-
     print("\n--- Operation ---")
     print(f"Dual Watch:         {'On' if s.dual_watch else 'Off'}")
     print(f"Band A Mode:        {['Channel', 'VFO'][s.work_mode_a] if s.work_mode_a < 2 else s.work_mode_a}")

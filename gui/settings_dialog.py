@@ -1149,10 +1149,6 @@ class SettingsWidget(QWidget):
         self.combo_power_save_start.currentIndexChanged.connect(self.on_settings_changed)
         power_layout.addRow("Power Save Start:", self.combo_power_save_start)
 
-        self.check_apo = QCheckBox("Enable Auto Power Off")
-        self.check_apo.stateChanged.connect(self.on_settings_changed)
-        power_layout.addRow("", self.check_apo)
-
         power_group.setLayout(power_layout)
         layout.addWidget(power_group)
 
@@ -1334,7 +1330,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.setEnabled(enabled)
         self.spin_power_save.setEnabled(enabled)
         self.combo_power_save_start.setEnabled(enabled)
-        self.check_apo.setEnabled(enabled)
         self.combo_dual_watch.setEnabled(enabled)
         self.combo_talkaround.setEnabled(enabled)
         self.combo_alarm_type.setEnabled(enabled)
@@ -1457,7 +1452,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.blockSignals(True)
         self.spin_power_save.blockSignals(True)
         self.combo_power_save_start.blockSignals(True)
-        self.check_apo.blockSignals(True)
         self.combo_dual_watch.blockSignals(True)
         self.combo_talkaround.blockSignals(True)
         self.combo_alarm_type.blockSignals(True)
@@ -1549,8 +1543,6 @@ class SettingsWidget(QWidget):
             if self.combo_power_save_start.itemData(i) == settings.power_save_start:
                 self.combo_power_save_start.setCurrentIndex(i)
                 break
-
-        self.check_apo.setChecked(settings.apo_enabled)
 
         # Dual watch
         for i in range(self.combo_dual_watch.count()):
@@ -1645,7 +1637,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.blockSignals(False)
         self.spin_power_save.blockSignals(False)
         self.combo_power_save_start.blockSignals(False)
-        self.check_apo.blockSignals(False)
         self.combo_dual_watch.blockSignals(False)
         self.combo_talkaround.blockSignals(False)
         self.combo_alarm_type.blockSignals(False)
@@ -1686,7 +1677,6 @@ class SettingsWidget(QWidget):
         self.settings.display_mode_b = self.combo_display_mode_b.currentData()
         self.settings.power_save_mode = self.spin_power_save.value()
         self.settings.power_save_start = self.combo_power_save_start.currentData()
-        self.settings.apo_enabled = self.check_apo.isChecked()
         self.settings.dual_watch = self.combo_dual_watch.currentData()
         self.settings.talkaround = self.combo_talkaround.currentData()
         self.settings.alarm_type = self.combo_alarm_type.currentData()

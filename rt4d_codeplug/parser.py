@@ -472,8 +472,6 @@ class CodeplugParser:
         # Power
         settings.power_save_mode = cfg_data[99]
         settings.power_save_start = cfg_data[100]
-        settings.apo_enabled = cfg_data[105] == 1
-
         # Operation
         settings.dual_watch = cfg_data[102]
         settings.talkaround = cfg_data[103]

@@ -380,8 +380,6 @@ class CodeplugSerializer:
         # Power
         data[99] = settings.power_save_mode
         data[100] = settings.power_save_start
-        data[105] = 1 if settings.apo_enabled else 0
-
         # Operation
         data[102] = settings.dual_watch
         data[103] = settings.talkaround

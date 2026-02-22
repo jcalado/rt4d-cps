@@ -318,8 +318,6 @@ class RadioSettings:
     # Power
     power_save_mode: int = 0
     power_save_start: int = 0  # Power save start timer in seconds (0-600)
-    apo_enabled: bool = False
-
     # Operation
     dual_watch: int = 0
     work_mode_a: int = 0
