@@ -504,7 +504,6 @@ class CodeplugParser:
         settings.clock_4_minute = cfg_data[121]
 
         # Startup/Boot settings
-        settings.startup_picture_enable = cfg_data[16]
         settings.tx_protection = cfg_data[17]
         settings.startup_beep_enable = cfg_data[19]
         settings.startup_label_enable = cfg_data[20]

@@ -414,7 +414,6 @@ class CodeplugSerializer:
         data[121] = settings.clock_4_minute
 
         # Startup/Boot settings
-        data[16] = settings.startup_picture_enable
         data[17] = settings.tx_protection
         data[19] = settings.startup_beep_enable
         data[20] = settings.startup_label_enable

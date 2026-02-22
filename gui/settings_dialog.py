@@ -19,7 +19,7 @@ from rt4d_codeplug.dropdowns import (
     BACKLIGHT_BRIGHTNESS_VALUES, POWER_SAVE_START_VALUES,
     TX_PRIORITY_GLOBAL_VALUES, MAIN_PTT_VALUES, VFO_STEP_VALUES,
     MAIN_BAND_VALUES, DISPLAY_MODE_VALUES, CLOCK_MODE_VALUES,
-    STARTUP_PICTURE_VALUES, TX_PROTECTION_VALUES, STARTUP_BEEP_VALUES,
+    TX_PROTECTION_VALUES, STARTUP_BEEP_VALUES,
     STARTUP_LABEL_VALUES,
     FREQUENCY_LOCK_VALUES, SCAN_DIRECTION_VALUES, SCAN_RETURN_VALUES,
     SCAN_MODE_VALUES, SCAN_DWELL_VALUES, FUNCTION_KEY_VALUES,
@@ -76,11 +76,6 @@ class SettingsDialog(QDialog):
         # Startup/Boot Options section
         startup_group = QGroupBox("Startup/Boot Options")
         startup_layout = QFormLayout()
-
-        self.combo_startup_picture = QComboBox()
-        for label, value in STARTUP_PICTURE_VALUES:
-            self.combo_startup_picture.addItem(label, value)
-        startup_layout.addRow("Startup Picture:", self.combo_startup_picture)
 
         self.combo_startup_beep = QComboBox()
         for label, value in STARTUP_BEEP_VALUES:
@@ -502,7 +497,6 @@ class SettingsDialog(QDialog):
         """Load settings into form"""
         # Startup/Boot settings combo boxes
         combo_settings = [
-            (self.combo_startup_picture, self.settings.startup_picture_enable),
             (self.combo_startup_beep, self.settings.startup_beep_enable),
             (self.combo_startup_label, self.settings.startup_label_enable),
         ]
@@ -597,7 +591,6 @@ class SettingsDialog(QDialog):
         # List of (attribute_name, combo_box/spin_box) pairs
         combo_mappings = [
             # Startup/Boot settings
-            ('startup_picture_enable', self.combo_startup_picture),
             ('startup_beep_enable', self.combo_startup_beep),
             ('startup_label_enable', self.combo_startup_label),
             # Frequency lock ranges
@@ -1348,12 +1341,6 @@ class SettingsWidget(QWidget):
         startup_group = QGroupBox("Startup/Boot Options")
         startup_layout = QFormLayout()
 
-        self.combo_startup_picture_widget = QComboBox()
-        for label, value in STARTUP_PICTURE_VALUES:
-            self.combo_startup_picture_widget.addItem(label, value)
-        self.combo_startup_picture_widget.currentIndexChanged.connect(self.on_settings_changed)
-        startup_layout.addRow("Startup Picture:", self.combo_startup_picture_widget)
-
         startup_group.setLayout(startup_layout)
         layout.addWidget(startup_group)
 
@@ -1456,7 +1443,6 @@ class SettingsWidget(QWidget):
         self.combo_clock_4_mode.setEnabled(enabled)
         self.spin_clock_4_hour.setEnabled(enabled)
         self.spin_clock_4_minute.setEnabled(enabled)
-        self.combo_startup_picture_widget.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
         self.btn_edit_custom_fw.setEnabled(enabled)
 
@@ -1592,8 +1578,6 @@ class SettingsWidget(QWidget):
         self.combo_clock_4_mode.blockSignals(True)
         self.spin_clock_4_hour.blockSignals(True)
         self.spin_clock_4_minute.blockSignals(True)
-        self.combo_startup_picture_widget.blockSignals(True)
-
         # Load values
         self.edit_radio_name.setText(settings.radio_name)
         self.spin_radio_id.setValue(settings.radio_id)
@@ -1778,12 +1762,6 @@ class SettingsWidget(QWidget):
         self.spin_clock_4_hour.setValue(settings.clock_4_hour)
         self.spin_clock_4_minute.setValue(settings.clock_4_minute)
 
-        # Startup/Boot settings
-        for i in range(self.combo_startup_picture_widget.count()):
-            if self.combo_startup_picture_widget.itemData(i) == settings.startup_picture_enable:
-                self.combo_startup_picture_widget.setCurrentIndex(i)
-                break
-
         # Unblock signals
         self.edit_radio_name.blockSignals(False)
         self.spin_radio_id.blockSignals(False)
@@ -1829,8 +1807,6 @@ class SettingsWidget(QWidget):
         self.combo_clock_4_mode.blockSignals(False)
         self.spin_clock_4_hour.blockSignals(False)
         self.spin_clock_4_minute.blockSignals(False)
-        self.combo_startup_picture_widget.blockSignals(False)
-
         self.set_enabled(True)
 
     def on_settings_changed(self):
@@ -1888,6 +1864,4 @@ class SettingsWidget(QWidget):
         self.settings.clock_4_mode = self.combo_clock_4_mode.currentData()
         self.settings.clock_4_hour = self.spin_clock_4_hour.value()
         self.settings.clock_4_minute = self.spin_clock_4_minute.value()
-        self.settings.startup_picture_enable = self.combo_startup_picture_widget.currentData()
-
         self.data_modified.emit()

@@ -350,7 +350,6 @@ class RadioSettings:
     clock_4_minute: int = 0
 
     # Startup/Boot settings
-    startup_picture_enable: int = 0  # Show boot logo (0=off, 1=on)
     tx_protection: int = 0  # TX protection (0=off, 1=on)
     startup_beep_enable: int = 0  # Power-on beep (0=off, 1=on)
     startup_label_enable: int = 0  # Show startup text (0=off, 1=on)

@@ -255,11 +255,6 @@ CLOCK_MODE_VALUES = [
 ]
 
 # Startup/Boot settings
-STARTUP_PICTURE_VALUES = [
-    ("Off", 0),
-    ("On", 1),
-]
-
 TX_PROTECTION_VALUES = [
     ("Off", 0),
     ("On", 1),
