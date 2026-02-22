@@ -335,20 +335,6 @@ class RadioSettings:
     tx_priority_global: int = 0  # Global TX priority (0=edit, 1=busy)
     alarm_type: int = 0  # Alarm type (0=local, 1=remote, 2=local+remote)
 
-    # Clocks/Timers (4 programmable timers)
-    clock_1_mode: int = 0  # 0=off, 1=once, 2=daily
-    clock_1_hour: int = 0
-    clock_1_minute: int = 0
-    clock_2_mode: int = 0
-    clock_2_hour: int = 0
-    clock_2_minute: int = 0
-    clock_3_mode: int = 0
-    clock_3_hour: int = 0
-    clock_3_minute: int = 0
-    clock_4_mode: int = 0
-    clock_4_hour: int = 0
-    clock_4_minute: int = 0
-
     # Startup/Boot settings
     tx_protection: int = 0  # TX protection (0=off, 1=on)
     startup_beep_enable: int = 0  # Power-on beep (0=off, 1=on)

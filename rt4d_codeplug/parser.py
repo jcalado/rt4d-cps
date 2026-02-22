@@ -489,20 +489,6 @@ class CodeplugParser:
         settings.zone_b = cfg_data[139]
         settings.channel_b = cfg_data[140] | (cfg_data[141] << 8)
 
-        # Clocks/Timers (3 bytes each: mode, hour, minute)
-        settings.clock_1_mode = cfg_data[110]
-        settings.clock_1_hour = cfg_data[111]
-        settings.clock_1_minute = cfg_data[112]
-        settings.clock_2_mode = cfg_data[113]
-        settings.clock_2_hour = cfg_data[114]
-        settings.clock_2_minute = cfg_data[115]
-        settings.clock_3_mode = cfg_data[116]
-        settings.clock_3_hour = cfg_data[117]
-        settings.clock_3_minute = cfg_data[118]
-        settings.clock_4_mode = cfg_data[119]
-        settings.clock_4_hour = cfg_data[120]
-        settings.clock_4_minute = cfg_data[121]
-
         # Startup/Boot settings
         settings.tx_protection = cfg_data[17]
         settings.startup_beep_enable = cfg_data[19]

@@ -247,13 +247,6 @@ DISPLAY_MODE_VALUES = [
     ("Channel Name", 2),
 ]
 
-# Clock/Timer mode
-CLOCK_MODE_VALUES = [
-    ("Off", 0),
-    ("Once", 1),
-    ("Daily", 2),
-]
-
 # Startup/Boot settings
 TX_PROTECTION_VALUES = [
     ("Off", 0),

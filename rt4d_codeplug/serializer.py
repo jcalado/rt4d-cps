@@ -399,20 +399,6 @@ class CodeplugSerializer:
         data[140] = settings.channel_b & 0xFF
         data[141] = (settings.channel_b >> 8) & 0xFF
 
-        # Clocks/Timers
-        data[110] = settings.clock_1_mode
-        data[111] = settings.clock_1_hour
-        data[112] = settings.clock_1_minute
-        data[113] = settings.clock_2_mode
-        data[114] = settings.clock_2_hour
-        data[115] = settings.clock_2_minute
-        data[116] = settings.clock_3_mode
-        data[117] = settings.clock_3_hour
-        data[118] = settings.clock_3_minute
-        data[119] = settings.clock_4_mode
-        data[120] = settings.clock_4_hour
-        data[121] = settings.clock_4_minute
-
         # Startup/Boot settings
         data[17] = settings.tx_protection
         data[19] = settings.startup_beep_enable

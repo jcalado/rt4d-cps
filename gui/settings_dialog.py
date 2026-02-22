@@ -18,7 +18,7 @@ from rt4d_codeplug.dropdowns import (
     LED_TIMER_VALUES, MENU_TIMER_VALUES,
     BACKLIGHT_BRIGHTNESS_VALUES, POWER_SAVE_START_VALUES,
     TX_PRIORITY_GLOBAL_VALUES, MAIN_PTT_VALUES, VFO_STEP_VALUES,
-    MAIN_BAND_VALUES, DISPLAY_MODE_VALUES, CLOCK_MODE_VALUES,
+    MAIN_BAND_VALUES, DISPLAY_MODE_VALUES,
     TX_PROTECTION_VALUES, STARTUP_BEEP_VALUES,
     STARTUP_LABEL_VALUES,
     FREQUENCY_LOCK_VALUES, SCAN_DIRECTION_VALUES, SCAN_RETURN_VALUES,
@@ -1254,89 +1254,6 @@ class SettingsWidget(QWidget):
         operation_group.setLayout(operation_main_layout)
         layout.addWidget(operation_group)
 
-        # Clocks/Timers section
-        self.clock_group = QGroupBox("Programmable Clocks/Timers")
-        clock_layout = QFormLayout()
-
-        # Clock 1
-        clock1_layout = QHBoxLayout()
-        self.combo_clock_1_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_1_mode.addItem(label, value)
-        self.combo_clock_1_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.combo_clock_1_mode)
-        self.spin_clock_1_hour = QSpinBox()
-        self.spin_clock_1_hour.setRange(0, 23)
-        self.spin_clock_1_hour.setPrefix("H:")
-        self.spin_clock_1_hour.valueChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.spin_clock_1_hour)
-        self.spin_clock_1_minute = QSpinBox()
-        self.spin_clock_1_minute.setRange(0, 59)
-        self.spin_clock_1_minute.setPrefix("M:")
-        self.spin_clock_1_minute.valueChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.spin_clock_1_minute)
-        clock_layout.addRow("Clock 1:", clock1_layout)
-
-        # Clock 2
-        clock2_layout = QHBoxLayout()
-        self.combo_clock_2_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_2_mode.addItem(label, value)
-        self.combo_clock_2_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.combo_clock_2_mode)
-        self.spin_clock_2_hour = QSpinBox()
-        self.spin_clock_2_hour.setRange(0, 23)
-        self.spin_clock_2_hour.setPrefix("H:")
-        self.spin_clock_2_hour.valueChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.spin_clock_2_hour)
-        self.spin_clock_2_minute = QSpinBox()
-        self.spin_clock_2_minute.setRange(0, 59)
-        self.spin_clock_2_minute.setPrefix("M:")
-        self.spin_clock_2_minute.valueChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.spin_clock_2_minute)
-        clock_layout.addRow("Clock 2:", clock2_layout)
-
-        # Clock 3
-        clock3_layout = QHBoxLayout()
-        self.combo_clock_3_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_3_mode.addItem(label, value)
-        self.combo_clock_3_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.combo_clock_3_mode)
-        self.spin_clock_3_hour = QSpinBox()
-        self.spin_clock_3_hour.setRange(0, 23)
-        self.spin_clock_3_hour.setPrefix("H:")
-        self.spin_clock_3_hour.valueChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.spin_clock_3_hour)
-        self.spin_clock_3_minute = QSpinBox()
-        self.spin_clock_3_minute.setRange(0, 59)
-        self.spin_clock_3_minute.setPrefix("M:")
-        self.spin_clock_3_minute.valueChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.spin_clock_3_minute)
-        clock_layout.addRow("Clock 3:", clock3_layout)
-
-        # Clock 4
-        clock4_layout = QHBoxLayout()
-        self.combo_clock_4_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_4_mode.addItem(label, value)
-        self.combo_clock_4_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.combo_clock_4_mode)
-        self.spin_clock_4_hour = QSpinBox()
-        self.spin_clock_4_hour.setRange(0, 23)
-        self.spin_clock_4_hour.setPrefix("H:")
-        self.spin_clock_4_hour.valueChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.spin_clock_4_hour)
-        self.spin_clock_4_minute = QSpinBox()
-        self.spin_clock_4_minute.setRange(0, 59)
-        self.spin_clock_4_minute.setPrefix("M:")
-        self.spin_clock_4_minute.valueChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.spin_clock_4_minute)
-        clock_layout.addRow("Clock 4:", clock4_layout)
-
-        self.clock_group.setLayout(clock_layout)
-        layout.addWidget(self.clock_group)
-
         # Startup/Boot Options section
         startup_group = QGroupBox("Startup/Boot Options")
         startup_layout = QFormLayout()
@@ -1431,18 +1348,6 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.setEnabled(enabled)
         self.combo_zone_b.setEnabled(enabled)
         self.combo_channel_b.setEnabled(enabled)
-        self.combo_clock_1_mode.setEnabled(enabled)
-        self.spin_clock_1_hour.setEnabled(enabled)
-        self.spin_clock_1_minute.setEnabled(enabled)
-        self.combo_clock_2_mode.setEnabled(enabled)
-        self.spin_clock_2_hour.setEnabled(enabled)
-        self.spin_clock_2_minute.setEnabled(enabled)
-        self.combo_clock_3_mode.setEnabled(enabled)
-        self.spin_clock_3_hour.setEnabled(enabled)
-        self.spin_clock_3_minute.setEnabled(enabled)
-        self.combo_clock_4_mode.setEnabled(enabled)
-        self.spin_clock_4_hour.setEnabled(enabled)
-        self.spin_clock_4_minute.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
         self.btn_edit_custom_fw.setEnabled(enabled)
 
@@ -1566,18 +1471,6 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.blockSignals(True)
         self.combo_zone_b.blockSignals(True)
         self.combo_channel_b.blockSignals(True)
-        self.combo_clock_1_mode.blockSignals(True)
-        self.spin_clock_1_hour.blockSignals(True)
-        self.spin_clock_1_minute.blockSignals(True)
-        self.combo_clock_2_mode.blockSignals(True)
-        self.spin_clock_2_hour.blockSignals(True)
-        self.spin_clock_2_minute.blockSignals(True)
-        self.combo_clock_3_mode.blockSignals(True)
-        self.spin_clock_3_hour.blockSignals(True)
-        self.spin_clock_3_minute.blockSignals(True)
-        self.combo_clock_4_mode.blockSignals(True)
-        self.spin_clock_4_hour.blockSignals(True)
-        self.spin_clock_4_minute.blockSignals(True)
         # Load values
         self.edit_radio_name.setText(settings.radio_name)
         self.spin_radio_id.setValue(settings.radio_id)
@@ -1733,35 +1626,6 @@ class SettingsWidget(QWidget):
                 self.combo_channel_b.setCurrentIndex(i)
                 break
 
-        # Clocks
-        for i in range(self.combo_clock_1_mode.count()):
-            if self.combo_clock_1_mode.itemData(i) == settings.clock_1_mode:
-                self.combo_clock_1_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_1_hour.setValue(settings.clock_1_hour)
-        self.spin_clock_1_minute.setValue(settings.clock_1_minute)
-
-        for i in range(self.combo_clock_2_mode.count()):
-            if self.combo_clock_2_mode.itemData(i) == settings.clock_2_mode:
-                self.combo_clock_2_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_2_hour.setValue(settings.clock_2_hour)
-        self.spin_clock_2_minute.setValue(settings.clock_2_minute)
-
-        for i in range(self.combo_clock_3_mode.count()):
-            if self.combo_clock_3_mode.itemData(i) == settings.clock_3_mode:
-                self.combo_clock_3_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_3_hour.setValue(settings.clock_3_hour)
-        self.spin_clock_3_minute.setValue(settings.clock_3_minute)
-
-        for i in range(self.combo_clock_4_mode.count()):
-            if self.combo_clock_4_mode.itemData(i) == settings.clock_4_mode:
-                self.combo_clock_4_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_4_hour.setValue(settings.clock_4_hour)
-        self.spin_clock_4_minute.setValue(settings.clock_4_minute)
-
         # Unblock signals
         self.edit_radio_name.blockSignals(False)
         self.spin_radio_id.blockSignals(False)
@@ -1795,18 +1659,6 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.blockSignals(False)
         self.combo_zone_b.blockSignals(False)
         self.combo_channel_b.blockSignals(False)
-        self.combo_clock_1_mode.blockSignals(False)
-        self.spin_clock_1_hour.blockSignals(False)
-        self.spin_clock_1_minute.blockSignals(False)
-        self.combo_clock_2_mode.blockSignals(False)
-        self.spin_clock_2_hour.blockSignals(False)
-        self.spin_clock_2_minute.blockSignals(False)
-        self.combo_clock_3_mode.blockSignals(False)
-        self.spin_clock_3_hour.blockSignals(False)
-        self.spin_clock_3_minute.blockSignals(False)
-        self.combo_clock_4_mode.blockSignals(False)
-        self.spin_clock_4_hour.blockSignals(False)
-        self.spin_clock_4_minute.blockSignals(False)
         self.set_enabled(True)
 
     def on_settings_changed(self):
@@ -1852,16 +1704,4 @@ class SettingsWidget(QWidget):
         self.settings.zone_b = zone_b if zone_b is not None else 0
         channel_b = self.combo_channel_b.currentData()
         self.settings.channel_b = channel_b if channel_b is not None else 0
-        self.settings.clock_1_mode = self.combo_clock_1_mode.currentData()
-        self.settings.clock_1_hour = self.spin_clock_1_hour.value()
-        self.settings.clock_1_minute = self.spin_clock_1_minute.value()
-        self.settings.clock_2_mode = self.combo_clock_2_mode.currentData()
-        self.settings.clock_2_hour = self.spin_clock_2_hour.value()
-        self.settings.clock_2_minute = self.spin_clock_2_minute.value()
-        self.settings.clock_3_mode = self.combo_clock_3_mode.currentData()
-        self.settings.clock_3_hour = self.spin_clock_3_hour.value()
-        self.settings.clock_3_minute = self.spin_clock_3_minute.value()
-        self.settings.clock_4_mode = self.combo_clock_4_mode.currentData()
-        self.settings.clock_4_hour = self.spin_clock_4_hour.value()
-        self.settings.clock_4_minute = self.spin_clock_4_minute.value()
         self.data_modified.emit()
