@@ -594,8 +594,6 @@ class CodeplugParser:
         settings.remote_control = cfg_data[0x184]
         settings.group_call_hang_time = cfg_data[0x18F] | (cfg_data[0x190] << 8)
         settings.private_call_hang_time = cfg_data[0x191] | (cfg_data[0x192] << 8)
-        settings.call_group_display = cfg_data[0x194]
-
         # DMR SMS Fields (0x195-0x19A)
         settings.dmr_send_dtmf = cfg_data[0x195]
         settings.sms_format = cfg_data[0x196]

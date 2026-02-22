@@ -523,8 +523,6 @@ class CodeplugSerializer:
         data[0x190] = (settings.group_call_hang_time >> 8) & 0xFF
         data[0x191] = settings.private_call_hang_time & 0xFF
         data[0x192] = (settings.private_call_hang_time >> 8) & 0xFF
-        data[0x194] = settings.call_group_display
-
         # DMR SMS Fields (0x195-0x19A)
         data[0x195] = settings.dmr_send_dtmf
         data[0x196] = settings.sms_format

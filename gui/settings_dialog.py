@@ -332,11 +332,6 @@ class SettingsDialog(QDialog):
             self.combo_private_call_hang_time.addItem(label, value)
         dmr_layout.addRow("Private Call Hang Time:", self.combo_private_call_hang_time)
 
-        self.combo_call_group_display = QComboBox()
-        for label, value in DISPLAY_ENABLE_VALUES:
-            self.combo_call_group_display.addItem(label, value)
-        dmr_layout.addRow("Show Call Group:", self.combo_call_group_display)
-
         dmr_group.setLayout(dmr_layout)
         scroll_layout.addWidget(dmr_group)
 
@@ -566,7 +561,6 @@ class SettingsDialog(QDialog):
             (self.combo_remote_control, self.settings.remote_control),
             (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
             (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
-            (self.combo_call_group_display, self.settings.call_group_display),
             # Function keys
             (self.combo_key_fs1_short, self.settings.key_fs1_short),
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
@@ -632,7 +626,6 @@ class SettingsDialog(QDialog):
             ('remote_control', self.combo_remote_control),
             ('group_call_hang_time', self.combo_group_call_hang_time),
             ('private_call_hang_time', self.combo_private_call_hang_time),
-            ('call_group_display', self.combo_call_group_display),
             # Function keys
             ('key_fs1_short', self.combo_key_fs1_short),
             ('key_fs1_long', self.combo_key_fs1_long),
