@@ -514,9 +514,6 @@ TX_BACKLIGHT_VALUES = [
     ("Off after 5s", 1),
 ]
 
-# Green Key Long Press - same values as function keys (offset 0x382)
-GREEN_KEY_LONG_VALUES = FUNCTION_KEY_VALUES
-
 # Voltage Display (offset 0x383)
 VOLTAGE_DISPLAY_VALUES = [
     ("Off", 0),

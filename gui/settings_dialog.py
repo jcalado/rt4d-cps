@@ -30,7 +30,7 @@ from rt4d_codeplug.dropdowns import (
 )
 # Custom firmware settings
 from rt4d_codeplug.dropdowns import (
-    SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES, GREEN_KEY_LONG_VALUES,
+    SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES,
     VOLTAGE_DISPLAY_VALUES, LIVE_SUB_TONE_VALUES, SPECTRUM_THRESHOLD_VALUES,
     SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
     SCAN_CONTINUE_VALUES, SCAN_RETURN_CUSTOM_VALUES, CALLSIGN_LOOKUP_VALUES,
@@ -355,6 +355,13 @@ class SettingsDialog(QDialog):
         funckeys_group = QGroupBox("Function Keys")
         funckeys_layout = QFormLayout()
 
+        # Green key
+        self.combo_green_key_long = QComboBox()
+        for label, value in FUNCTION_KEY_VALUES:
+            display_label = self._get_function_key_label(label, value)
+            self.combo_green_key_long.addItem(display_label, value)
+        funckeys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
+
         # FS1 button
         self.combo_key_fs1_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
@@ -478,6 +485,7 @@ class SettingsDialog(QDialog):
         """Re-apply version-aware labels on all function key combos."""
         from rt4d_codeplug.dropdowns import FUNCTION_KEY_VALUES
         combos = [
+            self.combo_green_key_long,
             self.combo_key_fs1_short, self.combo_key_fs1_long,
             self.combo_key_fs2_short, self.combo_key_fs2_long,
             self.combo_key_0, self.combo_key_1, self.combo_key_2,
@@ -554,6 +562,7 @@ class SettingsDialog(QDialog):
             # DMR operation settings
             (self.combo_remote_control, self.settings.remote_control),
             # Function keys
+            (self.combo_green_key_long, self.settings.green_key_long),
             (self.combo_key_fs1_short, self.settings.key_fs1_short),
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
             (self.combo_key_fs2_short, self.settings.key_fs2_short),
@@ -618,6 +627,7 @@ class SettingsDialog(QDialog):
             # DMR operation settings
             ('remote_control', self.combo_remote_control),
             # Function keys
+            ('green_key_long', self.combo_green_key_long),
             ('key_fs1_short', self.combo_key_fs1_short),
             ('key_fs1_long', self.combo_key_fs1_long),
             ('key_fs2_short', self.combo_key_fs2_short),
@@ -783,18 +793,6 @@ class CustomFirmwareDialog(QDialog):
         audio_group.setLayout(audio_layout)
         scroll_layout.addWidget(audio_group)
 
-        # Function Keys section
-        keys_group = QGroupBox("Function Keys")
-        keys_layout = QFormLayout()
-
-        self.combo_green_key_long = QComboBox()
-        for label, value in GREEN_KEY_LONG_VALUES:
-            self.combo_green_key_long.addItem(label, value)
-        keys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
-
-        keys_group.setLayout(keys_layout)
-        scroll_layout.addWidget(keys_group)
-
         # PTT & DTMF Settings section
         ptt_group = QGroupBox("PTT && DTMF Settings")
         ptt_layout = QFormLayout()
@@ -893,8 +891,6 @@ class CustomFirmwareDialog(QDialog):
             # Audio settings
             (self.combo_live_sub_tone, self.settings.live_sub_tone),
             (self.combo_tot_warning, self.settings.tot_warning),
-            # Function keys
-            (self.combo_green_key_long, self.settings.green_key_long),
             # PTT settings
             (self.combo_sub_tone_ptt, self.settings.sub_tone_ptt),
             (self.combo_ptt_lock, self.settings.ptt_lock),
@@ -931,8 +927,6 @@ class CustomFirmwareDialog(QDialog):
             # Audio settings
             ('live_sub_tone', self.combo_live_sub_tone),
             ('tot_warning', self.combo_tot_warning),
-            # Function keys
-            ('green_key_long', self.combo_green_key_long),
             # PTT settings
             ('sub_tone_ptt', self.combo_sub_tone_ptt),
             ('ptt_lock', self.combo_ptt_lock),
