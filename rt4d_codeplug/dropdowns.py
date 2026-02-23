@@ -533,6 +533,13 @@ SPECTRUM_THRESHOLD_VALUES = [
     ("5", 5), ("6", 6), ("7", 7), ("8", 8), ("9", 9),
 ]
 
+# Secondary PTT (offset 0x0E8)
+SECONDARY_PTT_VALUES = [
+    ("Off", 0),
+    ("VFO B", 1),
+    ("Opposite VFO", 2),
+]
+
 # Sub-tone PTT (offset 0x386)
 # Enable pressing PTT from the DTMF list (e.g., EchoLink/Allstar)
 SUB_TONE_PTT_VALUES = [

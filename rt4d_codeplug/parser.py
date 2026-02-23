@@ -553,7 +553,7 @@ class CodeplugParser:
 
         # Display Settings (additional)
         settings.rssi_refresh = cfg_data[0x0A8] | (cfg_data[0x0A9] << 8)
-        settings.slaver_ptt = cfg_data[0x0E8]
+        settings.secondary_ptt = cfg_data[0x0E8]
         settings.lcd_contrast = min(cfg_data[0x0E9], 13)
         settings.display_lines = cfg_data[0x0EA]
         settings.dual_display_mode = cfg_data[0x0EB]

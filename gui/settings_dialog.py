@@ -32,7 +32,7 @@ from rt4d_codeplug.dropdowns import (
 from rt4d_codeplug.dropdowns import (
     SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES,
     VOLTAGE_DISPLAY_VALUES, LIVE_SUB_TONE_VALUES, SPECTRUM_THRESHOLD_VALUES,
-    SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
+    SECONDARY_PTT_VALUES, SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
     SCAN_CONTINUE_VALUES, SCAN_RETURN_CUSTOM_VALUES, CALLSIGN_LOOKUP_VALUES,
     DMR_SCAN_SPEED_VALUES, PTT_LOCK_VALUES, ZONE_CHANNEL_DISPLAY_VALUES,
     DMR_GID_NAME_VALUES
@@ -757,6 +757,11 @@ class CustomFirmwareDialog(QDialog):
         ptt_group = QGroupBox("PTT && DTMF Settings")
         ptt_layout = QFormLayout()
 
+        self.combo_secondary_ptt = QComboBox()
+        for label, value in SECONDARY_PTT_VALUES:
+            self.combo_secondary_ptt.addItem(label, value)
+        ptt_layout.addRow("Secondary PTT:", self.combo_secondary_ptt)
+
         self.combo_sub_tone_ptt = QComboBox()
         for label, value in SUB_TONE_PTT_VALUES:
             self.combo_sub_tone_ptt.addItem(label, value)
@@ -852,6 +857,7 @@ class CustomFirmwareDialog(QDialog):
             (self.combo_live_sub_tone, self.settings.live_sub_tone),
             (self.combo_tot_warning, self.settings.tot_warning),
             # PTT settings
+            (self.combo_secondary_ptt, self.settings.secondary_ptt),
             (self.combo_sub_tone_ptt, self.settings.sub_tone_ptt),
             (self.combo_ptt_lock, self.settings.ptt_lock),
             # DMR settings
@@ -888,6 +894,7 @@ class CustomFirmwareDialog(QDialog):
             ('live_sub_tone', self.combo_live_sub_tone),
             ('tot_warning', self.combo_tot_warning),
             # PTT settings
+            ('secondary_ptt', self.combo_secondary_ptt),
             ('sub_tone_ptt', self.combo_sub_tone_ptt),
             ('ptt_lock', self.combo_ptt_lock),
             # DMR settings

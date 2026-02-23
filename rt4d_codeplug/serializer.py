@@ -480,7 +480,7 @@ class CodeplugSerializer:
         # Display Settings (additional)
         data[0x0A8] = settings.rssi_refresh & 0xFF
         data[0x0A9] = (settings.rssi_refresh >> 8) & 0xFF
-        data[0x0E8] = settings.slaver_ptt
+        data[0x0E8] = settings.secondary_ptt
         data[0x0E9] = settings.lcd_contrast
         data[0x0EA] = settings.display_lines
         data[0x0EB] = settings.dual_display_mode
