@@ -530,6 +530,13 @@ SPECTRUM_THRESHOLD_VALUES = [
     ("5", 5), ("6", 6), ("7", 7), ("8", 8), ("9", 9),
 ]
 
+# FN Key (offset 0x3A2) - which side button acts as FN modifier for hotkeys
+FN_KEY_VALUES = [
+    ("Off", 0),
+    ("Side 1", 1),
+    ("Side 2", 2),
+]
+
 # Secondary PTT (offset 0x0E8)
 SECONDARY_PTT_VALUES = [
     ("Off", 0),

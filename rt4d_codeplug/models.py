@@ -381,6 +381,18 @@ class RadioSettings:
     key_8: int = 0  # Numeric key 8 action
     key_9: int = 0  # Numeric key 9 action
 
+    # Hotkeys FN+0..9 (offset 0x06E-0x077/110-119)
+    hotkey_0: int = 0  # FN+0 action
+    hotkey_1: int = 0  # FN+1 action
+    hotkey_2: int = 0  # FN+2 action
+    hotkey_3: int = 0  # FN+3 action
+    hotkey_4: int = 0  # FN+4 action
+    hotkey_5: int = 0  # FN+5 action
+    hotkey_6: int = 0  # FN+6 action
+    hotkey_7: int = 0  # FN+7 action
+    hotkey_8: int = 0  # FN+8 action
+    hotkey_9: int = 0  # FN+9 action
+
     # Advanced Features (offsets 0x110-0x116)
     detection_range: int = 0  # Detection range (offset 0x110/272, u8)
     relay_delay: int = 0  # Relay delay (offset 0x111-0x112/273-274, u16 LE)
@@ -425,6 +437,7 @@ class RadioSettings:
     zone_channel_display: int = 0  # Show Zone CH on display (offset 0x39E/926)
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
     tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928)
+    fn_key: int = 0  # FN key assignment (0=off, 1=Side 1, 2=Side 2) (offset 0x3A2/930)
 
 
 @dataclass

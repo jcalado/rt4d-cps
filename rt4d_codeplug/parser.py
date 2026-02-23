@@ -537,6 +537,10 @@ class CodeplugParser:
         settings.key_8 = cfg_data[184]
         settings.key_9 = cfg_data[185]
 
+        # Hotkeys FN+0..9 (offset 0x06E-0x077)
+        for i in range(10):
+            setattr(settings, f'hotkey_{i}', cfg_data[0x06E + i])
+
         # Audio Settings (0x100-0x11A)
         settings.tone_frequency = cfg_data[0x100] | (cfg_data[0x101] << 8)
         settings.squelch_level = cfg_data[0x102]
@@ -648,6 +652,7 @@ class CodeplugParser:
         settings.zone_channel_display = cfg_data[0x39E]
         settings.dmr_gid_name = cfg_data[0x39F]
         settings.tx_alias = cfg_data[0x3A0]
+        settings.fn_key = cfg_data[0x3A2]
 
         return settings
 

@@ -32,7 +32,8 @@ from rt4d_codeplug.dropdowns import (
 from rt4d_codeplug.dropdowns import (
     SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES,
     VOLTAGE_DISPLAY_VALUES, LIVE_SUB_TONE_VALUES, SPECTRUM_THRESHOLD_VALUES,
-    SECONDARY_PTT_VALUES, SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
+    FN_KEY_VALUES, SECONDARY_PTT_VALUES,
+    SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
     SCAN_CONTINUE_VALUES, SCAN_RETURN_CUSTOM_VALUES, CALLSIGN_LOOKUP_VALUES,
     DMR_SCAN_SPEED_VALUES, PTT_LOCK_VALUES, ZONE_CHANNEL_DISPLAY_VALUES,
     DMR_GID_NAME_VALUES
@@ -427,6 +428,21 @@ class SettingsDialog(QDialog):
         funckeys_group.setLayout(funckeys_layout)
         scroll_layout.addWidget(funckeys_group)
 
+        # Hotkeys FN+0..9 section
+        hotkeys_group = QGroupBox("Hotkeys (FN + Key)")
+        hotkeys_layout = QFormLayout()
+
+        for i in range(10):
+            combo = QComboBox()
+            for label, value in FUNCTION_KEY_VALUES:
+                display_label = self._get_function_key_label(label, value)
+                combo.addItem(display_label, value)
+            setattr(self, f'combo_hotkey_{i}', combo)
+            hotkeys_layout.addRow(f"FN + {i}:", combo)
+
+        hotkeys_group.setLayout(hotkeys_layout)
+        scroll_layout.addWidget(hotkeys_group)
+
         scroll_layout.addStretch()
 
         # Buttons
@@ -544,6 +560,12 @@ class SettingsDialog(QDialog):
             (self.combo_key_8, self.settings.key_8),
             (self.combo_key_9, self.settings.key_9),
         ]
+        # Hotkeys FN+0..9
+        for i in range(10):
+            combo = getattr(self, f'combo_hotkey_{i}')
+            value = getattr(self.settings, f'hotkey_{i}')
+            other_combos.append((combo, value))
+
         for combo, value in other_combos:
             self._set_combo_value(combo, value)
 
@@ -609,6 +631,9 @@ class SettingsDialog(QDialog):
             ('key_8', self.combo_key_8),
             ('key_9', self.combo_key_9),
         ]
+        # Hotkeys FN+0..9
+        for i in range(10):
+            combo_mappings.append((f'hotkey_{i}', getattr(self, f'combo_hotkey_{i}')))
 
         # Save all combo box values
         for attr_name, combo in combo_mappings:
@@ -772,6 +797,11 @@ class CustomFirmwareDialog(QDialog):
             self.combo_ptt_lock.addItem(label, value)
         ptt_layout.addRow("PTT Lock:", self.combo_ptt_lock)
 
+        self.combo_fn_key = QComboBox()
+        for label, value in FN_KEY_VALUES:
+            self.combo_fn_key.addItem(label, value)
+        ptt_layout.addRow("FN Key:", self.combo_fn_key)
+
         ptt_group.setLayout(ptt_layout)
         scroll_layout.addWidget(ptt_group)
 
@@ -860,6 +890,7 @@ class CustomFirmwareDialog(QDialog):
             (self.combo_secondary_ptt, self.settings.secondary_ptt),
             (self.combo_sub_tone_ptt, self.settings.sub_tone_ptt),
             (self.combo_ptt_lock, self.settings.ptt_lock),
+            (self.combo_fn_key, self.settings.fn_key),
             # DMR settings
             (self.combo_dmr_gid_name, self.settings.dmr_gid_name),
             (self.combo_callsign_lookup, self.settings.callsign_lookup),
@@ -897,6 +928,7 @@ class CustomFirmwareDialog(QDialog):
             ('secondary_ptt', self.combo_secondary_ptt),
             ('sub_tone_ptt', self.combo_sub_tone_ptt),
             ('ptt_lock', self.combo_ptt_lock),
+            ('fn_key', self.combo_fn_key),
             # DMR settings
             ('dmr_gid_name', self.combo_dmr_gid_name),
             ('callsign_lookup', self.combo_callsign_lookup),

@@ -461,6 +461,10 @@ class CodeplugSerializer:
         data[184] = settings.key_8
         data[185] = settings.key_9
 
+        # Hotkeys FN+0..9 (offset 0x06E-0x077)
+        for i in range(10):
+            data[0x06E + i] = getattr(settings, f'hotkey_{i}')
+
         # Audio Settings (0x100-0x11A)
         data[0x100] = settings.tone_frequency & 0xFF
         data[0x101] = (settings.tone_frequency >> 8) & 0xFF
@@ -576,7 +580,8 @@ class CodeplugSerializer:
         data[0x39E] = settings.zone_channel_display & 0xFF
         data[0x39F] = settings.dmr_gid_name & 0xFF
         data[0x3A0] = settings.tx_alias & 0xFF
-        
+        data[0x3A2] = settings.fn_key & 0xFF
+
         data[4092:4096] = BETA41_MAGIC
 
         return bytes(data)
