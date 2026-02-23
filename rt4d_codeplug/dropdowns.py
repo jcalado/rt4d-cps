@@ -475,10 +475,7 @@ DTMF_SEND_DELAY_VALUES = [
 
 # DTMF Send Duration and Send Interval (offsets 513, 514)
 DTMF_DURATION_VALUES = [
-    ("30ms", 0), ("40ms", 1), ("50ms", 2), ("60ms", 3), ("70ms", 4),
-    ("80ms", 5), ("90ms", 6), ("100ms", 7), ("110ms", 8), ("120ms", 9),
-    ("130ms", 10), ("140ms", 11), ("150ms", 12), ("160ms", 13), ("170ms", 14),
-    ("180ms", 15), ("190ms", 16), ("200ms", 17),
+    (f"{ms}ms", i) for i, ms in enumerate(range(30, 401, 10))
 ]
 
 # DTMF Send Mode (offset 515)
