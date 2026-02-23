@@ -341,9 +341,6 @@ class RadioSettings:
     startup_display_column: int = 0  # Startup message column position
     password_enable: int = 0  # Password enable flag (0=off, 1=on)
 
-    # Radio clock/time
-    radio_time_seconds: int = 0  # Current time as total seconds since midnight
-
     # Frequency lock ranges (4 ranges)
     freq_lock_1_mode: int = 0  # 0=unlock, 1=rx only, 2=lock
     freq_lock_1_start: int = 0  # Start frequency in MHz

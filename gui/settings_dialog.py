@@ -98,31 +98,6 @@ class SettingsDialog(QDialog):
         startup_group.setLayout(startup_layout)
         scroll_layout.addWidget(startup_group)
 
-        # Radio Clock section
-        self.clock_group = QGroupBox("Radio Clock")
-        clock_layout = QFormLayout()
-
-        time_layout = QHBoxLayout()
-        self.spin_clock_hour = QSpinBox()
-        self.spin_clock_hour.setRange(0, 23)
-        time_layout.addWidget(QLabel("Hour:"))
-        time_layout.addWidget(self.spin_clock_hour)
-
-        self.spin_clock_minute = QSpinBox()
-        self.spin_clock_minute.setRange(0, 59)
-        time_layout.addWidget(QLabel("Minute:"))
-        time_layout.addWidget(self.spin_clock_minute)
-
-        self.spin_clock_second = QSpinBox()
-        self.spin_clock_second.setRange(0, 59)
-        time_layout.addWidget(QLabel("Second:"))
-        time_layout.addWidget(self.spin_clock_second)
-
-        clock_layout.addRow("Current Time:", time_layout)
-
-        self.clock_group.setLayout(clock_layout)
-        scroll_layout.addWidget(self.clock_group)
-
         # Frequency Lock Ranges section
         freq_lock_group = QGroupBox("Frequency Lock Ranges")
         freq_lock_layout = QFormLayout()
@@ -513,15 +488,6 @@ class SettingsDialog(QDialog):
         self.spin_startup_line.setValue(self.settings.startup_display_line)
         self.spin_startup_column.setValue(self.settings.startup_display_column)
 
-        # Radio clock - convert seconds to hour/minute/second
-        total_seconds = self.settings.radio_time_seconds
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        self.spin_clock_hour.setValue(hours)
-        self.spin_clock_minute.setValue(minutes)
-        self.spin_clock_second.setValue(seconds)
-
         # Frequency lock ranges
         freq_lock_combos = [
             (self.combo_freq_lock_1, self.settings.freq_lock_1_mode),
@@ -669,12 +635,6 @@ class SettingsDialog(QDialog):
         self.settings.detection_range = self.combo_detection_range.currentData()
         self.settings.relay_delay = self.combo_relay_delay.currentData()
         self.settings.glitch_filter = self.spin_glitch_filter.value()
-
-        # Radio clock - convert hour/minute/second to total seconds
-        hours = self.spin_clock_hour.value()
-        minutes = self.spin_clock_minute.value()
-        seconds = self.spin_clock_second.value()
-        self.settings.radio_time_seconds = hours * 3600 + minutes * 60 + seconds
 
         return self.settings
 

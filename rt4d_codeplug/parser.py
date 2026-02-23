@@ -495,12 +495,6 @@ class CodeplugParser:
         settings.startup_display_column = cfg_data[25] | (cfg_data[26] << 8)
         settings.password_enable = cfg_data[27]
 
-        # Radio clock/time (32-bit value: total seconds since midnight)
-        settings.radio_time_seconds = (cfg_data[106] |
-                                       (cfg_data[107] << 8) |
-                                       (cfg_data[108] << 16) |
-                                       (cfg_data[109] << 24))
-
         # Frequency lock ranges (4 ranges, 5 bytes each)
         settings.freq_lock_1_mode = cfg_data[142]
         settings.freq_lock_1_start = cfg_data[143] | (cfg_data[144] << 8)

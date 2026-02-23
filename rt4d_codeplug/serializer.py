@@ -407,12 +407,6 @@ class CodeplugSerializer:
         data[26] = (settings.startup_display_column >> 8) & 0xFF
         data[27] = settings.password_enable
 
-        # Radio clock/time (32-bit value)
-        data[106] = settings.radio_time_seconds & 0xFF
-        data[107] = (settings.radio_time_seconds >> 8) & 0xFF
-        data[108] = (settings.radio_time_seconds >> 16) & 0xFF
-        data[109] = (settings.radio_time_seconds >> 24) & 0xFF
-
         # Frequency lock ranges (4 ranges)
         data[142] = settings.freq_lock_1_mode
         data[143] = settings.freq_lock_1_start & 0xFF
