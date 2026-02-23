@@ -82,8 +82,7 @@ class DTMFWidget(QWidget):
         for label, value in DTMF_PRESET_VALUES:
             self.send_select_combo.addItem(label, value)
         self.send_select_combo.currentIndexChanged.connect(self.on_settings_changed)
-        self.send_select_label = QLabel("DTMF List:")
-        settings_layout.addRow(self.send_select_label, self.send_select_combo)
+        settings_layout.addRow("DTMF List:", self.send_select_combo)
 
         # DTMF Gain
         self.gain_spin = QSpinBox()
@@ -224,6 +223,7 @@ class DTMFWidget(QWidget):
                 name_item.setText(name if name else self.PRESET_NAMES[i])
                 name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
 
+        self._update_send_select_names()
         self._updating = False
 
     def save_settings(self, settings: RadioSettings):
@@ -258,6 +258,21 @@ class DTMFWidget(QWidget):
                 name = ""
             settings.dtmf_names.append(name[:16])
 
+    def _update_send_select_names(self):
+        """Update the DTMF List combo box labels with user-saved names"""
+        current = self.send_select_combo.currentData()
+        for i in range(16):
+            item = self.codes_table.item(i, 1)
+            if item is None:
+                continue
+            name = item.text()
+            self.send_select_combo.setItemText(i, name if name else self.PRESET_NAMES[i])
+        # Restore selection
+        for i in range(self.send_select_combo.count()):
+            if self.send_select_combo.itemData(i) == current:
+                self.send_select_combo.setCurrentIndex(i)
+                break
+
     def on_settings_changed(self):
         """Handle settings change"""
         if not self._updating and self.settings:
@@ -276,6 +291,7 @@ class DTMFWidget(QWidget):
                 self._updating = True
                 item.setText(name[:16])
                 self._updating = False
+            self._update_send_select_names()
             if self.settings:
                 self.save_settings(self.settings)
                 self.settings_changed.emit()
