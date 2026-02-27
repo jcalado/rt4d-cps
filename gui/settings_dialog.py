@@ -334,95 +334,80 @@ class SettingsDialog(QDialog):
         # Green key
         self.combo_green_key_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_green_key_long.addItem(display_label, value)
+            self.combo_green_key_long.addItem(label, value)
         funckeys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
 
         # FS1 button
         self.combo_key_fs1_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs1_short.addItem(display_label, value)
+            self.combo_key_fs1_short.addItem(label, value)
         funckeys_layout.addRow("FS1 (Short Press):", self.combo_key_fs1_short)
 
         self.combo_key_fs1_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs1_long.addItem(display_label, value)
+            self.combo_key_fs1_long.addItem(label, value)
         funckeys_layout.addRow("FS1 (Long Press):", self.combo_key_fs1_long)
 
         # FS2 button
         self.combo_key_fs2_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs2_short.addItem(display_label, value)
+            self.combo_key_fs2_short.addItem(label, value)
         funckeys_layout.addRow("FS2 (Short Press):", self.combo_key_fs2_short)
 
         self.combo_key_fs2_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs2_long.addItem(display_label, value)
+            self.combo_key_fs2_long.addItem(label, value)
         funckeys_layout.addRow("FS2 (Long Press):", self.combo_key_fs2_long)
 
         # Numeric keys 0-9
         self.combo_key_0 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_0.addItem(display_label, value)
+            self.combo_key_0.addItem(label, value)
         funckeys_layout.addRow("Key 0:", self.combo_key_0)
 
         self.combo_key_1 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_1.addItem(display_label, value)
+            self.combo_key_1.addItem(label, value)
         funckeys_layout.addRow("Key 1:", self.combo_key_1)
 
         self.combo_key_2 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_2.addItem(display_label, value)
+            self.combo_key_2.addItem(label, value)
         funckeys_layout.addRow("Key 2:", self.combo_key_2)
 
         self.combo_key_3 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_3.addItem(display_label, value)
+            self.combo_key_3.addItem(label, value)
         funckeys_layout.addRow("Key 3:", self.combo_key_3)
 
         self.combo_key_4 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_4.addItem(display_label, value)
+            self.combo_key_4.addItem(label, value)
         funckeys_layout.addRow("Key 4:", self.combo_key_4)
 
         self.combo_key_5 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_5.addItem(display_label, value)
+            self.combo_key_5.addItem(label, value)
         funckeys_layout.addRow("Key 5:", self.combo_key_5)
 
         self.combo_key_6 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_6.addItem(display_label, value)
+            self.combo_key_6.addItem(label, value)
         funckeys_layout.addRow("Key 6:", self.combo_key_6)
 
         self.combo_key_7 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_7.addItem(display_label, value)
+            self.combo_key_7.addItem(label, value)
         funckeys_layout.addRow("Key 7:", self.combo_key_7)
 
         self.combo_key_8 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_8.addItem(display_label, value)
+            self.combo_key_8.addItem(label, value)
         funckeys_layout.addRow("Key 8:", self.combo_key_8)
 
         self.combo_key_9 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_9.addItem(display_label, value)
+            self.combo_key_9.addItem(label, value)
         funckeys_layout.addRow("Key 9:", self.combo_key_9)
 
         funckeys_group.setLayout(funckeys_layout)
@@ -435,8 +420,7 @@ class SettingsDialog(QDialog):
         for i in range(10):
             combo = QComboBox()
             for label, value in FUNCTION_KEY_VALUES:
-                display_label = self._get_function_key_label(label, value)
-                combo.addItem(display_label, value)
+                combo.addItem(label, value)
             setattr(self, f'combo_hotkey_{i}', combo)
             hotkeys_layout.addRow(f"FN + {i}:", combo)
 
@@ -465,32 +449,6 @@ class SettingsDialog(QDialog):
             if combo.itemData(i) == value:
                 combo.setCurrentIndex(i)
                 break
-
-    def _get_function_key_label(self, label, value):
-        """Return display label for function key."""
-        if label == "Color Code Detect":
-            return "Talker Alias"
-        return label
-
-    def _update_function_key_labels(self):
-        """Re-apply version-aware labels on all function key combos."""
-        from rt4d_codeplug.dropdowns import FUNCTION_KEY_VALUES
-        combos = [
-            self.combo_green_key_long,
-            self.combo_key_fs1_short, self.combo_key_fs1_long,
-            self.combo_key_fs2_short, self.combo_key_fs2_long,
-            self.combo_key_0, self.combo_key_1, self.combo_key_2,
-            self.combo_key_3, self.combo_key_4, self.combo_key_5,
-            self.combo_key_6, self.combo_key_7, self.combo_key_8,
-            self.combo_key_9,
-        ]
-        for combo in combos:
-            for idx in range(combo.count()):
-                value = combo.itemData(idx)
-                for label, val in FUNCTION_KEY_VALUES:
-                    if val == value:
-                        combo.setItemText(idx, self._get_function_key_label(label, value))
-                        break
 
     def load_settings(self):
         """Load settings into form"""
@@ -581,7 +539,6 @@ class SettingsDialog(QDialog):
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
-        self._update_function_key_labels()
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
