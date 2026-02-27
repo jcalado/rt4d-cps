@@ -431,7 +431,7 @@ FUNCTION_KEY_VALUES = [
     ("Send Tone", 13),
     ("Query State", 14),
     ("Remote Monitor", 15),
-    ("Color Code Detect", 16),
+    ("Bandwidth Toggle", 16),
     ("DMR Remote Stun", 17),
     ("DMR Remote Kill", 18),
     ("DMR Remote Wakeup", 19),
