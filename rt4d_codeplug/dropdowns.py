@@ -436,7 +436,7 @@ FUNCTION_KEY_VALUES = [
     ("DMR Remote Kill", 18),
     ("DMR Remote Wakeup", 19),
     ("Online Detect", 20),
-    ("Group Call ID Show", 21),
+    ("Talker Alias", 21),
     ("AM/FM Switch (RX)", 22),
     ("Analog Spectrum", 23),
     ("Squelch Level", 24),
