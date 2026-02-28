@@ -5,7 +5,8 @@ from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
     QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView,
-    QMessageBox, QLabel, QComboBox, QGroupBox, QInputDialog, QLineEdit
+    QMessageBox, QLabel, QComboBox, QInputDialog, QLineEdit,
+    QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QDoubleValidator
@@ -41,8 +42,9 @@ class FMWidget(QWidget):
         # layout.addWidget(info_label)
 
         # Settings bar
-        settings_group = QGroupBox("FM Settings")
+        settings_group = QWidget()
         settings_layout = QHBoxLayout()
+        settings_layout.setContentsMargins(0, 0, 0, 0)
         settings_group.setLayout(settings_layout)
 
         # FM Mode
@@ -52,6 +54,13 @@ class FMWidget(QWidget):
         self.mode_combo.addItem("Channel Mode", 1)
         self.mode_combo.currentIndexChanged.connect(self.on_setting_changed)
         settings_layout.addWidget(self.mode_combo)
+
+        settings_layout.addSpacing(20)
+
+        # FM Standby
+        self.standby_check = QCheckBox("FM Radio on Standby")
+        self.standby_check.stateChanged.connect(self.on_setting_changed)
+        settings_layout.addWidget(self.standby_check)
 
         settings_layout.addSpacing(20)
 
@@ -160,6 +169,9 @@ class FMWidget(QWidget):
             if index >= 0:
                 self.mode_combo.setCurrentIndex(index)
 
+            # FM Standby
+            self.standby_check.setChecked(self.fm_settings.standby == 1)
+
             # Scan Mode
             index = self.scan_combo.findData(self.fm_settings.scan_mode)
             if index >= 0:
@@ -252,6 +264,7 @@ class FMWidget(QWidget):
             return
 
         self.fm_settings.mode = self.mode_combo.currentData()
+        self.fm_settings.standby = 1 if self.standby_check.isChecked() else 0
         self.fm_settings.scan_mode = self.scan_combo.currentData()
         self.fm_settings.selected_area = self.area_combo.currentData()
         self.fm_settings.selected_channel = self.channel_combo.currentData()
