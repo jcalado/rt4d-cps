@@ -451,8 +451,12 @@ class MainWindow(QMainWindow):
             "About RT-4D Editor",
             f"RT-4D Channel Editor & Flasher\n"
             f"Version {__version__}\n\n"
-            "A desktop application for editing RT-4D radio codeplug files.\n\n"
-            "Brought to you by: CS7BLE / Joel Calado\n"
+            "A desktop application for editing RT-4D refw codeplugs.\n\n"
+            "Special thanks to DualTachyon for such great contributions to the "
+            "radio community with the refw firmware, and for the continuous\n"
+            " guidance through the development of this app.\n"
+            "\n\n"
+            "CS7BLE / Joel Calado\n"
             "https://www.jcalado.com"
         )
 
