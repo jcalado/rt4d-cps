@@ -247,19 +247,7 @@ DISPLAY_MODE_VALUES = [
     ("Channel Name", 2),
 ]
 
-# Clock/Timer mode
-CLOCK_MODE_VALUES = [
-    ("Off", 0),
-    ("Once", 1),
-    ("Daily", 2),
-]
-
 # Startup/Boot settings
-STARTUP_PICTURE_VALUES = [
-    ("Off", 0),
-    ("On", 1),
-]
-
 TX_PROTECTION_VALUES = [
     ("Off", 0),
     ("On", 1),
@@ -335,11 +323,11 @@ TX_END_TONE_VALUES = [
     ("Send Radio Name", 3),
 ]
 
-# LCD contrast values (0-15)
+# LCD contrast values (0-13)
 LCD_CONTRAST_VALUES = [
     ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4), ("5", 5),
     ("6", 6), ("7", 7), ("8", 8), ("9", 9), ("10", 10), ("11", 11),
-    ("12", 12), ("13", 13), ("14", 14), ("15", 15),
+    ("12", 12), ("13", 13),
 ]
 
 # Display lines mode
@@ -358,21 +346,6 @@ DUAL_DISPLAY_VALUES = [
 REMOTE_CONTROL_VALUES = [
     ("Off", 0),
     ("On", 1),
-]
-
-# Group/Private call hang time (ms)
-HANG_TIME_VALUES = [
-    ("0 ms", 0),
-    ("500 ms", 500),
-    ("1000 ms", 1000),
-    ("1500 ms", 1500),
-    ("2000 ms", 2000),
-    ("2500 ms", 2500),
-    ("3000 ms", 3000),
-    ("3500 ms", 3500),
-    ("4000 ms", 4000),
-    ("4500 ms", 4500),
-    ("5000 ms", 5000),
 ]
 
 # Detection Range in Frequency Monitor/Detect (offset 0x110)
@@ -443,51 +416,51 @@ NOAA_CHANNEL_VALUES = [
 # CPS stores directly: bufCFG[170] = (byte)cboxFS1S.SelectedIndex (lines 5514-5525)
 FUNCTION_KEY_VALUES = [
     ("None", 0),
-    ("Analog Monitor", 1),
-    ("Power Switch", 2),
+    ("Monitor(Analog)", 1),
+    ("H/L Power", 2),
     ("Dual Standby", 3),
     ("TX Priority", 4),
     ("Scanning", 5),
-    ("Backlight", 6),
-    ("Analog Roger Beep", 7),
+    ("Backlight Switch", 6),
+    ("Roger Beep", 7),
     ("FM Radio", 8),
     ("Talkaround", 9),
-    ("Emergency Alarm", 10),
+    ("Alarm", 10),
     ("Freq Detect", 11),
-    ("Remote CTC/DCS Decode", 12),
-    ("Send Tone", 13),
-    ("Query State", 14),
+    ("CTCSS/DCS Scan", 12),
+    ("Send Single Tone", 13),
+    ("Status Query", 14),
     ("Remote Monitor", 15),
-    ("Color Code Detect", 16),
-    ("DMR Remote Stun", 17),
-    ("DMR Remote Kill", 18),
-    ("DMR Remote Wakeup", 19),
-    ("Online Detect", 20),
-    ("Group Call ID Show", 21),
-    ("AM/FM Switch (RX)", 22),
+    ("Bandwidth Toggle", 16),
+    ("Remote Stun", 17),
+    ("Remote Kill", 18),
+    ("Remote Wake Up", 19),
+    ("Online Check", 20),
+    ("Talker Alias", 21),
+    ("RX AM/FM/SSB SW", 22),
     ("Analog Spectrum", 23),
-    ("Squelch Level", 24),
-    ("Freq Step", 25),
-    ("Analog/DMR Switch", 26),
-    ("NOAA Weather CH", 27),
+    ("SQ", 24),
+    ("Frequency Step", 25),
+    ("DA Switch (VFO)", 26),
+    ("NOAA Mode", 27),
     ("Save Channel", 28),
     ("New SMS", 29),
-    ("Jump to SMS", 30),
-    ("LCD Brightness", 31),
+    ("Jump to SMS Menu", 30),
+    ("Brightness", 31),
     ("Analog VOX", 32),
-    ("Zone Selection", 33),
+    ("Zone Select", 33),
     ("Promiscuous Mode", 34),
-    ("Dual Slot On/Off", 35),
-    ("Time Slot Switch", 36),
-    ("Color Code Switch", 37),
-    ("DMR Encrypt On/Off", 38),
-    ("RX Group List Selection", 39),
-    # --- Custom Firmware Extensions (requires custom firmware) ---
-    ("Address Book (Custom FW)", 40),          # Custom FW only
-    ("Contacts List (Custom FW)", 41),         # Custom FW only
-    ("Next Zone (Custom FW)", 42),             # Custom FW only
-    ("Send DTMF (Custom FW)", 43),             # Custom FW only
-    ("Freq Monitor (Custom FW)", 44),          # Custom FW only
+    ("DMR DCDM Switch", 35),
+    ("DMR TS Switch", 36),
+    ("DMR CC Switch", 37),
+    ("DMR Key Select", 38),
+    ("Jump to RX List", 39),
+    ("Address Book", 40),
+    ("Contacts List", 41),
+    ("Next Zone", 42),   
+    ("DTMF List", 43),    
+    ("Freq Monitor", 44),
+    ("Last Call Info", 45),
 ]
 
 # DTMF Send Delay (offset 512)
@@ -501,10 +474,7 @@ DTMF_SEND_DELAY_VALUES = [
 
 # DTMF Send Duration and Send Interval (offsets 513, 514)
 DTMF_DURATION_VALUES = [
-    ("30ms", 0), ("40ms", 1), ("50ms", 2), ("60ms", 3), ("70ms", 4),
-    ("80ms", 5), ("90ms", 6), ("100ms", 7), ("110ms", 8), ("120ms", 9),
-    ("130ms", 10), ("140ms", 11), ("150ms", 12), ("160ms", 13), ("170ms", 14),
-    ("180ms", 15), ("190ms", 16), ("200ms", 17),
+    (f"{ms}ms", i) for i, ms in enumerate(range(30, 401, 10))
 ]
 
 # DTMF Send Mode (offset 515)
@@ -540,9 +510,6 @@ TX_BACKLIGHT_VALUES = [
     ("Off after 5s", 1),
 ]
 
-# Green Key Long Press - same values as function keys (offset 0x382)
-GREEN_KEY_LONG_VALUES = FUNCTION_KEY_VALUES
-
 # Voltage Display (offset 0x383)
 VOLTAGE_DISPLAY_VALUES = [
     ("Off", 0),
@@ -560,6 +527,20 @@ LIVE_SUB_TONE_VALUES = [
 SPECTRUM_THRESHOLD_VALUES = [
     ("0", 0), ("1", 1), ("2", 2), ("3", 3), ("4", 4),
     ("5", 5), ("6", 6), ("7", 7), ("8", 8), ("9", 9),
+]
+
+# FN Key (offset 0x3A2) - which side button acts as FN modifier for hotkeys
+FN_KEY_VALUES = [
+    ("Off", 0),
+    ("Side 1", 1),
+    ("Side 2", 2),
+]
+
+# Secondary PTT (offset 0x0E8)
+SECONDARY_PTT_VALUES = [
+    ("Off", 0),
+    ("VFO B", 1),
+    ("Opposite VFO", 2),
 ]
 
 # Sub-tone PTT (offset 0x386)

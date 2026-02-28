@@ -18,20 +18,21 @@ from rt4d_codeplug.dropdowns import (
     LED_TIMER_VALUES, MENU_TIMER_VALUES,
     BACKLIGHT_BRIGHTNESS_VALUES, POWER_SAVE_START_VALUES,
     TX_PRIORITY_GLOBAL_VALUES, MAIN_PTT_VALUES, VFO_STEP_VALUES,
-    MAIN_BAND_VALUES, DISPLAY_MODE_VALUES, CLOCK_MODE_VALUES,
-    STARTUP_PICTURE_VALUES, TX_PROTECTION_VALUES, STARTUP_BEEP_VALUES,
+    MAIN_BAND_VALUES, DISPLAY_MODE_VALUES,
+    TX_PROTECTION_VALUES, STARTUP_BEEP_VALUES,
     STARTUP_LABEL_VALUES,
     FREQUENCY_LOCK_VALUES, SCAN_DIRECTION_VALUES, SCAN_RETURN_VALUES,
     SCAN_MODE_VALUES, SCAN_DWELL_VALUES, FUNCTION_KEY_VALUES,
     SQUELCH_LEVEL_VALUES, BEEP_VALUES, TX_END_TONE_VALUES,
     LCD_CONTRAST_VALUES, DISPLAY_LINES_VALUES, DUAL_DISPLAY_VALUES,
-    REMOTE_CONTROL_VALUES, HANG_TIME_VALUES, DISPLAY_ENABLE_VALUES,
+    REMOTE_CONTROL_VALUES, DISPLAY_ENABLE_VALUES,
     NOAA_CHANNEL_VALUES, REPEATER_DELAY_VALUES, DETECT_RANGE_VALUES
 )
 # Custom firmware settings
 from rt4d_codeplug.dropdowns import (
-    SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES, GREEN_KEY_LONG_VALUES,
+    SCAN_SPEED_ANALOG_VALUES, TX_BACKLIGHT_VALUES,
     VOLTAGE_DISPLAY_VALUES, LIVE_SUB_TONE_VALUES, SPECTRUM_THRESHOLD_VALUES,
+    FN_KEY_VALUES, SECONDARY_PTT_VALUES,
     SUB_TONE_PTT_VALUES, TOT_WARNING_VALUES, SCAN_END_VALUES,
     SCAN_CONTINUE_VALUES, SCAN_RETURN_CUSTOM_VALUES, CALLSIGN_LOOKUP_VALUES,
     DMR_SCAN_SPEED_VALUES, PTT_LOCK_VALUES, ZONE_CHANNEL_DISPLAY_VALUES,
@@ -77,11 +78,6 @@ class SettingsDialog(QDialog):
         startup_group = QGroupBox("Startup/Boot Options")
         startup_layout = QFormLayout()
 
-        self.combo_startup_picture = QComboBox()
-        for label, value in STARTUP_PICTURE_VALUES:
-            self.combo_startup_picture.addItem(label, value)
-        startup_layout.addRow("Startup Picture:", self.combo_startup_picture)
-
         self.combo_startup_beep = QComboBox()
         for label, value in STARTUP_BEEP_VALUES:
             self.combo_startup_beep.addItem(label, value)
@@ -102,31 +98,6 @@ class SettingsDialog(QDialog):
 
         startup_group.setLayout(startup_layout)
         scroll_layout.addWidget(startup_group)
-
-        # Radio Clock section
-        self.clock_group = QGroupBox("Radio Clock")
-        clock_layout = QFormLayout()
-
-        time_layout = QHBoxLayout()
-        self.spin_clock_hour = QSpinBox()
-        self.spin_clock_hour.setRange(0, 23)
-        time_layout.addWidget(QLabel("Hour:"))
-        time_layout.addWidget(self.spin_clock_hour)
-
-        self.spin_clock_minute = QSpinBox()
-        self.spin_clock_minute.setRange(0, 59)
-        time_layout.addWidget(QLabel("Minute:"))
-        time_layout.addWidget(self.spin_clock_minute)
-
-        self.spin_clock_second = QSpinBox()
-        self.spin_clock_second.setRange(0, 59)
-        time_layout.addWidget(QLabel("Second:"))
-        time_layout.addWidget(self.spin_clock_second)
-
-        clock_layout.addRow("Current Time:", time_layout)
-
-        self.clock_group.setLayout(clock_layout)
-        scroll_layout.addWidget(self.clock_group)
 
         # Frequency Lock Ranges section
         freq_lock_group = QGroupBox("Frequency Lock Ranges")
@@ -322,20 +293,15 @@ class SettingsDialog(QDialog):
             self.combo_remote_control.addItem(label, value)
         dmr_layout.addRow("Remote Control:", self.combo_remote_control)
 
-        self.combo_group_call_hang_time = QComboBox()
-        for label, value in HANG_TIME_VALUES:
-            self.combo_group_call_hang_time.addItem(label, value)
-        dmr_layout.addRow("Group Call Hang Time:", self.combo_group_call_hang_time)
+        self.spin_group_call_hang_time = QSpinBox()
+        self.spin_group_call_hang_time.setRange(0, 60)
+        self.spin_group_call_hang_time.setSuffix(" s")
+        dmr_layout.addRow("Group Call Hang Time:", self.spin_group_call_hang_time)
 
-        self.combo_private_call_hang_time = QComboBox()
-        for label, value in HANG_TIME_VALUES:
-            self.combo_private_call_hang_time.addItem(label, value)
-        dmr_layout.addRow("Private Call Hang Time:", self.combo_private_call_hang_time)
-
-        self.combo_call_group_display = QComboBox()
-        for label, value in DISPLAY_ENABLE_VALUES:
-            self.combo_call_group_display.addItem(label, value)
-        dmr_layout.addRow("Show Call Group:", self.combo_call_group_display)
+        self.spin_private_call_hang_time = QSpinBox()
+        self.spin_private_call_hang_time.setRange(0, 60)
+        self.spin_private_call_hang_time.setSuffix(" s")
+        dmr_layout.addRow("Private Call Hang Time:", self.spin_private_call_hang_time)
 
         dmr_group.setLayout(dmr_layout)
         scroll_layout.addWidget(dmr_group)
@@ -365,95 +331,101 @@ class SettingsDialog(QDialog):
         funckeys_group = QGroupBox("Function Keys")
         funckeys_layout = QFormLayout()
 
+        # Green key
+        self.combo_green_key_long = QComboBox()
+        for label, value in FUNCTION_KEY_VALUES:
+            self.combo_green_key_long.addItem(label, value)
+        funckeys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
+
         # FS1 button
         self.combo_key_fs1_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs1_short.addItem(display_label, value)
+            self.combo_key_fs1_short.addItem(label, value)
         funckeys_layout.addRow("FS1 (Short Press):", self.combo_key_fs1_short)
 
         self.combo_key_fs1_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs1_long.addItem(display_label, value)
+            self.combo_key_fs1_long.addItem(label, value)
         funckeys_layout.addRow("FS1 (Long Press):", self.combo_key_fs1_long)
 
         # FS2 button
         self.combo_key_fs2_short = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs2_short.addItem(display_label, value)
+            self.combo_key_fs2_short.addItem(label, value)
         funckeys_layout.addRow("FS2 (Short Press):", self.combo_key_fs2_short)
 
         self.combo_key_fs2_long = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_fs2_long.addItem(display_label, value)
+            self.combo_key_fs2_long.addItem(label, value)
         funckeys_layout.addRow("FS2 (Long Press):", self.combo_key_fs2_long)
 
         # Numeric keys 0-9
         self.combo_key_0 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_0.addItem(display_label, value)
+            self.combo_key_0.addItem(label, value)
         funckeys_layout.addRow("Key 0:", self.combo_key_0)
 
         self.combo_key_1 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_1.addItem(display_label, value)
+            self.combo_key_1.addItem(label, value)
         funckeys_layout.addRow("Key 1:", self.combo_key_1)
 
         self.combo_key_2 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_2.addItem(display_label, value)
+            self.combo_key_2.addItem(label, value)
         funckeys_layout.addRow("Key 2:", self.combo_key_2)
 
         self.combo_key_3 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_3.addItem(display_label, value)
+            self.combo_key_3.addItem(label, value)
         funckeys_layout.addRow("Key 3:", self.combo_key_3)
 
         self.combo_key_4 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_4.addItem(display_label, value)
+            self.combo_key_4.addItem(label, value)
         funckeys_layout.addRow("Key 4:", self.combo_key_4)
 
         self.combo_key_5 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_5.addItem(display_label, value)
+            self.combo_key_5.addItem(label, value)
         funckeys_layout.addRow("Key 5:", self.combo_key_5)
 
         self.combo_key_6 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_6.addItem(display_label, value)
+            self.combo_key_6.addItem(label, value)
         funckeys_layout.addRow("Key 6:", self.combo_key_6)
 
         self.combo_key_7 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_7.addItem(display_label, value)
+            self.combo_key_7.addItem(label, value)
         funckeys_layout.addRow("Key 7:", self.combo_key_7)
 
         self.combo_key_8 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_8.addItem(display_label, value)
+            self.combo_key_8.addItem(label, value)
         funckeys_layout.addRow("Key 8:", self.combo_key_8)
 
         self.combo_key_9 = QComboBox()
         for label, value in FUNCTION_KEY_VALUES:
-            display_label = self._get_function_key_label(label, value)
-            self.combo_key_9.addItem(display_label, value)
+            self.combo_key_9.addItem(label, value)
         funckeys_layout.addRow("Key 9:", self.combo_key_9)
 
         funckeys_group.setLayout(funckeys_layout)
         scroll_layout.addWidget(funckeys_group)
+
+        # Hotkeys FN+0..9 section
+        hotkeys_group = QGroupBox("Hotkeys (FN + Key)")
+        hotkeys_layout = QFormLayout()
+
+        for i in range(10):
+            combo = QComboBox()
+            for label, value in FUNCTION_KEY_VALUES:
+                combo.addItem(label, value)
+            setattr(self, f'combo_hotkey_{i}', combo)
+            hotkeys_layout.addRow(f"FN + {i}:", combo)
+
+        hotkeys_group.setLayout(hotkeys_layout)
+        scroll_layout.addWidget(hotkeys_group)
 
         scroll_layout.addStretch()
 
@@ -471,8 +443,6 @@ class SettingsDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
-        self._apply_beta41_visibility()
-
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
@@ -480,45 +450,10 @@ class SettingsDialog(QDialog):
                 combo.setCurrentIndex(i)
                 break
 
-    def _get_function_key_label(self, label, value):
-        """Return version-aware label for function key."""
-        if label == "Color Code Detect" and self.settings and self.settings.beta41:
-            return "Talker Alias"
-        if label == "Send DTMF (Custom FW)" and self.settings and self.settings.beta_version >= 42:
-            return "DTMF List (Custom FW)"
-        return label
-
-    def _update_function_key_labels(self):
-        """Re-apply version-aware labels on all function key combos."""
-        from rt4d_codeplug.dropdowns import FUNCTION_KEY_VALUES
-        combos = [
-            self.combo_key_fs1_short, self.combo_key_fs1_long,
-            self.combo_key_fs2_short, self.combo_key_fs2_long,
-            self.combo_key_0, self.combo_key_1, self.combo_key_2,
-            self.combo_key_3, self.combo_key_4, self.combo_key_5,
-            self.combo_key_6, self.combo_key_7, self.combo_key_8,
-            self.combo_key_9,
-        ]
-        for combo in combos:
-            for idx in range(combo.count()):
-                value = combo.itemData(idx)
-                for label, val in FUNCTION_KEY_VALUES:
-                    if val == value:
-                        combo.setItemText(idx, self._get_function_key_label(label, value))
-                        break
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.clock_group.setVisible(False)
-        else:
-            self.clock_group.setVisible(True)
-
     def load_settings(self):
         """Load settings into form"""
         # Startup/Boot settings combo boxes
         combo_settings = [
-            (self.combo_startup_picture, self.settings.startup_picture_enable),
             (self.combo_startup_beep, self.settings.startup_beep_enable),
             (self.combo_startup_label, self.settings.startup_label_enable),
         ]
@@ -526,15 +461,6 @@ class SettingsDialog(QDialog):
             self._set_combo_value(combo, value)
         self.spin_startup_line.setValue(self.settings.startup_display_line)
         self.spin_startup_column.setValue(self.settings.startup_display_column)
-
-        # Radio clock - convert seconds to hour/minute/second
-        total_seconds = self.settings.radio_time_seconds
-        hours = total_seconds // 3600
-        minutes = (total_seconds % 3600) // 60
-        seconds = total_seconds % 60
-        self.spin_clock_hour.setValue(hours)
-        self.spin_clock_minute.setValue(minutes)
-        self.spin_clock_second.setValue(seconds)
 
         # Frequency lock ranges
         freq_lock_combos = [
@@ -575,10 +501,8 @@ class SettingsDialog(QDialog):
             (self.combo_dual_display_mode, self.settings.dual_display_mode),
             # DMR operation settings
             (self.combo_remote_control, self.settings.remote_control),
-            (self.combo_group_call_hang_time, self.settings.group_call_hang_time),
-            (self.combo_private_call_hang_time, self.settings.private_call_hang_time),
-            (self.combo_call_group_display, self.settings.call_group_display),
             # Function keys
+            (self.combo_green_key_long, self.settings.green_key_long),
             (self.combo_key_fs1_short, self.settings.key_fs1_short),
             (self.combo_key_fs1_long, self.settings.key_fs1_long),
             (self.combo_key_fs2_short, self.settings.key_fs2_short),
@@ -594,10 +518,18 @@ class SettingsDialog(QDialog):
             (self.combo_key_8, self.settings.key_8),
             (self.combo_key_9, self.settings.key_9),
         ]
+        # Hotkeys FN+0..9
+        for i in range(10):
+            combo = getattr(self, f'combo_hotkey_{i}')
+            value = getattr(self.settings, f'hotkey_{i}')
+            other_combos.append((combo, value))
+
         for combo, value in other_combos:
             self._set_combo_value(combo, value)
 
         # Spin boxes
+        self.spin_group_call_hang_time.setValue(self.settings.group_call_hang_time)
+        self.spin_private_call_hang_time.setValue(self.settings.private_call_hang_time)
         self.spin_tx_mic_gain.setValue(self.settings.tx_mic_gain)
         self.spin_rx_speaker_volume.setValue(self.settings.rx_speaker_volume)
         self.spin_tone_frequency.setValue(self.settings.tone_frequency)
@@ -607,15 +539,12 @@ class SettingsDialog(QDialog):
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
 
-        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
-        self._update_function_key_labels()
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
         # List of (attribute_name, combo_box/spin_box) pairs
         combo_mappings = [
             # Startup/Boot settings
-            ('startup_picture_enable', self.combo_startup_picture),
             ('startup_beep_enable', self.combo_startup_beep),
             ('startup_label_enable', self.combo_startup_label),
             # Frequency lock ranges
@@ -642,10 +571,8 @@ class SettingsDialog(QDialog):
             ('dual_display_mode', self.combo_dual_display_mode),
             # DMR operation settings
             ('remote_control', self.combo_remote_control),
-            ('group_call_hang_time', self.combo_group_call_hang_time),
-            ('private_call_hang_time', self.combo_private_call_hang_time),
-            ('call_group_display', self.combo_call_group_display),
             # Function keys
+            ('green_key_long', self.combo_green_key_long),
             ('key_fs1_short', self.combo_key_fs1_short),
             ('key_fs1_long', self.combo_key_fs1_long),
             ('key_fs2_short', self.combo_key_fs2_short),
@@ -661,12 +588,17 @@ class SettingsDialog(QDialog):
             ('key_8', self.combo_key_8),
             ('key_9', self.combo_key_9),
         ]
+        # Hotkeys FN+0..9
+        for i in range(10):
+            combo_mappings.append((f'hotkey_{i}', getattr(self, f'combo_hotkey_{i}')))
 
         # Save all combo box values
         for attr_name, combo in combo_mappings:
             setattr(self.settings, attr_name, combo.currentData())
 
         # Spin boxes
+        self.settings.group_call_hang_time = self.spin_group_call_hang_time.value()
+        self.settings.private_call_hang_time = self.spin_private_call_hang_time.value()
         self.settings.startup_display_line = self.spin_startup_line.value()
         self.settings.startup_display_column = self.spin_startup_column.value()
         self.settings.freq_lock_1_start = self.spin_freq_lock_1_start.value()
@@ -685,12 +617,6 @@ class SettingsDialog(QDialog):
         self.settings.detection_range = self.combo_detection_range.currentData()
         self.settings.relay_delay = self.combo_relay_delay.currentData()
         self.settings.glitch_filter = self.spin_glitch_filter.value()
-
-        # Radio clock - convert hour/minute/second to total seconds
-        hours = self.spin_clock_hour.value()
-        minutes = self.spin_clock_minute.value()
-        seconds = self.spin_clock_second.value()
-        self.settings.radio_time_seconds = hours * 3600 + minutes * 60 + seconds
 
         return self.settings
 
@@ -809,21 +735,14 @@ class CustomFirmwareDialog(QDialog):
         audio_group.setLayout(audio_layout)
         scroll_layout.addWidget(audio_group)
 
-        # Function Keys section
-        keys_group = QGroupBox("Function Keys")
-        keys_layout = QFormLayout()
-
-        self.combo_green_key_long = QComboBox()
-        for label, value in GREEN_KEY_LONG_VALUES:
-            self.combo_green_key_long.addItem(label, value)
-        keys_layout.addRow("Green Key (Long Press):", self.combo_green_key_long)
-
-        keys_group.setLayout(keys_layout)
-        scroll_layout.addWidget(keys_group)
-
         # PTT & DTMF Settings section
         ptt_group = QGroupBox("PTT && DTMF Settings")
         ptt_layout = QFormLayout()
+
+        self.combo_secondary_ptt = QComboBox()
+        for label, value in SECONDARY_PTT_VALUES:
+            self.combo_secondary_ptt.addItem(label, value)
+        ptt_layout.addRow("Secondary PTT:", self.combo_secondary_ptt)
 
         self.combo_sub_tone_ptt = QComboBox()
         for label, value in SUB_TONE_PTT_VALUES:
@@ -834,6 +753,11 @@ class CustomFirmwareDialog(QDialog):
         for label, value in PTT_LOCK_VALUES:
             self.combo_ptt_lock.addItem(label, value)
         ptt_layout.addRow("PTT Lock:", self.combo_ptt_lock)
+
+        self.combo_fn_key = QComboBox()
+        for label, value in FN_KEY_VALUES:
+            self.combo_fn_key.addItem(label, value)
+        ptt_layout.addRow("FN Key:", self.combo_fn_key)
 
         ptt_group.setLayout(ptt_layout)
         scroll_layout.addWidget(ptt_group)
@@ -895,23 +819,12 @@ class CustomFirmwareDialog(QDialog):
 
         main_layout.addLayout(button_layout)
 
-        self._apply_beta41_visibility()
-
     def _set_combo_value(self, combo, value):
         """Helper method to set combo box to matching value"""
         for i in range(combo.count()):
             if combo.itemData(i) == value:
                 combo.setCurrentIndex(i)
                 break
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.combo_dmr_gid_name.setVisible(False)
-            self.label_dmr_gid_name.setVisible(False)
-        else:
-            self.combo_dmr_gid_name.setVisible(True)
-            self.label_dmr_gid_name.setVisible(True)
 
     def load_settings(self):
         """Load settings into form"""
@@ -930,11 +843,11 @@ class CustomFirmwareDialog(QDialog):
             # Audio settings
             (self.combo_live_sub_tone, self.settings.live_sub_tone),
             (self.combo_tot_warning, self.settings.tot_warning),
-            # Function keys
-            (self.combo_green_key_long, self.settings.green_key_long),
             # PTT settings
+            (self.combo_secondary_ptt, self.settings.secondary_ptt),
             (self.combo_sub_tone_ptt, self.settings.sub_tone_ptt),
             (self.combo_ptt_lock, self.settings.ptt_lock),
+            (self.combo_fn_key, self.settings.fn_key),
             # DMR settings
             (self.combo_dmr_gid_name, self.settings.dmr_gid_name),
             (self.combo_callsign_lookup, self.settings.callsign_lookup),
@@ -950,19 +863,6 @@ class CustomFirmwareDialog(QDialog):
         self.spin_vfo_a_offset.setValue(self.settings.vfo_a_offset)
         self.spin_vfo_b_offset.setValue(self.settings.vfo_b_offset)
 
-        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
-        self._update_green_key_labels()
-
-    def _update_green_key_labels(self):
-        """Re-apply version-aware labels on green key long combo."""
-        if not self.settings or self.settings.beta_version < 42:
-            return
-        for idx in range(self.combo_green_key_long.count()):
-            value = self.combo_green_key_long.itemData(idx)
-            for label, val in GREEN_KEY_LONG_VALUES:
-                if val == value and label == "Send DTMF (Custom FW)":
-                    self.combo_green_key_long.setItemText(idx, "DTMF List (Custom FW)")
-                    break
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
@@ -981,11 +881,11 @@ class CustomFirmwareDialog(QDialog):
             # Audio settings
             ('live_sub_tone', self.combo_live_sub_tone),
             ('tot_warning', self.combo_tot_warning),
-            # Function keys
-            ('green_key_long', self.combo_green_key_long),
             # PTT settings
+            ('secondary_ptt', self.combo_secondary_ptt),
             ('sub_tone_ptt', self.combo_sub_tone_ptt),
             ('ptt_lock', self.combo_ptt_lock),
+            ('fn_key', self.combo_fn_key),
             # DMR settings
             ('dmr_gid_name', self.combo_dmr_gid_name),
             ('callsign_lookup', self.combo_callsign_lookup),
@@ -1199,10 +1099,6 @@ class SettingsWidget(QWidget):
         self.combo_power_save_start.currentIndexChanged.connect(self.on_settings_changed)
         power_layout.addRow("Power Save Start:", self.combo_power_save_start)
 
-        self.check_apo = QCheckBox("Enable Auto Power Off")
-        self.check_apo.stateChanged.connect(self.on_settings_changed)
-        power_layout.addRow("", self.check_apo)
-
         power_group.setLayout(power_layout)
         layout.addWidget(power_group)
 
@@ -1304,102 +1200,6 @@ class SettingsWidget(QWidget):
         operation_group.setLayout(operation_main_layout)
         layout.addWidget(operation_group)
 
-        # Clocks/Timers section
-        self.clock_group = QGroupBox("Programmable Clocks/Timers")
-        clock_layout = QFormLayout()
-
-        # Clock 1
-        clock1_layout = QHBoxLayout()
-        self.combo_clock_1_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_1_mode.addItem(label, value)
-        self.combo_clock_1_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.combo_clock_1_mode)
-        self.spin_clock_1_hour = QSpinBox()
-        self.spin_clock_1_hour.setRange(0, 23)
-        self.spin_clock_1_hour.setPrefix("H:")
-        self.spin_clock_1_hour.valueChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.spin_clock_1_hour)
-        self.spin_clock_1_minute = QSpinBox()
-        self.spin_clock_1_minute.setRange(0, 59)
-        self.spin_clock_1_minute.setPrefix("M:")
-        self.spin_clock_1_minute.valueChanged.connect(self.on_settings_changed)
-        clock1_layout.addWidget(self.spin_clock_1_minute)
-        clock_layout.addRow("Clock 1:", clock1_layout)
-
-        # Clock 2
-        clock2_layout = QHBoxLayout()
-        self.combo_clock_2_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_2_mode.addItem(label, value)
-        self.combo_clock_2_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.combo_clock_2_mode)
-        self.spin_clock_2_hour = QSpinBox()
-        self.spin_clock_2_hour.setRange(0, 23)
-        self.spin_clock_2_hour.setPrefix("H:")
-        self.spin_clock_2_hour.valueChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.spin_clock_2_hour)
-        self.spin_clock_2_minute = QSpinBox()
-        self.spin_clock_2_minute.setRange(0, 59)
-        self.spin_clock_2_minute.setPrefix("M:")
-        self.spin_clock_2_minute.valueChanged.connect(self.on_settings_changed)
-        clock2_layout.addWidget(self.spin_clock_2_minute)
-        clock_layout.addRow("Clock 2:", clock2_layout)
-
-        # Clock 3
-        clock3_layout = QHBoxLayout()
-        self.combo_clock_3_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_3_mode.addItem(label, value)
-        self.combo_clock_3_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.combo_clock_3_mode)
-        self.spin_clock_3_hour = QSpinBox()
-        self.spin_clock_3_hour.setRange(0, 23)
-        self.spin_clock_3_hour.setPrefix("H:")
-        self.spin_clock_3_hour.valueChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.spin_clock_3_hour)
-        self.spin_clock_3_minute = QSpinBox()
-        self.spin_clock_3_minute.setRange(0, 59)
-        self.spin_clock_3_minute.setPrefix("M:")
-        self.spin_clock_3_minute.valueChanged.connect(self.on_settings_changed)
-        clock3_layout.addWidget(self.spin_clock_3_minute)
-        clock_layout.addRow("Clock 3:", clock3_layout)
-
-        # Clock 4
-        clock4_layout = QHBoxLayout()
-        self.combo_clock_4_mode = QComboBox()
-        for label, value in CLOCK_MODE_VALUES:
-            self.combo_clock_4_mode.addItem(label, value)
-        self.combo_clock_4_mode.currentIndexChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.combo_clock_4_mode)
-        self.spin_clock_4_hour = QSpinBox()
-        self.spin_clock_4_hour.setRange(0, 23)
-        self.spin_clock_4_hour.setPrefix("H:")
-        self.spin_clock_4_hour.valueChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.spin_clock_4_hour)
-        self.spin_clock_4_minute = QSpinBox()
-        self.spin_clock_4_minute.setRange(0, 59)
-        self.spin_clock_4_minute.setPrefix("M:")
-        self.spin_clock_4_minute.valueChanged.connect(self.on_settings_changed)
-        clock4_layout.addWidget(self.spin_clock_4_minute)
-        clock_layout.addRow("Clock 4:", clock4_layout)
-
-        self.clock_group.setLayout(clock_layout)
-        layout.addWidget(self.clock_group)
-
-        # Startup/Boot Options section
-        startup_group = QGroupBox("Startup/Boot Options")
-        startup_layout = QFormLayout()
-
-        self.combo_startup_picture_widget = QComboBox()
-        for label, value in STARTUP_PICTURE_VALUES:
-            self.combo_startup_picture_widget.addItem(label, value)
-        self.combo_startup_picture_widget.currentIndexChanged.connect(self.on_settings_changed)
-        startup_layout.addRow("Startup Picture:", self.combo_startup_picture_widget)
-
-        startup_group.setLayout(startup_layout)
-        layout.addWidget(startup_group)
-
         layout.addStretch()
 
         # Initially disable all controls
@@ -1473,7 +1273,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.setEnabled(enabled)
         self.spin_power_save.setEnabled(enabled)
         self.combo_power_save_start.setEnabled(enabled)
-        self.check_apo.setEnabled(enabled)
         self.combo_dual_watch.setEnabled(enabled)
         self.combo_talkaround.setEnabled(enabled)
         self.combo_alarm_type.setEnabled(enabled)
@@ -1487,19 +1286,6 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.setEnabled(enabled)
         self.combo_zone_b.setEnabled(enabled)
         self.combo_channel_b.setEnabled(enabled)
-        self.combo_clock_1_mode.setEnabled(enabled)
-        self.spin_clock_1_hour.setEnabled(enabled)
-        self.spin_clock_1_minute.setEnabled(enabled)
-        self.combo_clock_2_mode.setEnabled(enabled)
-        self.spin_clock_2_hour.setEnabled(enabled)
-        self.spin_clock_2_minute.setEnabled(enabled)
-        self.combo_clock_3_mode.setEnabled(enabled)
-        self.spin_clock_3_hour.setEnabled(enabled)
-        self.spin_clock_3_minute.setEnabled(enabled)
-        self.combo_clock_4_mode.setEnabled(enabled)
-        self.spin_clock_4_hour.setEnabled(enabled)
-        self.spin_clock_4_minute.setEnabled(enabled)
-        self.combo_startup_picture_widget.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
         self.btn_edit_custom_fw.setEnabled(enabled)
 
@@ -1609,7 +1395,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.blockSignals(True)
         self.spin_power_save.blockSignals(True)
         self.combo_power_save_start.blockSignals(True)
-        self.check_apo.blockSignals(True)
         self.combo_dual_watch.blockSignals(True)
         self.combo_talkaround.blockSignals(True)
         self.combo_alarm_type.blockSignals(True)
@@ -1623,20 +1408,6 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.blockSignals(True)
         self.combo_zone_b.blockSignals(True)
         self.combo_channel_b.blockSignals(True)
-        self.combo_clock_1_mode.blockSignals(True)
-        self.spin_clock_1_hour.blockSignals(True)
-        self.spin_clock_1_minute.blockSignals(True)
-        self.combo_clock_2_mode.blockSignals(True)
-        self.spin_clock_2_hour.blockSignals(True)
-        self.spin_clock_2_minute.blockSignals(True)
-        self.combo_clock_3_mode.blockSignals(True)
-        self.spin_clock_3_hour.blockSignals(True)
-        self.spin_clock_3_minute.blockSignals(True)
-        self.combo_clock_4_mode.blockSignals(True)
-        self.spin_clock_4_hour.blockSignals(True)
-        self.spin_clock_4_minute.blockSignals(True)
-        self.combo_startup_picture_widget.blockSignals(True)
-
         # Load values
         self.edit_radio_name.setText(settings.radio_name)
         self.spin_radio_id.setValue(settings.radio_id)
@@ -1716,8 +1487,6 @@ class SettingsWidget(QWidget):
                 self.combo_power_save_start.setCurrentIndex(i)
                 break
 
-        self.check_apo.setChecked(settings.apo_enabled)
-
         # Dual watch
         for i in range(self.combo_dual_watch.count()):
             if self.combo_dual_watch.itemData(i) == settings.dual_watch:
@@ -1792,41 +1561,6 @@ class SettingsWidget(QWidget):
                 self.combo_channel_b.setCurrentIndex(i)
                 break
 
-        # Clocks
-        for i in range(self.combo_clock_1_mode.count()):
-            if self.combo_clock_1_mode.itemData(i) == settings.clock_1_mode:
-                self.combo_clock_1_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_1_hour.setValue(settings.clock_1_hour)
-        self.spin_clock_1_minute.setValue(settings.clock_1_minute)
-
-        for i in range(self.combo_clock_2_mode.count()):
-            if self.combo_clock_2_mode.itemData(i) == settings.clock_2_mode:
-                self.combo_clock_2_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_2_hour.setValue(settings.clock_2_hour)
-        self.spin_clock_2_minute.setValue(settings.clock_2_minute)
-
-        for i in range(self.combo_clock_3_mode.count()):
-            if self.combo_clock_3_mode.itemData(i) == settings.clock_3_mode:
-                self.combo_clock_3_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_3_hour.setValue(settings.clock_3_hour)
-        self.spin_clock_3_minute.setValue(settings.clock_3_minute)
-
-        for i in range(self.combo_clock_4_mode.count()):
-            if self.combo_clock_4_mode.itemData(i) == settings.clock_4_mode:
-                self.combo_clock_4_mode.setCurrentIndex(i)
-                break
-        self.spin_clock_4_hour.setValue(settings.clock_4_hour)
-        self.spin_clock_4_minute.setValue(settings.clock_4_minute)
-
-        # Startup/Boot settings
-        for i in range(self.combo_startup_picture_widget.count()):
-            if self.combo_startup_picture_widget.itemData(i) == settings.startup_picture_enable:
-                self.combo_startup_picture_widget.setCurrentIndex(i)
-                break
-
         # Unblock signals
         self.edit_radio_name.blockSignals(False)
         self.spin_radio_id.blockSignals(False)
@@ -1846,7 +1580,6 @@ class SettingsWidget(QWidget):
         self.combo_display_mode_b.blockSignals(False)
         self.spin_power_save.blockSignals(False)
         self.combo_power_save_start.blockSignals(False)
-        self.check_apo.blockSignals(False)
         self.combo_dual_watch.blockSignals(False)
         self.combo_talkaround.blockSignals(False)
         self.combo_alarm_type.blockSignals(False)
@@ -1860,31 +1593,7 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.blockSignals(False)
         self.combo_zone_b.blockSignals(False)
         self.combo_channel_b.blockSignals(False)
-        self.combo_clock_1_mode.blockSignals(False)
-        self.spin_clock_1_hour.blockSignals(False)
-        self.spin_clock_1_minute.blockSignals(False)
-        self.combo_clock_2_mode.blockSignals(False)
-        self.spin_clock_2_hour.blockSignals(False)
-        self.spin_clock_2_minute.blockSignals(False)
-        self.combo_clock_3_mode.blockSignals(False)
-        self.spin_clock_3_hour.blockSignals(False)
-        self.spin_clock_3_minute.blockSignals(False)
-        self.combo_clock_4_mode.blockSignals(False)
-        self.spin_clock_4_hour.blockSignals(False)
-        self.spin_clock_4_minute.blockSignals(False)
-        self.combo_startup_picture_widget.blockSignals(False)
-
         self.set_enabled(True)
-        self._apply_beta41_visibility()
-
-    def _apply_beta41_visibility(self):
-        """Apply visibility based on beta41 flag."""
-        if self.settings and self.settings.beta41:
-            self.check_apo.setVisible(False)
-            self.clock_group.setVisible(False)
-        else:
-            self.check_apo.setVisible(True)
-            self.clock_group.setVisible(True)
 
     def on_settings_changed(self):
         """Handle settings changes"""
@@ -1911,7 +1620,6 @@ class SettingsWidget(QWidget):
         self.settings.display_mode_b = self.combo_display_mode_b.currentData()
         self.settings.power_save_mode = self.spin_power_save.value()
         self.settings.power_save_start = self.combo_power_save_start.currentData()
-        self.settings.apo_enabled = self.check_apo.isChecked()
         self.settings.dual_watch = self.combo_dual_watch.currentData()
         self.settings.talkaround = self.combo_talkaround.currentData()
         self.settings.alarm_type = self.combo_alarm_type.currentData()
@@ -1929,18 +1637,4 @@ class SettingsWidget(QWidget):
         self.settings.zone_b = zone_b if zone_b is not None else 0
         channel_b = self.combo_channel_b.currentData()
         self.settings.channel_b = channel_b if channel_b is not None else 0
-        self.settings.clock_1_mode = self.combo_clock_1_mode.currentData()
-        self.settings.clock_1_hour = self.spin_clock_1_hour.value()
-        self.settings.clock_1_minute = self.spin_clock_1_minute.value()
-        self.settings.clock_2_mode = self.combo_clock_2_mode.currentData()
-        self.settings.clock_2_hour = self.spin_clock_2_hour.value()
-        self.settings.clock_2_minute = self.spin_clock_2_minute.value()
-        self.settings.clock_3_mode = self.combo_clock_3_mode.currentData()
-        self.settings.clock_3_hour = self.spin_clock_3_hour.value()
-        self.settings.clock_3_minute = self.spin_clock_3_minute.value()
-        self.settings.clock_4_mode = self.combo_clock_4_mode.currentData()
-        self.settings.clock_4_hour = self.spin_clock_4_hour.value()
-        self.settings.clock_4_minute = self.spin_clock_4_minute.value()
-        self.settings.startup_picture_enable = self.combo_startup_picture_widget.currentData()
-
         self.data_modified.emit()

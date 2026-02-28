@@ -1,12 +1,16 @@
 import contextlib
 import io
+import struct
 from pathlib import Path
 
 import pytest
 
 from rt4d_codeplug import ChannelMode, CodeplugParser, CodeplugSerializer
-from rt4d_codeplug.models import Codeplug, RadioSettings
-from rt4d_codeplug.constants import TOTAL_SIZE
+from rt4d_codeplug.models import Codeplug, RadioSettings, Zone, Channel
+from rt4d_codeplug.constants import (
+    TOTAL_SIZE, ZONE_SIZE, OFFSET_ZONES,
+    ZONE_SCAN_LIST_OFFSET, ZONE_SCAN_LIST_SIZE, EMPTY_BYTE,
+)
 
 
 @pytest.fixture(scope="module")
@@ -108,7 +112,7 @@ def snapshot_zones(codeplug):
             ch = codeplug.get_channel(ch_uuid)
             if ch:
                 channel_names.append(ch.name)
-        result.append((z.name, tuple(channel_names)))
+        result.append((z.name, tuple(channel_names), tuple(z.scan_list)))
     return sorted(result)
 
 
@@ -127,26 +131,19 @@ def test_serializer_round_trip_preserves_key_fields(codeplug):
     assert snapshot_zones(reparsed) == original_zones
 
 
-def test_beta41_settings_round_trip_preserves_magic_bytes():
-    codeplug = Codeplug(settings=RadioSettings(beta41=True))
+def test_settings_round_trip_always_writes_dtcn_magic():
+    codeplug = Codeplug(settings=RadioSettings())
 
     serialized = CodeplugSerializer.serialize(codeplug)
 
     assert len(serialized) == TOTAL_SIZE
-
-    parser = CodeplugParser(serialized)
-    with contextlib.redirect_stdout(io.StringIO()):
-        reparsed = parser.parse()
-
-    assert reparsed.settings.beta41 is True
+    # DTCN magic should always be written at bytes 4092-4096 of the settings block
+    assert serialized[4092:4096] == b'DTCN'
 
 
 def test_parser_radio_settings_identity(codeplug):
     """Test that radio identity settings are parsed correctly"""
     settings = codeplug.settings
-
-    # Beta41+ codeplug should have beta41 flag set
-    assert settings.beta41 is True
 
     # Radio identity - these are from codeplug.41-plus.4rdmf
     assert settings.radio_name == "CS7BLE"
@@ -172,7 +169,7 @@ def test_parser_radio_settings_display(codeplug):
 
     # Display settings should be within valid ranges
     assert 0 <= settings.backlight_brightness <= 4
-    assert 0 <= settings.lcd_contrast <= 15
+    assert 0 <= settings.lcd_contrast <= 13
     assert settings.display_mode_a in (0, 1, 2)  # channel, freq, name
     assert settings.display_mode_b in (0, 1, 2)
 
@@ -193,7 +190,6 @@ def snapshot_settings(settings):
         # Identity
         'radio_name': settings.radio_name,
         'radio_id': settings.radio_id,
-        'beta41': settings.beta41,
         # Audio
         'squelch_level': settings.squelch_level,
         'digital_squelch': settings.digital_squelch,
@@ -257,3 +253,146 @@ def test_serializer_round_trip_preserves_radio_settings(codeplug):
     for key in original_settings:
         assert reparsed_settings[key] == original_settings[key], \
             f"Setting '{key}' mismatch: {reparsed_settings[key]} != {original_settings[key]}"
+
+
+# --- Zone scan list tests ---
+
+def _build_zone_record(name: str, channel_indices: list[int], scan_flags: list[bool] | None = None) -> bytes:
+    """Build a raw 512-byte zone record for testing."""
+    data = bytearray(b'\xff' * ZONE_SIZE)
+    count = len(channel_indices)
+    data[0] = count & 0xFF
+    data[1] = (count >> 8) & 0xFF
+    # Name at 0x04 (16 bytes)
+    name_bytes = name.encode('ascii')[:16]
+    for i, b in enumerate(name_bytes):
+        data[0x04 + i] = b
+    for i in range(len(name_bytes), 16):
+        data[0x04 + i] = EMPTY_BYTE
+    # Channel indices at 0x14 (2 bytes each)
+    for i, idx in enumerate(channel_indices):
+        offset = 0x14 + i * 2
+        data[offset] = idx & 0xFF
+        data[offset + 1] = (idx >> 8) & 0xFF
+    # Scan list bitmap at 0x1A4
+    if scan_flags is not None:
+        for i in range(ZONE_SCAN_LIST_SIZE):
+            data[ZONE_SCAN_LIST_OFFSET + i] = 0x00
+        for i, flag in enumerate(scan_flags):
+            if flag:
+                data[ZONE_SCAN_LIST_OFFSET + i // 8] |= (1 << (i % 8))
+    # else leave as 0xFF (backwards compat)
+    return bytes(data)
+
+
+def test_zone_scan_list_parse_with_bitmap():
+    """Test parsing a zone with an explicit scan bitmap."""
+    # channels at slot 0, 1, 2 — scan flags: True, False, True
+    zone_data = _build_zone_record("TestZone", [0, 1, 2], [True, False, True])
+    # Build a full codeplug with these channels present
+    full_data = bytearray(b'\xff' * TOTAL_SIZE)
+    # Write zone at index 0
+    full_data[OFFSET_ZONES:OFFSET_ZONES + ZONE_SIZE] = zone_data
+    # Write minimal channels at positions 1, 2, 3 (slots 0, 1, 2)
+    from rt4d_codeplug.constants import OFFSET_CHANNELS, CHANNEL_SIZE
+    for slot in range(3):
+        ch_offset = OFFSET_CHANNELS + slot * CHANNEL_SIZE
+        ch = bytearray(b'\xff' * CHANNEL_SIZE)
+        ch[0x00] = 0x40  # analog mode
+        struct.pack_into('<I', ch, 0x05, 43312345)  # rx freq
+        struct.pack_into('<I', ch, 0x09, 43312345)  # tx freq
+        name = f"CH{slot+1}".encode('ascii')
+        for i, b in enumerate(name):
+            ch[0x20 + i] = b
+        full_data[ch_offset:ch_offset + CHANNEL_SIZE] = ch
+    # Write valid CFG with DTCN magic
+    full_data[12] = 0xCD
+    full_data[13] = 0xAB
+    full_data[4092:4096] = b'DTCN'
+
+    parser = CodeplugParser(bytes(full_data))
+    with contextlib.redirect_stdout(io.StringIO()):
+        cp = parser.parse()
+
+    assert len(cp.zones) == 1
+    zone = cp.zones[0]
+    assert len(zone.channels) == 3
+    assert zone.scan_list == [True, False, True]
+
+
+def test_zone_scan_list_backwards_compat_all_ff():
+    """Test that all-0xFF scan area defaults to all True (backwards compat)."""
+    # Don't pass scan_flags → leaves 0xFF
+    zone_data = _build_zone_record("OldZone", [0, 1], None)
+    full_data = bytearray(b'\xff' * TOTAL_SIZE)
+    full_data[OFFSET_ZONES:OFFSET_ZONES + ZONE_SIZE] = zone_data
+    from rt4d_codeplug.constants import OFFSET_CHANNELS, CHANNEL_SIZE
+    for slot in range(2):
+        ch_offset = OFFSET_CHANNELS + slot * CHANNEL_SIZE
+        ch = bytearray(b'\xff' * CHANNEL_SIZE)
+        ch[0x00] = 0x40
+        struct.pack_into('<I', ch, 0x05, 43312345)
+        struct.pack_into('<I', ch, 0x09, 43312345)
+        name = f"CH{slot+1}".encode('ascii')
+        for i, b in enumerate(name):
+            ch[0x20 + i] = b
+        full_data[ch_offset:ch_offset + CHANNEL_SIZE] = ch
+    full_data[12] = 0xCD
+    full_data[13] = 0xAB
+    full_data[4092:4096] = b'DTCN'
+
+    parser = CodeplugParser(bytes(full_data))
+    with contextlib.redirect_stdout(io.StringIO()):
+        cp = parser.parse()
+
+    zone = cp.zones[0]
+    assert zone.scan_list == [True, True]
+
+
+def test_zone_scan_list_serialize_round_trip():
+    """Test that mixed scan flags survive serialize → parse round-trip."""
+    cp = Codeplug(settings=RadioSettings())
+    # Create channels
+    channels = []
+    for i in range(5):
+        ch = Channel(position=i + 1, name=f"CH{i+1}", rx_freq=43312345, tx_freq=43312345)
+        cp.add_channel(ch)
+        channels.append(ch)
+    # Create zone with mixed scan flags
+    zone = Zone(name="MixedScan")
+    for i, ch in enumerate(channels):
+        zone.add_channel(ch.uuid)
+    zone.scan_list = [True, False, True, False, True]
+    cp.add_zone(zone)
+
+    serialized = CodeplugSerializer.serialize(cp)
+    parser = CodeplugParser(serialized)
+    with contextlib.redirect_stdout(io.StringIO()):
+        reparsed = parser.parse()
+
+    rz = reparsed.zones[0]
+    assert len(rz.channels) == 5
+    assert rz.scan_list == [True, False, True, False, True]
+
+
+def test_zone_model_add_remove_keeps_scan_list_in_sync():
+    """Test that add_channel/remove_channel keep scan_list in sync."""
+    zone = Zone(name="SyncTest")
+    zone.add_channel("uuid-a")
+    zone.add_channel("uuid-b")
+    zone.add_channel("uuid-c")
+    assert zone.scan_list == [True, True, True]
+
+    # Modify scan for middle channel
+    zone.set_channel_scan(1, False)
+    assert zone.scan_list == [True, False, True]
+
+    # Remove middle channel
+    zone.remove_channel("uuid-b")
+    assert zone.channels == ["uuid-a", "uuid-c"]
+    assert zone.scan_list == [True, True]
+
+    # Remove first channel
+    zone.remove_channel("uuid-a")
+    assert zone.channels == ["uuid-c"]
+    assert zone.scan_list == [True]

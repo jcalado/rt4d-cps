@@ -190,20 +190,19 @@ class GroupList:
     uuid: str = field(default_factory=lambda: str(uuid4()))
     index: int = 0  # Computed from list position on save, used for display
     name: str = ""
-    contacts: List[str] = field(default_factory=list)  # List of contact UUIDs (max 128 old, 32 new layout)
+    contacts: List[str] = field(default_factory=list)  # List of contact UUIDs (max 32)
 
     def __post_init__(self):
         """Validate group list data"""
         if len(self.name) > 14:
             self.name = self.name[:14]
-        # Note: max contacts depends on layout (128 for old, 32 for B41+)
-        # Actual enforcement happens at serialization time
+        # Max 32 contacts per group list (B41+ layout)
 
     def is_empty(self) -> bool:
         """Check if group list is empty/unused"""
         return not self.name
 
-    def add_contact(self, contact_uuid: str, max_contacts: int = 128):
+    def add_contact(self, contact_uuid: str, max_contacts: int = 32):
         """Add a contact to this group list by UUID"""
         if len(self.contacts) < max_contacts and contact_uuid not in self.contacts:
             self.contacts.append(contact_uuid)
@@ -221,6 +220,7 @@ class Zone:
     index: int = 0  # Computed from list position on save, used for display
     name: str = ""
     channels: List[str] = field(default_factory=list)  # List of channel UUIDs
+    scan_list: List[bool] = field(default_factory=list)  # Per-channel scan flags (one per channel)
 
     def __post_init__(self):
         """Validate zone data"""
@@ -237,11 +237,20 @@ class Zone:
             raise ValueError("Zone can contain maximum 200 channels")
         if channel_uuid not in self.channels:
             self.channels.append(channel_uuid)
+            self.scan_list.append(True)
 
     def remove_channel(self, channel_uuid: str):
         """Remove a channel from this zone by UUID"""
         if channel_uuid in self.channels:
-            self.channels.remove(channel_uuid)
+            idx = self.channels.index(channel_uuid)
+            self.channels.pop(idx)
+            if idx < len(self.scan_list):
+                self.scan_list.pop(idx)
+
+    def set_channel_scan(self, index: int, scan: bool):
+        """Set scan flag for channel at given zone index"""
+        if 0 <= index < len(self.scan_list):
+            self.scan_list[index] = scan
 
 
 @dataclass
@@ -290,19 +299,17 @@ class RadioSettings:
     display_mode_a: int = 0  # Display mode for band A (0=channel, 1=freq, 2=name) (offset 0x85/133)
     display_mode_b: int = 0  # Display mode for band B (0=channel, 1=freq, 2=name) (offset 0x8A/138)
     rssi_refresh: int = 0  # RSSI refresh rate (offset 0x0A8-0x0A9/168-169, u16 LE)
-    slaver_ptt: int = 0  # Side 1 as secondary PTT (offset 0x0E8/232)
-    lcd_contrast: int = 7  # LCD contrast 0-15 (offset 0x0E9/233)
+    secondary_ptt: int = 0  # Secondary PTT (0=off, 1=VFO B, 2=opposite VFO) (offset 0x0E8/232)
+    lcd_contrast: int = 7  # LCD contrast 0-13 (offset 0x0E9/233)
     display_lines: int = 0  # 6 digits or 8 digits frequency display mode (offset 0x0EA/234)
     dual_display_mode: int = 0  # Dual display mode (offset 0x0EB/235)
 
     # DMR Enhancements (offsets 0x184-0x19A)
     remote_control: int = 0  # Remote control enable (offset 0x184/388)
-    group_call_hang_time: int = 3000  # Group call hang time in ms (offset 0x18F-0x190/399-400, u16 LE)
-    private_call_hang_time: int = 3000  # Private call hang time in ms (offset 0x191-0x192/401-402, u16 LE)
-    call_group_display: int = 0  # Show call group during calls (offset 0x194/404)
-
+    group_call_hang_time: int = 3  # Group call hang time in seconds (offset 0x18F-0x190/399-400, u16 LE)
+    private_call_hang_time: int = 3  # Private call hang time in seconds (offset 0x191-0x192/401-402, u16 LE)
     # DMR SMS Fields (offsets 0x195-0x19A)
-    dmr_send_dtmf: int = 0  # Send DTMF via DMR (offset 0x195/405)
+    dmr_send_dtmf: int = 0  # DTMF List via DMR (offset 0x195/405)
     sms_format: int = 0  # DMR SMS format (offset 0x196/406)
     sms_font: int = 0  # DMR SMS font (offset 0x197/407)
     caller_keep: int = 0  # Keep DMR caller info (offset 0x198/408)
@@ -311,8 +318,6 @@ class RadioSettings:
     # Power
     power_save_mode: int = 0
     power_save_start: int = 0  # Power save start timer in seconds (0-600)
-    apo_enabled: bool = False
-
     # Operation
     dual_watch: int = 0
     work_mode_a: int = 0
@@ -328,31 +333,13 @@ class RadioSettings:
     tx_priority_global: int = 0  # Global TX priority (0=edit, 1=busy)
     alarm_type: int = 0  # Alarm type (0=local, 1=remote, 2=local+remote)
 
-    # Clocks/Timers (4 programmable timers)
-    clock_1_mode: int = 0  # 0=off, 1=once, 2=daily
-    clock_1_hour: int = 0
-    clock_1_minute: int = 0
-    clock_2_mode: int = 0
-    clock_2_hour: int = 0
-    clock_2_minute: int = 0
-    clock_3_mode: int = 0
-    clock_3_hour: int = 0
-    clock_3_minute: int = 0
-    clock_4_mode: int = 0
-    clock_4_hour: int = 0
-    clock_4_minute: int = 0
-
     # Startup/Boot settings
-    startup_picture_enable: int = 0  # Show boot logo (0=off, 1=on)
     tx_protection: int = 0  # TX protection (0=off, 1=on)
     startup_beep_enable: int = 0  # Power-on beep (0=off, 1=on)
     startup_label_enable: int = 0  # Show startup text (0=off, 1=on)
     startup_display_line: int = 0  # Startup message line position
     startup_display_column: int = 0  # Startup message column position
     password_enable: int = 0  # Password enable flag (0=off, 1=on)
-
-    # Radio clock/time
-    radio_time_seconds: int = 0  # Current time as total seconds since midnight
 
     # Frequency lock ranges (4 ranges)
     freq_lock_1_mode: int = 0  # 0=unlock, 1=rx only, 2=lock
@@ -393,6 +380,18 @@ class RadioSettings:
     key_7: int = 0  # Numeric key 7 action
     key_8: int = 0  # Numeric key 8 action
     key_9: int = 0  # Numeric key 9 action
+
+    # Hotkeys FN+0..9 (offset 0x06E-0x077/110-119)
+    hotkey_0: int = 0  # FN+0 action
+    hotkey_1: int = 0  # FN+1 action
+    hotkey_2: int = 0  # FN+2 action
+    hotkey_3: int = 0  # FN+3 action
+    hotkey_4: int = 0  # FN+4 action
+    hotkey_5: int = 0  # FN+5 action
+    hotkey_6: int = 0  # FN+6 action
+    hotkey_7: int = 0  # FN+7 action
+    hotkey_8: int = 0  # FN+8 action
+    hotkey_9: int = 0  # FN+9 action
 
     # Advanced Features (offsets 0x110-0x116)
     detection_range: int = 0  # Detection range (offset 0x110/272, u8)
@@ -437,9 +436,8 @@ class RadioSettings:
     ptt_lock: int = 0  # PTT lock feature (offset 0x39D/925)
     zone_channel_display: int = 0  # Show Zone CH on display (offset 0x39E/926)
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
-    tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928) - Beta41+ only
-    beta41: bool = False  # Indicates the settings are Beta41+ compatible
-    beta_version: int = 0  # Beta version number (0=not beta/stock, 41=pre-42 DTCN, 42+=from offset 0xFF0)
+    tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928)
+    fn_key: int = 0  # FN key assignment (0=off, 1=Side 1, 2=Side 2) (offset 0x3A2/930)
 
 
 @dataclass
