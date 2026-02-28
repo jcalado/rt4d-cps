@@ -3,9 +3,81 @@
 Ported from the C# RT_4D_UART class
 """
 
+import os
 import serial
 import time
 from typing import Optional
+
+# Firmware flash constants
+FIRMWARE_SIZE = 251904  # 246 KB - exact firmware image size
+FIRMWARE_CHUNK_SIZE = 1024  # 1 KB chunks
+_FW_CHECKSUM_BASE = 0x48
+_CMD_HANDSHAKE = 0x39
+_CMD_WRITE_FW = 0x57
+_RESP_ACK = 0x06
+_RESP_ERROR = 0xFF
+_PROBE_MAX_ATTEMPTS = 50
+_HANDSHAKE_MAX_RETRIES = 10
+_HANDSHAKE_STEPS = 3
+_ERASE_TRIGGER_MAX_RETRIES = 10
+_WRITE_MAX_RETRIES = 100
+_RETRY_DELAY = 0.05  # 50 ms
+
+
+def _fw_checksum(command: bytearray) -> None:
+    """Calculate firmware checksum (base 0x48) and store in last byte."""
+    total = _FW_CHECKSUM_BASE
+    for b in command[:-1]:
+        total = (total + b) & 0xFF
+    command[-1] = total
+
+
+def validate_firmware_file(file_path: str) -> tuple[bool, str, int]:
+    """Validate a firmware file for flashing.
+
+    Returns:
+        (is_valid, error_message_or_None, file_size)
+    """
+    if not os.path.isfile(file_path):
+        return False, "File does not exist", 0
+
+    file_size = os.path.getsize(file_path)
+
+    if file_size == 0:
+        return False, "File is empty", 0
+
+    if file_size > FIRMWARE_SIZE:
+        return (False,
+                f"File is too large ({file_size} bytes). "
+                f"Maximum allowed is {FIRMWARE_SIZE} bytes ({FIRMWARE_SIZE // 1024} KB)",
+                file_size)
+
+    try:
+        with open(file_path, 'rb') as f:
+            f.read(1)
+    except Exception as e:
+        return False, f"Cannot read file: {e}", file_size
+
+    return True, None, file_size
+
+
+def prepare_firmware_data(file_path: str) -> bytearray:
+    """Read firmware file and pad to FIRMWARE_SIZE bytes with zeros.
+
+    Raises:
+        Exception: If file is invalid.
+    """
+    is_valid, error_msg, _ = validate_firmware_file(file_path)
+    if not is_valid:
+        raise Exception(f"Invalid firmware file: {error_msg}")
+
+    with open(file_path, 'rb') as f:
+        data = bytearray(f.read())
+
+    if len(data) < FIRMWARE_SIZE:
+        data.extend(bytearray(FIRMWARE_SIZE - len(data)))
+
+    return data
 
 
 class RT4DUART:
@@ -494,3 +566,111 @@ class RT4DUART:
 
         print(f"\n{region_name} write complete!")
         return True
+
+    # ── Firmware flash commands ──────────────────────────────────
+
+    def probe_bootloader(self, max_attempts: int = _PROBE_MAX_ATTEMPTS) -> bool:
+        """Probe bootloader by sending 0xFF until it responds.
+
+        Raises:
+            IOError: If bootloader does not respond within max_attempts.
+        """
+        probe_byte = bytearray([_RESP_ERROR])
+
+        for attempt in range(max_attempts):
+            try:
+                self.port.reset_input_buffer()
+                self.port.write(probe_byte)
+                time.sleep(_RETRY_DELAY)
+                response = self.port.read(1)
+                if len(response) == 1 and response[0] == _RESP_ERROR:
+                    return True
+            except serial.SerialException:
+                continue
+
+        raise IOError(f"Bootloader did not respond after {max_attempts} attempts")
+
+    def command_handshake(self, max_retries: int = _HANDSHAKE_MAX_RETRIES) -> bool:
+        """Send 3-step handshake to prepare bootloader for firmware update.
+
+        Raises:
+            IOError: If any handshake step fails.
+        """
+        command = bytearray([_CMD_HANDSHAKE, 0x33, 0x05, 0x10, 0x00])
+        _fw_checksum(command)
+
+        for step in range(_HANDSHAKE_STEPS):
+            success = False
+            for _ in range(max_retries):
+                try:
+                    self.port.reset_input_buffer()
+                    self.port.write(command)
+                    time.sleep(_RETRY_DELAY)
+                    response = self.port.read(1)
+                    if len(response) == 1 and response[0] == _RESP_ACK:
+                        success = True
+                        break
+                except serial.SerialException:
+                    continue
+
+            if not success:
+                raise IOError(f"Handshake step {step + 1}/{_HANDSHAKE_STEPS} failed")
+
+        return True
+
+    def command_trigger_erase(self, max_retries: int = _ERASE_TRIGGER_MAX_RETRIES) -> bool:
+        """Trigger firmware erase mode after successful handshake.
+
+        Raises:
+            IOError: If erase trigger fails.
+        """
+        command = bytearray([_CMD_HANDSHAKE, 0x33, 0x05, 0x55, 0x00])
+        _fw_checksum(command)
+
+        for _ in range(max_retries):
+            try:
+                self.port.reset_input_buffer()
+                self.port.write(command)
+                time.sleep(_RETRY_DELAY)
+                response = self.port.read(1)
+                if len(response) == 1 and response[0] == _RESP_ACK:
+                    return True
+            except serial.SerialException:
+                continue
+
+        raise IOError(f"Erase trigger failed after {max_retries} retries")
+
+    def command_write_firmware(self, offset: int, data: bytes,
+                               max_retries: int = _WRITE_MAX_RETRIES) -> bool:
+        """Write a 1 KB chunk of firmware data.
+
+        Args:
+            offset: Byte offset in firmware (must be multiple of 1024).
+            data: Exactly 1024 bytes of firmware data.
+
+        Raises:
+            ValueError: If data is not 1024 bytes.
+            IOError: If write fails after retries.
+        """
+        if len(data) != FIRMWARE_CHUNK_SIZE:
+            raise ValueError(f"Data must be exactly {FIRMWARE_CHUNK_SIZE} bytes, got {len(data)}")
+
+        command = bytearray(1028)
+        command[0] = _CMD_WRITE_FW
+        command[1] = (offset >> 8) & 0xFF
+        command[2] = offset & 0xFF
+        command[3:3 + FIRMWARE_CHUNK_SIZE] = data
+        _fw_checksum(command)
+
+        for _ in range(max_retries):
+            try:
+                self.port.reset_input_buffer()
+                self.port.write(command)
+                time.sleep(_RETRY_DELAY)
+                response = self.port.read(1)
+                if len(response) == 1 and response[0] == _RESP_ACK:
+                    return True
+            except serial.SerialException:
+                continue
+
+        raise IOError(f"Firmware write failed at offset 0x{offset:06X} after {max_retries} retries")

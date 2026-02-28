@@ -77,12 +77,13 @@ class DTMFWidget(QWidget):
         self.send_mode_combo.currentIndexChanged.connect(self.on_settings_changed)
         settings_layout.addRow("Send Mode:", self.send_mode_combo)
 
-        # Send Select (Preset Code Selection)
+        # Send Select (Preset Code Selection) - label renamed to "DTMF List" in beta42+
         self.send_select_combo = QComboBox()
         for label, value in DTMF_PRESET_VALUES:
             self.send_select_combo.addItem(label, value)
         self.send_select_combo.currentIndexChanged.connect(self.on_settings_changed)
-        settings_layout.addRow("Send Select:", self.send_select_combo)
+        self.send_select_label = QLabel("Send Select:")
+        settings_layout.addRow(self.send_select_label, self.send_select_combo)
 
         # DTMF Gain
         self.gain_spin = QSpinBox()
@@ -143,7 +144,7 @@ class DTMFWidget(QWidget):
             index_item.setTextAlignment(Qt.AlignCenter)
             self.codes_table.setItem(i, 0, index_item)
 
-            # Name column (read-only)
+            # Name column (read-only by default, made editable for first 16 in load_settings if beta42+)
             name_item = QTableWidgetItem(self.PRESET_NAMES[i])
             name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
             self.codes_table.setItem(i, 1, name_item)
@@ -212,10 +213,26 @@ class DTMFWidget(QWidget):
         self.gain_spin.setValue(settings.dtmf_gain)
         self.decode_threshold_spin.setValue(settings.dtmf_decode_threshold)
 
-        # Load DTMF codes
+        # Update version-aware labels
+        self.send_select_label.setText(
+            "DTMF List:" if settings.beta_version >= 42 else "Send Select:"
+        )
+
+        # Load DTMF codes and names
+        has_custom_names = settings.beta_version >= 42
         for i in range(20):
             code = settings.dtmf_codes[i] if i < len(settings.dtmf_codes) else ""
             self.codes_table.item(i, 2).setText(code)
+            # Load user-editable names for first 16 (beta42+ only)
+            if i < 16:
+                name_item = self.codes_table.item(i, 1)
+                if has_custom_names:
+                    name = settings.dtmf_names[i] if i < len(settings.dtmf_names) else ""
+                    name_item.setText(name if name else self.PRESET_NAMES[i])
+                    name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
+                else:
+                    name_item.setText(self.PRESET_NAMES[i])
+                    name_item.setFlags(name_item.flags() & ~Qt.ItemIsEditable)
 
         self._updating = False
 
@@ -242,6 +259,16 @@ class DTMFWidget(QWidget):
             code = self.codes_table.item(i, 2).text()
             settings.dtmf_codes.append(code)
 
+        # Save DTMF names (first 16 only, beta42+ only)
+        if settings.beta_version >= 42:
+            settings.dtmf_names = []
+            for i in range(16):
+                name = self.codes_table.item(i, 1).text()
+                # Store empty string if name matches the default placeholder
+                if name == self.PRESET_NAMES[i]:
+                    name = ""
+                settings.dtmf_names.append(name[:16])
+
     def on_settings_changed(self):
         """Handle settings change"""
         if not self._updating and self.settings:
@@ -249,8 +276,20 @@ class DTMFWidget(QWidget):
             self.settings_changed.emit()
 
     def on_code_changed(self, item: QTableWidgetItem):
-        """Handle DTMF code change with validation"""
+        """Handle DTMF code or name change with validation"""
         if self._updating:
+            return
+
+        # Handle name column (column 1) for first 16 rows
+        if item.column() == 1 and item.row() < 16:
+            name = item.text()
+            if len(name) > 16:
+                self._updating = True
+                item.setText(name[:16])
+                self._updating = False
+            if self.settings:
+                self.save_settings(self.settings)
+                self.settings_changed.emit()
             return
 
         # Only validate code column (column 2)

@@ -5,12 +5,12 @@ from typing import Optional
 from . import theme as _theme
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QLabel, QLineEdit, QSpinBox, QComboBox, QCheckBox,
+    QLabel, QLineEdit, QSpinBox, QComboBox, QCompleter, QCheckBox,
     QPushButton, QGroupBox, QScrollArea, QWidget, QStyle
 )
 from PySide6.QtCore import Qt, Signal
 
-from rt4d_codeplug.models import RadioSettings
+from rt4d_codeplug.models import RadioSettings, Codeplug
 from rt4d_codeplug.dropdowns import (
     VOICE_PROMPT_VALUES, KEY_BEEP_VALUES, KEY_LOCK_VALUES,
     DUAL_WATCH_VALUES, WORK_MODE_VALUES, TALKAROUND_VALUES,
@@ -481,10 +481,31 @@ class SettingsDialog(QDialog):
                 break
 
     def _get_function_key_label(self, label, value):
-        """Return beta41-aware label for function key."""
+        """Return version-aware label for function key."""
         if label == "Color Code Detect" and self.settings and self.settings.beta41:
             return "Talker Alias"
+        if label == "Send DTMF (Custom FW)" and self.settings and self.settings.beta_version >= 42:
+            return "DTMF List (Custom FW)"
         return label
+
+    def _update_function_key_labels(self):
+        """Re-apply version-aware labels on all function key combos."""
+        from rt4d_codeplug.dropdowns import FUNCTION_KEY_VALUES
+        combos = [
+            self.combo_key_fs1_short, self.combo_key_fs1_long,
+            self.combo_key_fs2_short, self.combo_key_fs2_long,
+            self.combo_key_0, self.combo_key_1, self.combo_key_2,
+            self.combo_key_3, self.combo_key_4, self.combo_key_5,
+            self.combo_key_6, self.combo_key_7, self.combo_key_8,
+            self.combo_key_9,
+        ]
+        for combo in combos:
+            for idx in range(combo.count()):
+                value = combo.itemData(idx)
+                for label, val in FUNCTION_KEY_VALUES:
+                    if val == value:
+                        combo.setItemText(idx, self._get_function_key_label(label, value))
+                        break
 
     def _apply_beta41_visibility(self):
         """Apply visibility based on beta41 flag."""
@@ -585,6 +606,9 @@ class SettingsDialog(QDialog):
         self._set_combo_value(self.combo_detection_range, self.settings.detection_range)
         self._set_combo_value(self.combo_relay_delay, self.settings.relay_delay)
         self.spin_glitch_filter.setValue(self.settings.glitch_filter)
+
+        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
+        self._update_function_key_labels()
 
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
@@ -926,6 +950,20 @@ class CustomFirmwareDialog(QDialog):
         self.spin_vfo_a_offset.setValue(self.settings.vfo_a_offset)
         self.spin_vfo_b_offset.setValue(self.settings.vfo_b_offset)
 
+        # Update version-aware labels (e.g. "Send DTMF" -> "DTMF List" for beta42+)
+        self._update_green_key_labels()
+
+    def _update_green_key_labels(self):
+        """Re-apply version-aware labels on green key long combo."""
+        if not self.settings or self.settings.beta_version < 42:
+            return
+        for idx in range(self.combo_green_key_long.count()):
+            value = self.combo_green_key_long.itemData(idx)
+            for label, val in GREEN_KEY_LONG_VALUES:
+                if val == value and label == "Send DTMF (Custom FW)":
+                    self.combo_green_key_long.setItemText(idx, "DTMF List (Custom FW)")
+                    break
+
     def save_settings(self) -> RadioSettings:
         """Save form data to settings"""
         # List of (attribute_name, combo_box) pairs for combo boxes
@@ -979,6 +1017,7 @@ class SettingsWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.settings: Optional[RadioSettings] = None
+        self.codeplug: Optional[Codeplug] = None
         self.init_ui()
 
     def init_ui(self):
@@ -1229,15 +1268,13 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_a.currentIndexChanged.connect(self.on_settings_changed)
         band_a_layout.addRow("Mode:", self.combo_work_mode_a)
 
-        self.spin_zone_a = QSpinBox()
-        self.spin_zone_a.setRange(0, 255)
-        self.spin_zone_a.valueChanged.connect(self.on_settings_changed)
-        band_a_layout.addRow("Zone:", self.spin_zone_a)
+        self.combo_zone_a = self._make_searchable_combo()
+        self.combo_zone_a.currentIndexChanged.connect(self.on_settings_changed)
+        band_a_layout.addRow("Zone:", self.combo_zone_a)
 
-        self.spin_channel_a = QSpinBox()
-        self.spin_channel_a.setRange(1, 1024)
-        self.spin_channel_a.valueChanged.connect(self.on_settings_changed)
-        band_a_layout.addRow("Channel:", self.spin_channel_a)
+        self.combo_channel_a = self._make_searchable_combo()
+        self.combo_channel_a.currentIndexChanged.connect(self.on_settings_changed)
+        band_a_layout.addRow("Channel:", self.combo_channel_a)
 
         band_a_group.setLayout(band_a_layout)
         bands_layout.addWidget(band_a_group)
@@ -1251,15 +1288,13 @@ class SettingsWidget(QWidget):
         self.combo_work_mode_b.currentIndexChanged.connect(self.on_settings_changed)
         band_b_layout.addRow("Mode:", self.combo_work_mode_b)
 
-        self.spin_zone_b = QSpinBox()
-        self.spin_zone_b.setRange(0, 255)
-        self.spin_zone_b.valueChanged.connect(self.on_settings_changed)
-        band_b_layout.addRow("Zone:", self.spin_zone_b)
+        self.combo_zone_b = self._make_searchable_combo()
+        self.combo_zone_b.currentIndexChanged.connect(self.on_settings_changed)
+        band_b_layout.addRow("Zone:", self.combo_zone_b)
 
-        self.spin_channel_b = QSpinBox()
-        self.spin_channel_b.setRange(1, 1024)
-        self.spin_channel_b.valueChanged.connect(self.on_settings_changed)
-        band_b_layout.addRow("Channel:", self.spin_channel_b)
+        self.combo_channel_b = self._make_searchable_combo()
+        self.combo_channel_b.currentIndexChanged.connect(self.on_settings_changed)
+        band_b_layout.addRow("Channel:", self.combo_channel_b)
 
         band_b_group.setLayout(band_b_layout)
         bands_layout.addWidget(band_b_group)
@@ -1447,11 +1482,11 @@ class SettingsWidget(QWidget):
         self.combo_main_ptt.setEnabled(enabled)
         self.combo_vfo_step.setEnabled(enabled)
         self.combo_work_mode_a.setEnabled(enabled)
-        self.spin_zone_a.setEnabled(enabled)
-        self.spin_channel_a.setEnabled(enabled)
+        self.combo_zone_a.setEnabled(enabled)
+        self.combo_channel_a.setEnabled(enabled)
         self.combo_work_mode_b.setEnabled(enabled)
-        self.spin_zone_b.setEnabled(enabled)
-        self.spin_channel_b.setEnabled(enabled)
+        self.combo_zone_b.setEnabled(enabled)
+        self.combo_channel_b.setEnabled(enabled)
         self.combo_clock_1_mode.setEnabled(enabled)
         self.spin_clock_1_hour.setEnabled(enabled)
         self.spin_clock_1_minute.setEnabled(enabled)
@@ -1467,6 +1502,86 @@ class SettingsWidget(QWidget):
         self.combo_startup_picture_widget.setEnabled(enabled)
         self.btn_edit_advanced.setEnabled(enabled)
         self.btn_edit_custom_fw.setEnabled(enabled)
+
+    @staticmethod
+    def _make_searchable_combo() -> QComboBox:
+        """Create a QComboBox that supports type-to-filter with substring matching"""
+        combo = QComboBox()
+        combo.setEditable(True)
+        combo.setInsertPolicy(QComboBox.NoInsert)
+        completer = combo.completer()
+        completer.setCompletionMode(QCompleter.PopupCompletion)
+        completer.setFilterMode(Qt.MatchContains)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)
+        return combo
+
+    def load_codeplug(self, codeplug: Optional[Codeplug]):
+        """Store codeplug reference and populate zone/channel combos"""
+        self.codeplug = codeplug
+        self._populate_zone_combos()
+        self._populate_channel_combos()
+
+    def _populate_zone_combos(self):
+        """Fill both zone combos from codeplug zones.
+
+        Uses enumerate position (not zone.index) because zone.index is only
+        recalculated on save — it becomes stale after reordering in the UI.
+        """
+        for combo in (self.combo_zone_a, self.combo_zone_b):
+            combo.blockSignals(True)
+            combo.clear()
+            if self.codeplug:
+                for i, zone in enumerate(self.codeplug.zones):
+                    if not zone.is_empty():
+                        combo.addItem(f"{i} - {zone.name}", i)
+            combo.blockSignals(False)
+
+    def _populate_channel_combos(self):
+        """Fill both channel combos from codeplug channels"""
+        for combo in (self.combo_channel_a, self.combo_channel_b):
+            combo.blockSignals(True)
+            combo.clear()
+            if self.codeplug:
+                channels = self.codeplug.get_channels_sorted_by_position()
+                for ch in channels:
+                    combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
+            combo.blockSignals(False)
+
+    def refresh_zone_combos(self):
+        """Repopulate zone combos while preserving current selection"""
+        for combo in (self.combo_zone_a, self.combo_zone_b):
+            prev = combo.currentData()
+            combo.blockSignals(True)
+            combo.clear()
+            if self.codeplug:
+                for i, zone in enumerate(self.codeplug.zones):
+                    if not zone.is_empty():
+                        combo.addItem(f"{i} - {zone.name}", i)
+            # Restore previous selection
+            if prev is not None:
+                for i in range(combo.count()):
+                    if combo.itemData(i) == prev:
+                        combo.setCurrentIndex(i)
+                        break
+            combo.blockSignals(False)
+
+    def refresh_channel_combos(self):
+        """Repopulate channel combos while preserving current selection"""
+        for combo in (self.combo_channel_a, self.combo_channel_b):
+            prev = combo.currentData()
+            combo.blockSignals(True)
+            combo.clear()
+            if self.codeplug:
+                channels = self.codeplug.get_channels_sorted_by_position()
+                for ch in channels:
+                    combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
+            # Restore previous selection
+            if prev is not None:
+                for i in range(combo.count()):
+                    if combo.itemData(i) == prev:
+                        combo.setCurrentIndex(i)
+                        break
+            combo.blockSignals(False)
 
     def load_settings(self, settings: Optional[RadioSettings]):
         """Load settings"""
@@ -1503,11 +1618,11 @@ class SettingsWidget(QWidget):
         self.combo_main_ptt.blockSignals(True)
         self.combo_vfo_step.blockSignals(True)
         self.combo_work_mode_a.blockSignals(True)
-        self.spin_zone_a.blockSignals(True)
-        self.spin_channel_a.blockSignals(True)
+        self.combo_zone_a.blockSignals(True)
+        self.combo_channel_a.blockSignals(True)
         self.combo_work_mode_b.blockSignals(True)
-        self.spin_zone_b.blockSignals(True)
-        self.spin_channel_b.blockSignals(True)
+        self.combo_zone_b.blockSignals(True)
+        self.combo_channel_b.blockSignals(True)
         self.combo_clock_1_mode.blockSignals(True)
         self.spin_clock_1_hour.blockSignals(True)
         self.spin_clock_1_minute.blockSignals(True)
@@ -1651,8 +1766,15 @@ class SettingsWidget(QWidget):
                 self.combo_work_mode_a.setCurrentIndex(i)
                 break
 
-        self.spin_zone_a.setValue(settings.zone_a)
-        self.spin_channel_a.setValue(settings.channel_a + 1)
+        for i in range(self.combo_zone_a.count()):
+            if self.combo_zone_a.itemData(i) == settings.zone_a:
+                self.combo_zone_a.setCurrentIndex(i)
+                break
+
+        for i in range(self.combo_channel_a.count()):
+            if self.combo_channel_a.itemData(i) == settings.channel_a:
+                self.combo_channel_a.setCurrentIndex(i)
+                break
 
         # Work mode B
         for i in range(self.combo_work_mode_b.count()):
@@ -1660,8 +1782,15 @@ class SettingsWidget(QWidget):
                 self.combo_work_mode_b.setCurrentIndex(i)
                 break
 
-        self.spin_zone_b.setValue(settings.zone_b)
-        self.spin_channel_b.setValue(settings.channel_b + 1)
+        for i in range(self.combo_zone_b.count()):
+            if self.combo_zone_b.itemData(i) == settings.zone_b:
+                self.combo_zone_b.setCurrentIndex(i)
+                break
+
+        for i in range(self.combo_channel_b.count()):
+            if self.combo_channel_b.itemData(i) == settings.channel_b:
+                self.combo_channel_b.setCurrentIndex(i)
+                break
 
         # Clocks
         for i in range(self.combo_clock_1_mode.count()):
@@ -1726,11 +1855,11 @@ class SettingsWidget(QWidget):
         self.combo_main_ptt.blockSignals(False)
         self.combo_vfo_step.blockSignals(False)
         self.combo_work_mode_a.blockSignals(False)
-        self.spin_zone_a.blockSignals(False)
-        self.spin_channel_a.blockSignals(False)
+        self.combo_zone_a.blockSignals(False)
+        self.combo_channel_a.blockSignals(False)
         self.combo_work_mode_b.blockSignals(False)
-        self.spin_zone_b.blockSignals(False)
-        self.spin_channel_b.blockSignals(False)
+        self.combo_zone_b.blockSignals(False)
+        self.combo_channel_b.blockSignals(False)
         self.combo_clock_1_mode.blockSignals(False)
         self.spin_clock_1_hour.blockSignals(False)
         self.spin_clock_1_minute.blockSignals(False)
@@ -1791,11 +1920,15 @@ class SettingsWidget(QWidget):
         self.settings.main_ptt = self.combo_main_ptt.currentData()
         self.settings.vfo_step = self.combo_vfo_step.currentData()
         self.settings.work_mode_a = self.combo_work_mode_a.currentData()
-        self.settings.zone_a = self.spin_zone_a.value()
-        self.settings.channel_a = self.spin_channel_a.value() - 1
+        zone_a = self.combo_zone_a.currentData()
+        self.settings.zone_a = zone_a if zone_a is not None else 0
+        channel_a = self.combo_channel_a.currentData()
+        self.settings.channel_a = channel_a if channel_a is not None else 0
         self.settings.work_mode_b = self.combo_work_mode_b.currentData()
-        self.settings.zone_b = self.spin_zone_b.value()
-        self.settings.channel_b = self.spin_channel_b.value() - 1
+        zone_b = self.combo_zone_b.currentData()
+        self.settings.zone_b = zone_b if zone_b is not None else 0
+        channel_b = self.combo_channel_b.currentData()
+        self.settings.channel_b = channel_b if channel_b is not None else 0
         self.settings.clock_1_mode = self.combo_clock_1_mode.currentData()
         self.settings.clock_1_hour = self.spin_clock_1_hour.value()
         self.settings.clock_1_minute = self.spin_clock_1_minute.value()

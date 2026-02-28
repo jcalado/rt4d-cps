@@ -103,6 +103,11 @@ class CodeplugSerializer:
         # Write other sections
         data[OFFSET_FM:OFFSET_FM + SIZE_FM] = codeplug.fm_data
 
+        # Serialize DTMF names from settings into codeplug raw data
+        if codeplug.settings:
+            codeplug.dtmf_names_data = CodeplugSerializer.serialize_dtmf_names(codeplug.settings.dtmf_names)
+        data[OFFSET_DTMF_NAMES:OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES] = codeplug.dtmf_names_data
+
         return bytes(data)
 
     @staticmethod
@@ -693,6 +698,17 @@ class CodeplugSerializer:
         if settings.beta41:
             data[4092:4096] = BETA41_MAGIC
 
+        return bytes(data)
+
+    @staticmethod
+    def serialize_dtmf_names(names: list[str]) -> bytes:
+        """Serialize 16 DTMF preset names to 256-byte buffer (16 × 16 ASCII, 0xFF padded)"""
+        data = bytearray(b'\xff' * SIZE_DTMF_NAMES)
+        for i in range(MAX_DTMF_NAMES):
+            name = names[i] if i < len(names) else ""
+            name_bytes = name[:DTMF_NAME_SIZE].encode('ascii', errors='ignore')
+            offset = i * DTMF_NAME_SIZE
+            data[offset:offset + len(name_bytes)] = name_bytes
         return bytes(data)
 
     @staticmethod

@@ -78,6 +78,7 @@ class MainWindow(QMainWindow):
         # Zones tab
         self.zone_widget = ZoneWidget()
         self.zone_widget.data_modified.connect(self.on_data_modified)
+        self.zone_widget.data_modified.connect(self.on_zones_modified)
         self.tabs.addTab(self.zone_widget, "Zones")
 
         # Encryption tab
@@ -194,6 +195,17 @@ class MainWindow(QMainWindow):
         self.action_flash.triggered.connect(self.flash_to_radio)
         radio_menu.addAction(self.action_flash)
 
+        radio_menu.addSeparator()
+
+        self.action_flash_firmware = QAction(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogApplyButton),
+            "Flash &Firmware...", self
+        )
+        self.action_flash_firmware.setToolTip("Flash device firmware")
+        self.action_flash_firmware.setStatusTip("Update radio firmware via bootloader")
+        self.action_flash_firmware.triggered.connect(self.flash_firmware)
+        radio_menu.addAction(self.action_flash_firmware)
+
         # Options menu
         options_menu = menubar.addMenu("&Options")
 
@@ -265,6 +277,7 @@ class MainWindow(QMainWindow):
             self.zone_widget.load_codeplug(self.codeplug)
             self.encryption_widget.load_codeplug(self.codeplug)
             self.dtmf_widget.load_settings(self.codeplug.settings)
+            self.settings_widget.load_codeplug(self.codeplug)
             self.settings_widget.load_settings(self.codeplug.settings)
             self.fm_widget.load_fm_data(self.codeplug.fm_data)
 
@@ -402,6 +415,7 @@ class MainWindow(QMainWindow):
                     self.zone_widget.load_codeplug(self.codeplug)
                     self.encryption_widget.load_codeplug(self.codeplug)
                     self.dtmf_widget.load_settings(self.codeplug.settings)
+                    self.settings_widget.load_codeplug(self.codeplug)
                     self.settings_widget.load_settings(self.codeplug.settings)
                     self.fm_widget.load_fm_data(self.codeplug.fm_data)
                     self.update_title()
@@ -422,6 +436,12 @@ class MainWindow(QMainWindow):
 
         from .radio_dialog import RadioFlashDialog
         dialog = RadioFlashDialog(self, self.codeplug)
+        dialog.exec()
+
+    def flash_firmware(self):
+        """Flash firmware to radio"""
+        from .radio_dialog import FirmwareFlashDialog
+        dialog = FirmwareFlashDialog(self)
         dialog.exec()
 
     def show_about(self):
@@ -468,6 +488,11 @@ class MainWindow(QMainWindow):
         """Handle channels modification - refresh zone widget channel lists and counts"""
         self.zone_widget.refresh_table()
         self.zone_widget.refresh_details()
+        self.settings_widget.refresh_channel_combos()
+
+    def on_zones_modified(self):
+        """Handle zones modification - refresh settings zone dropdowns"""
+        self.settings_widget.refresh_zone_combos()
 
     def update_title(self):
         """Update window title"""

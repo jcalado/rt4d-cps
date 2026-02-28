@@ -14,8 +14,8 @@ class CodeplugParser:
 
     def __init__(self, data: bytes):
         """Initialize parser with binary data"""
-        if len(data) != TOTAL_SIZE:
-            raise ValueError(f"Invalid file size: {len(data)} (expected {TOTAL_SIZE})")
+        if len(data) not in (TOTAL_SIZE, TOTAL_SIZE_LEGACY):
+            raise ValueError(f"Invalid file size: {len(data)} (expected {TOTAL_SIZE} or {TOTAL_SIZE_LEGACY})")
         self.data = data
         self._beta41_layout = False
 
@@ -29,12 +29,18 @@ class CodeplugParser:
         codeplug.encrypt_data = self.data[OFFSET_ENCRYPT:OFFSET_ENCRYPT + SIZE_ENCRYPT]
         codeplug.fm_data = self.data[OFFSET_FM:OFFSET_FM + SIZE_FM]
 
+        # Parse DTMF names (if present in file)
+        if len(self.data) >= OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES:
+            codeplug.dtmf_names_data = self.data[OFFSET_DTMF_NAMES:OFFSET_DTMF_NAMES + SIZE_DTMF_NAMES]
+
         # Parse radio settings
         print("Parsing radio settings...")
         codeplug.settings = self.parse_settings(codeplug.cfg_data)
         if codeplug.settings:
             self._beta41_layout = bool(codeplug.settings.beta41)
             print(f"Detected beta41+ layout: {self._beta41_layout}")
+            # Parse DTMF names into settings
+            codeplug.settings.dtmf_names = self.parse_dtmf_names(codeplug.dtmf_names_data)
 
         # Parse channels
         print("Parsing channels...")
@@ -456,12 +462,16 @@ class CodeplugParser:
 
             # Channel list starts at offset 0x14 (20)
             # Each channel is a 16-bit little-endian integer
-            for i in range(min(channel_count, 200)):  # Max 200 channels per zone
+            max_count = min(channel_count, 200)
+            j = 0
+            for i in range(200):  # Max 200 channels per zone
+                if j == max_count:
+                    break
                 offset = 0x14 + (i * 2)
-                if offset + 1 < len(zone_data):
-                    channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)
-                    if channel_idx != 0xFFFF and channel_idx < 1024:  # Valid channel index
+                channel_idx = zone_data[offset] | (zone_data[offset + 1] << 8)
+                if channel_idx != 0xFFFF and channel_idx < 1024:  # Valid channel index
                         parsed_channel_indices.append(channel_idx)
+                        j += 1
 
             zone = Zone(
                 index=index,
@@ -769,7 +779,26 @@ class CodeplugParser:
         settings.tx_alias = cfg_data[0x3A0]
         settings.beta41 = cfg_data[4092:4096] == BETA41_MAGIC
 
+        # Beta version detection (Beta 42+ stores version at offset 0xFF0 as u32 LE)
+        if settings.beta41:
+            raw_version = struct.unpack_from('<I', cfg_data, BETA_VERSION_OFFSET)[0]
+            if raw_version == 0 or raw_version == 0xFFFFFFFF:
+                settings.beta_version = 41
+            else:
+                settings.beta_version = raw_version
+
         return settings
+
+    @staticmethod
+    def parse_dtmf_names(data: bytes) -> list[str]:
+        """Parse 16 DTMF preset names from 256-byte buffer (16 × 16 ASCII, 0xFF padded)"""
+        names = []
+        for i in range(MAX_DTMF_NAMES):
+            offset = i * DTMF_NAME_SIZE
+            raw = data[offset:offset + DTMF_NAME_SIZE]
+            name_bytes = bytes(b for b in raw if b != EMPTY_BYTE and b != 0x00)
+            names.append(name_bytes.decode('ascii', errors='ignore').strip())
+        return names
 
     @staticmethod
     def _parse_bcd(bcd_bytes: bytes) -> int:

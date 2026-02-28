@@ -415,6 +415,8 @@ class RadioSettings:
     # 20 programmable DTMF codes (each 16 bytes, offsets 522-841)
     # Stored as list of strings, each up to 16 chars, valid characters: 0-9, A-D, *, #
     dtmf_codes: List[str] = field(default_factory=lambda: [""] * 20)
+    # 16 user-editable DTMF preset names (stored in separate SPI region at 0xC7000)
+    dtmf_names: List[str] = field(default_factory=lambda: [""] * 16)
 
     # DT Custom Firmware Settings (offset 0x380 = 896)
     scan_speed_analog: int = 0  # Scan speed for analog channels (offset 0x380/896)
@@ -437,6 +439,7 @@ class RadioSettings:
     dmr_gid_name: int = 0  # Show DMR group name if available (offset 0x39F/927)
     tx_alias: int = 0  # Enable TA (Talker Alias) (offset 0x3A0/928) - Beta41+ only
     beta41: bool = False  # Indicates the settings are Beta41+ compatible
+    beta_version: int = 0  # Beta version number (0=not beta/stock, 41=pre-42 DTCN, 42+=from offset 0xFF0)
 
 
 @dataclass
@@ -452,6 +455,7 @@ class Codeplug:
     grouplist_data: bytes = field(default_factory=lambda: b'\xff' * 12288)
     encrypt_data: bytes = field(default_factory=lambda: b'\xff' * 12288)
     fm_data: bytes = field(default_factory=lambda: b'\xff' * 1024)
+    dtmf_names_data: bytes = field(default_factory=lambda: b'\xff' * 256)
 
     # Primary lookups by UUID
     def get_channel(self, uuid: str) -> Optional[Channel]:
