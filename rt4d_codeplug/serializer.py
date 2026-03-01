@@ -235,6 +235,10 @@ class CodeplugSerializer:
         data[0] = channel_count & 0xFF
         data[1] = (channel_count >> 8) & 0xFF
 
+        # CurCh[2] at offset 0x02-0x03: current channel index per band
+        data[0x02] = min(zone.cur_ch[0], max(channel_count - 1, 0)) & 0xFF
+        data[0x03] = min(zone.cur_ch[1], max(channel_count - 1, 0)) & 0xFF
+
         # Channel indices start at offset 0x14 (20)
         # Each channel index is 2 bytes (uint16_le)
         for i, channel_idx in enumerate(valid_channels[:200]):

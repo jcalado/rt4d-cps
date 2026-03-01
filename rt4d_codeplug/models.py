@@ -221,6 +221,7 @@ class Zone:
     name: str = ""
     channels: List[str] = field(default_factory=list)  # List of channel UUIDs
     scan_list: List[bool] = field(default_factory=list)  # Per-channel scan flags (one per channel)
+    cur_ch: List[int] = field(default_factory=lambda: [0, 0])  # CurCh[0]=Band A, [1]=Band B (index into channels[])
 
     def __post_init__(self):
         """Validate zone data"""

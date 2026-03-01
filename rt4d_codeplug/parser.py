@@ -368,9 +368,19 @@ class CodeplugParser:
                 else:
                     scan_list.append(bool(scan_data[i // 8] & (1 << (i % 8))))
 
+            # CurCh[2] at offset 0x02-0x03: current channel index per band
+            cur_ch_a = zone_data[0x02]
+            cur_ch_b = zone_data[0x03]
+            # Clamp to valid range (0xFF means unset)
+            if cur_ch_a == EMPTY_BYTE or cur_ch_a >= len(parsed_channel_indices):
+                cur_ch_a = 0
+            if cur_ch_b == EMPTY_BYTE or cur_ch_b >= len(parsed_channel_indices):
+                cur_ch_b = 0
+
             zone = Zone(
                 index=index,
                 name=name,
+                cur_ch=[cur_ch_a, cur_ch_b],
             )
             zone._parsed_channel_indices = parsed_channel_indices
             zone._parsed_scan_list = scan_list

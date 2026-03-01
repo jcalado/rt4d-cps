@@ -1302,6 +1302,14 @@ class SettingsWidget(QWidget):
         completer.setCaseSensitivity(Qt.CaseInsensitive)
         return combo
 
+    def _zone_list_index(self, zone_uuid: str) -> int:
+        """Convert zone UUID to current list position (becomes firmware index on save)."""
+        if self.codeplug:
+            for i, z in enumerate(self.codeplug.zones):
+                if z.uuid == zone_uuid:
+                    return i
+        return 0
+
     def _on_work_mode_changed(self, band: str):
         """Show/hide zone and channel controls based on work mode.
 
@@ -1339,25 +1347,29 @@ class SettingsWidget(QWidget):
             return
         combo_zone = getattr(self, f"combo_zone_{band}")
         combo_channel = getattr(self, f"combo_channel_{band}")
-        zone_idx = combo_zone.currentData()
-        if zone_idx is not None and self.codeplug and zone_idx < len(self.codeplug.zones):
-            zone = self.codeplug.zones[zone_idx]
-            self._populate_channel_combo_for_zone(combo_channel, zone)
-        else:
-            combo_channel.blockSignals(True)
-            combo_channel.clear()
-            combo_channel.blockSignals(False)
+        zone_uuid = combo_zone.currentData()
+        if zone_uuid is not None and self.codeplug:
+            zone = self.codeplug.get_zone(zone_uuid)
+            if zone:
+                self._populate_channel_combo_for_zone(combo_channel, zone)
+                return
+        combo_channel.blockSignals(True)
+        combo_channel.clear()
+        combo_channel.blockSignals(False)
 
     def _populate_channel_combo_for_zone(self, combo: QComboBox, zone):
-        """Populate a channel combo with only the channels belonging to a zone."""
+        """Populate a channel combo with only the channels belonging to a zone.
+
+        Data values are zone-relative indices (matching firmware CurCh).
+        """
         prev = combo.currentData()
         combo.blockSignals(True)
         combo.clear()
         if self.codeplug:
-            for ch_uuid in zone.channels:
+            for zone_idx, ch_uuid in enumerate(zone.channels):
                 ch = self.codeplug.get_channel(ch_uuid)
                 if ch:
-                    combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
+                    combo.addItem(f"{ch.position} - {ch.name}", zone_idx)
         # Restore previous selection if still present
         if prev is not None:
             for i in range(combo.count()):
@@ -1391,8 +1403,7 @@ class SettingsWidget(QWidget):
     def _populate_zone_combos(self):
         """Fill both zone combos from codeplug zones.
 
-        Uses enumerate position (not zone.index) because zone.index is only
-        recalculated on save — it becomes stale after reordering in the UI.
+        Stores zone UUID as combo data so references survive reordering/deletion.
         """
         for combo in (self.combo_zone_a, self.combo_zone_b):
             combo.blockSignals(True)
@@ -1400,7 +1411,7 @@ class SettingsWidget(QWidget):
             if self.codeplug:
                 for i, zone in enumerate(self.codeplug.zones):
                     if not zone.is_empty():
-                        combo.addItem(f"{i} - {zone.name}", i)
+                        combo.addItem(f"{i} - {zone.name}", zone.uuid)
             combo.blockSignals(False)
 
     def _populate_channel_combos(self):
@@ -1415,7 +1426,7 @@ class SettingsWidget(QWidget):
             combo.blockSignals(False)
 
     def refresh_zone_combos(self):
-        """Repopulate zone combos while preserving current selection"""
+        """Repopulate zone combos while preserving current selection (by UUID)"""
         for combo in (self.combo_zone_a, self.combo_zone_b):
             prev = combo.currentData()
             combo.blockSignals(True)
@@ -1423,7 +1434,7 @@ class SettingsWidget(QWidget):
             if self.codeplug:
                 for i, zone in enumerate(self.codeplug.zones):
                     if not zone.is_empty():
-                        combo.addItem(f"{i} - {zone.name}", i)
+                        combo.addItem(f"{i} - {zone.name}", zone.uuid)
             # Restore previous selection
             if prev is not None:
                 for i in range(combo.count()):
@@ -1607,13 +1618,20 @@ class SettingsWidget(QWidget):
                 self.combo_work_mode_a.setCurrentIndex(i)
                 break
 
-        for i in range(self.combo_zone_a.count()):
-            if self.combo_zone_a.itemData(i) == settings.zone_a:
-                self.combo_zone_a.setCurrentIndex(i)
-                break
+        # Zone A: convert firmware index → zone object → match combo by UUID
+        target_zone_a = self.codeplug.get_zone_by_index(settings.zone_a) if self.codeplug else None
+        if target_zone_a:
+            for i in range(self.combo_zone_a.count()):
+                if self.combo_zone_a.itemData(i) == target_zone_a.uuid:
+                    self.combo_zone_a.setCurrentIndex(i)
+                    break
 
+        # Channel A: use zone's cur_ch in zone mode, settings.channel_a otherwise
+        channel_a_value = settings.channel_a
+        if settings.work_mode_a == 2 and target_zone_a:
+            channel_a_value = target_zone_a.cur_ch[0]
         for i in range(self.combo_channel_a.count()):
-            if self.combo_channel_a.itemData(i) == settings.channel_a:
+            if self.combo_channel_a.itemData(i) == channel_a_value:
                 self.combo_channel_a.setCurrentIndex(i)
                 break
 
@@ -1623,13 +1641,20 @@ class SettingsWidget(QWidget):
                 self.combo_work_mode_b.setCurrentIndex(i)
                 break
 
-        for i in range(self.combo_zone_b.count()):
-            if self.combo_zone_b.itemData(i) == settings.zone_b:
-                self.combo_zone_b.setCurrentIndex(i)
-                break
+        # Zone B: convert firmware index → zone object → match combo by UUID
+        target_zone_b = self.codeplug.get_zone_by_index(settings.zone_b) if self.codeplug else None
+        if target_zone_b:
+            for i in range(self.combo_zone_b.count()):
+                if self.combo_zone_b.itemData(i) == target_zone_b.uuid:
+                    self.combo_zone_b.setCurrentIndex(i)
+                    break
 
+        # Channel B: use zone's cur_ch in zone mode, settings.channel_b otherwise
+        channel_b_value = settings.channel_b
+        if settings.work_mode_b == 2 and target_zone_b:
+            channel_b_value = target_zone_b.cur_ch[1]
         for i in range(self.combo_channel_b.count()):
-            if self.combo_channel_b.itemData(i) == settings.channel_b:
+            if self.combo_channel_b.itemData(i) == channel_b_value:
                 self.combo_channel_b.setCurrentIndex(i)
                 break
 
@@ -1701,13 +1726,23 @@ class SettingsWidget(QWidget):
         self.settings.main_ptt = self.combo_main_ptt.currentData()
         self.settings.vfo_step = self.combo_vfo_step.currentData()
         self.settings.work_mode_a = self.combo_work_mode_a.currentData()
-        zone_a = self.combo_zone_a.currentData()
-        self.settings.zone_a = zone_a if zone_a is not None else 0
+        zone_a_uuid = self.combo_zone_a.currentData()
+        self.settings.zone_a = self._zone_list_index(zone_a_uuid) if zone_a_uuid else 0
         channel_a = self.combo_channel_a.currentData()
-        self.settings.channel_a = channel_a if channel_a is not None else 0
+        if self.settings.work_mode_a == 2 and zone_a_uuid and self.codeplug:
+            zone = self.codeplug.get_zone(zone_a_uuid)
+            if zone:
+                zone.cur_ch[0] = channel_a if channel_a is not None else 0
+        else:
+            self.settings.channel_a = channel_a if channel_a is not None else 0
         self.settings.work_mode_b = self.combo_work_mode_b.currentData()
-        zone_b = self.combo_zone_b.currentData()
-        self.settings.zone_b = zone_b if zone_b is not None else 0
+        zone_b_uuid = self.combo_zone_b.currentData()
+        self.settings.zone_b = self._zone_list_index(zone_b_uuid) if zone_b_uuid else 0
         channel_b = self.combo_channel_b.currentData()
-        self.settings.channel_b = channel_b if channel_b is not None else 0
+        if self.settings.work_mode_b == 2 and zone_b_uuid and self.codeplug:
+            zone = self.codeplug.get_zone(zone_b_uuid)
+            if zone:
+                zone.cur_ch[1] = channel_b if channel_b is not None else 0
+        else:
+            self.settings.channel_b = channel_b if channel_b is not None else 0
         self.data_modified.emit()
