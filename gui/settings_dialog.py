@@ -766,12 +766,6 @@ class CustomFirmwareDialog(QDialog):
         dmr_group = QGroupBox("DMR Settings")
         dmr_layout = QFormLayout()
 
-        self.combo_dmr_gid_name = QComboBox()
-        for label, value in DMR_GID_NAME_VALUES:
-            self.combo_dmr_gid_name.addItem(label, value)
-        self.label_dmr_gid_name = QLabel("Show DMR Group Name:")
-        dmr_layout.addRow(self.label_dmr_gid_name, self.combo_dmr_gid_name)
-
         self.combo_callsign_lookup = QComboBox()
         for label, value in CALLSIGN_LOOKUP_VALUES:
             self.combo_callsign_lookup.addItem(label, value)
@@ -849,7 +843,6 @@ class CustomFirmwareDialog(QDialog):
             (self.combo_ptt_lock, self.settings.ptt_lock),
             (self.combo_fn_key, self.settings.fn_key),
             # DMR settings
-            (self.combo_dmr_gid_name, self.settings.dmr_gid_name),
             (self.combo_callsign_lookup, self.settings.callsign_lookup),
             # Advanced settings
             (self.combo_spectrum_threshold, self.settings.spectrum_threshold),
@@ -887,7 +880,6 @@ class CustomFirmwareDialog(QDialog):
             ('ptt_lock', self.combo_ptt_lock),
             ('fn_key', self.combo_fn_key),
             # DMR settings
-            ('dmr_gid_name', self.combo_dmr_gid_name),
             ('callsign_lookup', self.combo_callsign_lookup),
             # Advanced settings
             ('spectrum_threshold', self.combo_spectrum_threshold),
