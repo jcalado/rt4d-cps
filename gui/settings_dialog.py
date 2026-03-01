@@ -1162,15 +1162,23 @@ class SettingsWidget(QWidget):
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_a.addItem(label, value)
         self.combo_work_mode_a.currentIndexChanged.connect(self.on_settings_changed)
+        self.combo_work_mode_a.currentIndexChanged.connect(
+            lambda: self._on_work_mode_changed("a")
+        )
         band_a_layout.addRow("Mode:", self.combo_work_mode_a)
 
+        self.label_zone_a = QLabel("Zone:")
         self.combo_zone_a = self._make_searchable_combo()
         self.combo_zone_a.currentIndexChanged.connect(self.on_settings_changed)
-        band_a_layout.addRow("Zone:", self.combo_zone_a)
+        self.combo_zone_a.currentIndexChanged.connect(
+            lambda: self._on_zone_changed("a")
+        )
+        band_a_layout.addRow(self.label_zone_a, self.combo_zone_a)
 
+        self.label_channel_a = QLabel("Channel:")
         self.combo_channel_a = self._make_searchable_combo()
         self.combo_channel_a.currentIndexChanged.connect(self.on_settings_changed)
-        band_a_layout.addRow("Channel:", self.combo_channel_a)
+        band_a_layout.addRow(self.label_channel_a, self.combo_channel_a)
 
         band_a_group.setLayout(band_a_layout)
         bands_layout.addWidget(band_a_group)
@@ -1182,15 +1190,23 @@ class SettingsWidget(QWidget):
         for label, value in WORK_MODE_VALUES:
             self.combo_work_mode_b.addItem(label, value)
         self.combo_work_mode_b.currentIndexChanged.connect(self.on_settings_changed)
+        self.combo_work_mode_b.currentIndexChanged.connect(
+            lambda: self._on_work_mode_changed("b")
+        )
         band_b_layout.addRow("Mode:", self.combo_work_mode_b)
 
+        self.label_zone_b = QLabel("Zone:")
         self.combo_zone_b = self._make_searchable_combo()
         self.combo_zone_b.currentIndexChanged.connect(self.on_settings_changed)
-        band_b_layout.addRow("Zone:", self.combo_zone_b)
+        self.combo_zone_b.currentIndexChanged.connect(
+            lambda: self._on_zone_changed("b")
+        )
+        band_b_layout.addRow(self.label_zone_b, self.combo_zone_b)
 
+        self.label_channel_b = QLabel("Channel:")
         self.combo_channel_b = self._make_searchable_combo()
         self.combo_channel_b.currentIndexChanged.connect(self.on_settings_changed)
-        band_b_layout.addRow("Channel:", self.combo_channel_b)
+        band_b_layout.addRow(self.label_channel_b, self.combo_channel_b)
 
         band_b_group.setLayout(band_b_layout)
         bands_layout.addWidget(band_b_group)
@@ -1301,6 +1317,86 @@ class SettingsWidget(QWidget):
         completer.setCaseSensitivity(Qt.CaseInsensitive)
         return combo
 
+    def _on_work_mode_changed(self, band: str):
+        """Show/hide zone and channel controls based on work mode.
+
+        VFO (0): hide zone, hide channel
+        Channel (1): hide zone, show channel (full list)
+        Zone (2): show zone, show channel (filtered to zone)
+        """
+        combo_mode = getattr(self, f"combo_work_mode_{band}")
+        label_zone = getattr(self, f"label_zone_{band}")
+        combo_zone = getattr(self, f"combo_zone_{band}")
+        label_channel = getattr(self, f"label_channel_{band}")
+        combo_channel = getattr(self, f"combo_channel_{band}")
+
+        mode = combo_mode.currentData()
+        # Zone row: visible only in Zone mode (2)
+        zone_visible = mode == 2
+        label_zone.setVisible(zone_visible)
+        combo_zone.setVisible(zone_visible)
+
+        # Channel row: visible in Channel (1) and Zone (2) modes
+        channel_visible = mode in (1, 2)
+        label_channel.setVisible(channel_visible)
+        combo_channel.setVisible(channel_visible)
+
+        # Repopulate channel combo based on mode
+        if mode == 2:
+            self._on_zone_changed(band)
+        elif mode == 1:
+            self._populate_channel_combo(combo_channel)
+
+    def _on_zone_changed(self, band: str):
+        """When zone changes in Zone mode, repopulate channel combo with zone's channels."""
+        combo_mode = getattr(self, f"combo_work_mode_{band}")
+        if combo_mode.currentData() != 2:
+            return
+        combo_zone = getattr(self, f"combo_zone_{band}")
+        combo_channel = getattr(self, f"combo_channel_{band}")
+        zone_idx = combo_zone.currentData()
+        if zone_idx is not None and self.codeplug and zone_idx < len(self.codeplug.zones):
+            zone = self.codeplug.zones[zone_idx]
+            self._populate_channel_combo_for_zone(combo_channel, zone)
+        else:
+            combo_channel.blockSignals(True)
+            combo_channel.clear()
+            combo_channel.blockSignals(False)
+
+    def _populate_channel_combo_for_zone(self, combo: QComboBox, zone):
+        """Populate a channel combo with only the channels belonging to a zone."""
+        prev = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        if self.codeplug:
+            for ch_uuid in zone.channels:
+                ch = self.codeplug.get_channel(ch_uuid)
+                if ch:
+                    combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
+        # Restore previous selection if still present
+        if prev is not None:
+            for i in range(combo.count()):
+                if combo.itemData(i) == prev:
+                    combo.setCurrentIndex(i)
+                    break
+        combo.blockSignals(False)
+
+    def _populate_channel_combo(self, combo: QComboBox):
+        """Populate a single channel combo with all channels sorted by position."""
+        prev = combo.currentData()
+        combo.blockSignals(True)
+        combo.clear()
+        if self.codeplug:
+            channels = self.codeplug.get_channels_sorted_by_position()
+            for ch in channels:
+                combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
+        if prev is not None:
+            for i in range(combo.count()):
+                if combo.itemData(i) == prev:
+                    combo.setCurrentIndex(i)
+                    break
+        combo.blockSignals(False)
+
     def load_codeplug(self, codeplug: Optional[Codeplug]):
         """Store codeplug reference and populate zone/channel combos"""
         self.codeplug = codeplug
@@ -1350,24 +1446,21 @@ class SettingsWidget(QWidget):
                         combo.setCurrentIndex(i)
                         break
             combo.blockSignals(False)
+        # Also refresh channel combos for bands in zone mode
+        self.refresh_channel_combos()
 
     def refresh_channel_combos(self):
-        """Repopulate channel combos while preserving current selection"""
-        for combo in (self.combo_channel_a, self.combo_channel_b):
-            prev = combo.currentData()
-            combo.blockSignals(True)
-            combo.clear()
-            if self.codeplug:
-                channels = self.codeplug.get_channels_sorted_by_position()
-                for ch in channels:
-                    combo.addItem(f"{ch.position} - {ch.name}", ch.position - 1)
-            # Restore previous selection
-            if prev is not None:
-                for i in range(combo.count()):
-                    if combo.itemData(i) == prev:
-                        combo.setCurrentIndex(i)
-                        break
-            combo.blockSignals(False)
+        """Repopulate channel combos while respecting current work mode"""
+        for band in ("a", "b"):
+            combo_mode = getattr(self, f"combo_work_mode_{band}")
+            combo_channel = getattr(self, f"combo_channel_{band}")
+            mode = combo_mode.currentData()
+            if mode == 2:
+                # Zone mode: repopulate with zone-filtered channels
+                self._on_zone_changed(band)
+            elif mode == 1:
+                # Channel mode: full channel list
+                self._populate_channel_combo(combo_channel)
 
     def load_settings(self, settings: Optional[RadioSettings]):
         """Load settings"""
@@ -1594,6 +1687,9 @@ class SettingsWidget(QWidget):
         self.combo_zone_b.blockSignals(False)
         self.combo_channel_b.blockSignals(False)
         self.set_enabled(True)
+        # Set initial visibility and populate zone-filtered channels
+        self._on_work_mode_changed("a")
+        self._on_work_mode_changed("b")
 
     def on_settings_changed(self):
         """Handle settings changes"""
