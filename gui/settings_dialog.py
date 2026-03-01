@@ -12,7 +12,7 @@ from PySide6.QtCore import Qt, Signal
 
 from rt4d_codeplug.models import RadioSettings, Codeplug
 from rt4d_codeplug.dropdowns import (
-    VOICE_PROMPT_VALUES, KEY_BEEP_VALUES, KEY_LOCK_VALUES,
+    KEY_BEEP_VALUES, KEY_LOCK_VALUES,
     DUAL_WATCH_VALUES, WORK_MODE_VALUES, TALKAROUND_VALUES,
     ALARM_TYPE_VALUES, LOCK_TIMER_VALUES, LED_ON_OFF_VALUES,
     LED_TIMER_VALUES, MENU_TIMER_VALUES,
@@ -1006,12 +1006,6 @@ class SettingsWidget(QWidget):
         audio_group = QGroupBox("Audio && User Interface")
         audio_layout = QFormLayout()
 
-        self.combo_voice_prompt = QComboBox()
-        for label, value in VOICE_PROMPT_VALUES:
-            self.combo_voice_prompt.addItem(label, value)
-        self.combo_voice_prompt.currentIndexChanged.connect(self.on_settings_changed)
-        audio_layout.addRow("Voice Prompt:", self.combo_voice_prompt)
-
         self.combo_key_beep = QComboBox()
         for label, value in KEY_BEEP_VALUES:
             self.combo_key_beep.addItem(label, value)
@@ -1269,7 +1263,6 @@ class SettingsWidget(QWidget):
         self.edit_startup_msg.setEnabled(enabled)
         self.check_password_enabled.setEnabled(enabled)
         # Password field and button enabled state controlled by checkbox
-        self.combo_voice_prompt.setEnabled(enabled)
         self.combo_key_beep.setEnabled(enabled)
         self.combo_key_lock.setEnabled(enabled)
         self.combo_lock_timer.setEnabled(enabled)
@@ -1468,7 +1461,6 @@ class SettingsWidget(QWidget):
         self.check_password_enabled.blockSignals(True)
         self.edit_startup_pwd.blockSignals(True)
         self.btn_show_pwd.blockSignals(True)
-        self.combo_voice_prompt.blockSignals(True)
         self.combo_key_beep.blockSignals(True)
         self.combo_key_lock.blockSignals(True)
         self.combo_lock_timer.blockSignals(True)
@@ -1506,11 +1498,6 @@ class SettingsWidget(QWidget):
         self.btn_show_pwd.setEnabled(password_enabled)
         self.btn_show_pwd.setChecked(False)  # Reset show/hide state
 
-        # Voice prompt
-        for i in range(self.combo_voice_prompt.count()):
-            if self.combo_voice_prompt.itemData(i) == settings.voice_prompt:
-                self.combo_voice_prompt.setCurrentIndex(i)
-                break
 
         # Key beep
         for i in range(self.combo_key_beep.count()):
@@ -1653,7 +1640,6 @@ class SettingsWidget(QWidget):
         self.check_password_enabled.blockSignals(False)
         self.edit_startup_pwd.blockSignals(False)
         self.btn_show_pwd.blockSignals(False)
-        self.combo_voice_prompt.blockSignals(False)
         self.combo_key_beep.blockSignals(False)
         self.combo_key_lock.blockSignals(False)
         self.combo_lock_timer.blockSignals(False)
@@ -1696,7 +1682,6 @@ class SettingsWidget(QWidget):
         password_enabled = self.check_password_enabled.isChecked()
         self.settings.password_enable = 1 if password_enabled else 0
         self.settings.startup_password = self.edit_startup_pwd.text() if password_enabled else ""
-        self.settings.voice_prompt = self.combo_voice_prompt.currentData()
         self.settings.key_beep = self.combo_key_beep.currentData()
         self.settings.key_lock = self.combo_key_lock.currentData()
         self.settings.lock_timer = self.combo_lock_timer.currentData()
