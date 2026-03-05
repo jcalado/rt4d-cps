@@ -3,7 +3,7 @@
 A codeplug programming software for the Radtel RT-4D, with full support for [DualTachyon's REFW](https://github.com/DualTachyon) custom firmware.
 
 > [!CAUTION]
-> This software is **not compatible** with Radtel's stock firmware >= 3.18.
+> This software is optimized to work with DT's REFW beta 42 and up. Verions are released to match a refw beta release.
 
 [![Support me on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20this%20project-FF5E5B?logo=ko-fi&logoColor=white)](https://ko-fi.com/jcalado)
 
